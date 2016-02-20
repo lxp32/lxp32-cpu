@@ -1,0 +1,6 @@
+/work
+*.stamp
+*.wlf
+*.ini
+*.o
+transcript

@@ -1,0 +1,88 @@
+\usepackage{microtype}
+\usepackage{alltt}
+\usepackage{amsmath}
+\usepackage[charter]{mathdesign}
+
+\usepackage{fontspec}
+\setmainfont[Ligatures=TeX]{XCharter}
+\setmonofont[Scale=MatchLowercase]{DejaVu Sans Mono}
+
+\usepackage[english]{babel}
+
+\usepackage[perpage]{footmisc}
+
+\newcommand{\styledtitleref}[1]{\emph{\titleref{#1}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Various Memoir class settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\sloppybottom
+\setsecnumdepth{section}
+\settocdepth{section}
+
+\setpnumwidth{2.55em}
+\setrmarg{3.55em}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Code
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\shellcmd}[1]{\texttt{#1}}
+\newcommand{\code}[1]{\mbox{\texttt{#1}}}
+\newcommand{\instr}[1]{\texttt{\textbf{#1}}}
+\newcommand{\instrname}[1]{\emph{#1}}
+\newcommand{\signal}[1]{\texttt{#1}}
+
+\newenvironment{codepar}{%
+	\vspace{0.5\baselineskip}%
+	\begin{minipage}{0.9\textwidth}\begin{alltt}
+}{%
+	\end{alltt}\end{minipage}%
+	\vspace{0.5\baselineskip}
+}
+
+\newenvironment{codeparbreakable}{%
+	\vspace{0.5\baselineskip}%
+	\begin{alltt}
+		}{%
+	\end{alltt}%
+	\vspace{0.5\baselineskip}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Tables
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+\newcolumntype{Q}[1]{>{\raggedright\arraybackslash}m{#1}}
+\newcolumntype{E}[1]{>{\raggedleft\arraybackslash}m{#1}}
+\newcolumntype{W}[1]{>{\centering\arraybackslash}m{#1}}
+
+\newcommand{\tabcutin}[2]{\multicolumn{#1}{c}{\emph{#2}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Various stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\cplusplus}{C\texttt{\raisebox{0.05em}{++}}}
+\newcommand{\lxp}{\textls[60]{LXP}32}
+\newcommand{\tocitem}[2]{\phantomsection\addcontentsline{toc}{#1}{#2}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Hyperlinks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[bookmarks=true,
+	bookmarksnumbered=true,
+	bookmarksdepth=2,
+	hypertexnames=false]
+	{hyperref}
+
+\hypersetup{
+	pdftitle={LXP32 Technical Reference Manual},
+	pdfauthor={Alex I. Kuznetsov}
+}

@@ -1,0 +1,625 @@
+/*
+ * Copyright (c) 2016 by Alex I. Kuznetsov.
+ *
+ * Part of the LXP32 CPU IP core.
+ *
+ * This module implements members of the Generator class.
+ */
+
+#ifdef _MSC_VER
+	#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include "generator.h"
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+#include <cctype>
+#include <ctime>
+
+Generator::Generator():
+	_masters(1),
+	_slaves(1),
+	_addrWidth(32),
+	_portSize(32),
+	_portGranularity(32),
+	_entityName("intercon"),
+	_pipelinedArbiter(false),
+	_registeredFeedback(false),
+	_unsafeDecoder(false) {}
+
+void Generator::setMasters(int i) {
+	if(i<1) throw std::runtime_error("Invalid number of masters");
+	_masters=i;
+}
+
+void Generator::setSlaves(int i) {
+	if(i<1) throw std::runtime_error("Invalid number of slaves");
+	_slaves=i;
+}
+
+void Generator::setAddrWidth(int i) {
+	if(i<1) throw std::runtime_error("Invalid address width");
+	_addrWidth=i;
+}
+
+void Generator::setSlaveAddrWidth(int i) {
+	if(i<1) throw std::runtime_error("Invalid slave address width");
+	_slaveAddrWidth=i;
+}
+
+void Generator::setPortSize(int i) {
+	if(i!=8&&i!=16&&i!=32&&i!=64)
+		throw std::runtime_error("Invalid port size: 8, 16, 32 or 64 expected");
+	_portSize=i;
+}
+
+void Generator::setPortGranularity(int i) {
+	if(i!=8&&i!=16&&i!=32&&i!=64)
+		throw std::runtime_error("Invalid port granularity: 8, 16, 32 or 64 expected");
+	_portGranularity=i;
+}
+
+void Generator::setEntityName(const std::string &str) try {
+	if(str.empty()) throw std::exception();
+// First character must be a letter
+	if(!std::isalpha(str[0])) throw std::exception();
+// Subsequent characters can be letters, digits or underscores
+	for(std::size_t i=1;i<str.size();i++)
+		if(!std::isalnum(str[i])&&str[i]!='_') throw std::exception();
+	
+	_entityName=str;
+}
+catch(std::exception &) {
+	throw std::runtime_error("Invalid entity name");
+}
+
+void Generator::setPipelinedArbiter(bool b) {
+	_pipelinedArbiter=b;
+}
+
+void Generator::setRegisteredFeedback(bool b) {
+	_registeredFeedback=b;
+}
+
+void Generator::setUnsafeDecoder(bool b) {
+	_unsafeDecoder=b;
+}
+
+int Generator::masters() const {
+	return _masters;
+}
+
+int Generator::slaves() const {
+	return _slaves;
+}
+
+int Generator::addrWidth() const {
+	return _addrWidth;
+}
+
+int Generator::slaveAddrWidth() const {
+	return _slaveAddrWidth;
+}
+
+int Generator::portSize() const {
+	return _portSize;
+}
+
+int Generator::portGranularity() const {
+	return _portGranularity;
+}
+
+std::string Generator::entityName() const {
+	return _entityName;
+}
+
+bool Generator::pipelinedArbiter() const {
+	return _pipelinedArbiter;
+}
+
+bool Generator::registeredFeedback() const {
+	return _registeredFeedback;
+}
+
+bool Generator::unsafeDecoder() const {
+	return _unsafeDecoder;
+}
+
+void Generator::generate(const std::string &filename) {
+	prepare();
+	
+	std::ofstream out(filename,std::ios_base::out);
+	if(!out) throw std::runtime_error("Cannot open \""+filename+"\"");
+	
+	writeBanner(out);
+	writePreamble(out);
+	writeEntity(out);
+	writeArchitecture(out);
+}
+
+/*
+ * Private members
+ */
+
+void Generator::prepare() {
+	_fallbackSlave=false;
+	if(slaves()<(1<<(addrWidth()-slaveAddrWidth()))&&!unsafeDecoder())
+		_fallbackSlave=true;
+	
+	_mastersRange.assign(masters()-1,0);
+	if(_fallbackSlave) _slavesRange.assign(slaves(),0);
+	else _slavesRange.assign(slaves()-1,0);
+	
+	int q=portSize()/portGranularity();
+	
+	switch(q) {
+	case 1:
+		_addrRange.assign(addrWidth()-1,0);
+		break;
+	case 2:
+		if(addrWidth()<=1) throw std::runtime_error("Invalid master address width");
+		_addrRange.assign(addrWidth()-1,1);
+		_selRange.assign(1,0);
+		break;
+	case 4:
+		if(addrWidth()<=2) throw std::runtime_error("Invalid master address width");
+		_addrRange.assign(addrWidth()-1,2);
+		_selRange.assign(3,0);
+		break;
+	case 8:
+		if(addrWidth()<=3) throw std::runtime_error("Invalid master address width");
+		_addrRange.assign(addrWidth()-1,3);
+		_selRange.assign(7,0);
+		break;
+	default:
+		throw std::runtime_error("Invalid port size/granularity combination");
+	}
+	
+	if(slaveAddrWidth()>addrWidth()) throw std::runtime_error("Invalid slave address width");
+	if(slaves()>(1<<(addrWidth()-slaveAddrWidth()))) throw std::runtime_error("Invalid slave address width");
+	if(slaveAddrWidth()<=_addrRange.low()) throw std::runtime_error("Invalid slave address width");
+	
+	_slaveAddrRange.assign(slaveAddrWidth()-1,_addrRange.low());
+	
+	if(slaves()>1) {
+		_slaveDecoderRange.assign(_addrRange.high(),slaveAddrWidth());
+		if(unsafeDecoder()) {
+			int requiredSize=0;
+			while((1<<requiredSize)<slaves()) requiredSize++;
+			_slaveDecoderRange.assign(_slaveDecoderRange.low()+requiredSize-1,
+				_slaveDecoderRange.low());
+		}
+	}
+	_dataRange.assign(portSize()-1,0);
+}
+
+void Generator::writeBanner(std::ostream &os) {
+	auto t=std::time(NULL);
+	char szTime[256];
+	auto r=std::strftime(szTime,256,"%c",std::localtime(&t));
+	if(r==0) szTime[0]='\0';
+	
+	os<<"---------------------------------------------------------------------"<<std::endl;
+	os<<"-- Simple WISHBONE interconnect"<<std::endl;
+	os<<"--"<<std::endl;
+	os<<"-- Generated by wigen at "<<szTime<<std::endl;
+	os<<"--"<<std::endl;
+	os<<"-- Configuration:"<<std::endl;
+	os<<"--     Number of masters:     "<<masters()<<std::endl;
+	os<<"--     Number of slaves:      "<<slaves()<<std::endl;
+	os<<"--     Master address width:  "<<addrWidth()<<std::endl;
+	os<<"--     Slave address width:   "<<slaveAddrWidth()<<std::endl;
+	os<<"--     Port size:             "<<portSize()<<std::endl;
+	os<<"--     Port granularity:      "<<portGranularity()<<std::endl;
+	os<<"--     Entity name:           "<<entityName()<<std::endl;
+	os<<"--     Pipelined arbiter:     "<<(pipelinedArbiter()?"yes":"no")<<std::endl;
+	os<<"--     Registered feedback:   "<<(registeredFeedback()?"yes":"no")<<std::endl;
+	os<<"--     Unsafe slave decoder:  "<<(unsafeDecoder()?"yes":"no")<<std::endl;
+	os<<"--"<<std::endl;
+	os<<"-- Command line:"<<std::endl;
+	os<<"--     wigen -e "<<entityName();
+	if(pipelinedArbiter()) os<<" -p";
+	if(registeredFeedback()) os<<" -r";
+	if(unsafeDecoder()) os<<" -u";
+	os<<" "<<masters()<<" "<<slaves()<<" "<<addrWidth()<<" "<<slaveAddrWidth();
+	os<<" "<<portSize()<<" "<<portGranularity()<<std::endl;
+	os<<"---------------------------------------------------------------------"<<std::endl;
+	os<<std::endl;
+}
+
+void Generator::writePreamble(std::ostream &os) {
+	os<<"library ieee;"<<std::endl;
+	os<<"use ieee.std_logic_1164.all;"<<std::endl;
+	os<<std::endl;
+}
+
+void Generator::writeEntity(std::ostream &os) {
+	os<<"entity "<<entityName()<<" is"<<std::endl;
+	os<<"\tport("<<std::endl;
+	os<<"\t\tclk_i: in std_logic;"<<std::endl;
+	os<<"\t\trst_i: in std_logic;"<<std::endl;
+	os<<std::endl;
+	
+	for(int i=0;i<masters();i++) {
+		os<<"\t\ts"<<i<<"_cyc_i: in std_logic;"<<std::endl;
+		os<<"\t\ts"<<i<<"_stb_i: in std_logic;"<<std::endl;
+		os<<"\t\ts"<<i<<"_we_i: in std_logic;"<<std::endl;
+		if(_selRange.valid())
+			os<<"\t\ts"<<i<<"_sel_i: in std_logic_vector("<<_selRange.toString()<<");"<<std::endl;
+		if(registeredFeedback()) {
+			os<<"\t\ts"<<i<<"_cti_i: in std_logic_vector(2 downto 0);"<<std::endl;
+			os<<"\t\ts"<<i<<"_bte_i: in std_logic_vector(1 downto 0);"<<std::endl;
+		}
+		os<<"\t\ts"<<i<<"_ack_o: out std_logic;"<<std::endl;
+		os<<"\t\ts"<<i<<"_adr_i: in std_logic_vector("<<_addrRange.toString()<<");"<<std::endl;
+		os<<"\t\ts"<<i<<"_dat_i: in std_logic_vector("<<_dataRange.toString()<<");"<<std::endl;
+		os<<"\t\ts"<<i<<"_dat_o: out std_logic_vector("<<_dataRange.toString()<<");"<<std::endl;
+		os<<std::endl;
+	}
+	
+	for(int i=0;i<slaves();i++) {
+		os<<"\t\tm"<<i<<"_cyc_o: out std_logic;"<<std::endl;
+		os<<"\t\tm"<<i<<"_stb_o: out std_logic;"<<std::endl;
+		os<<"\t\tm"<<i<<"_we_o: out std_logic;"<<std::endl;
+		if(_selRange.valid())
+			os<<"\t\tm"<<i<<"_sel_o: out std_logic_vector("<<_selRange.toString()<<");"<<std::endl;
+		if(registeredFeedback()) {
+			os<<"\t\tm"<<i<<"_cti_o: out std_logic_vector(2 downto 0);"<<std::endl;
+			os<<"\t\tm"<<i<<"_bte_o: out std_logic_vector(1 downto 0);"<<std::endl;
+		}
+		os<<"\t\tm"<<i<<"_ack_i: in std_logic;"<<std::endl;
+		os<<"\t\tm"<<i<<"_adr_o: out std_logic_vector("<<_slaveAddrRange.toString()<<");"<<std::endl;
+		os<<"\t\tm"<<i<<"_dat_o: out std_logic_vector("<<_dataRange.toString()<<");"<<std::endl;
+		os<<"\t\tm"<<i<<"_dat_i: in std_logic_vector("<<_dataRange.toString()<<")";
+		if(i!=slaves()-1) os<<";"<<std::endl<<std::endl;
+		else os<<std::endl;
+	}
+	
+	os<<"\t);"<<std::endl;
+	os<<"end entity;"<<std::endl;
+	os<<std::endl;
+}
+
+void Generator::writeArchitecture(std::ostream &os) {
+	os<<"architecture rtl of "<<entityName()<<" is"<<std::endl;
+	os<<std::endl;
+	
+	if(masters()>1) {
+		os<<"signal request: std_logic_vector("<<
+			_mastersRange.toString()<<");"<<std::endl;
+		os<<"signal grant_next: std_logic_vector("<<
+			_mastersRange.toString()<<");"<<std::endl;
+		os<<"signal grant: std_logic_vector("<<
+			_mastersRange.toString()<<");"<<std::endl;
+		
+		if(!pipelinedArbiter()) {
+			os<<"signal grant_reg: std_logic_vector("<<
+				_mastersRange.toString()<<"):=(others=>\'0\');"<<std::endl;
+		}
+		
+		os<<std::endl;
+	}
+	
+	if(slaves()>1) {
+		os<<"signal select_slave: std_logic_vector("<<
+			_slavesRange.toString()<<");"<<std::endl;
+		os<<std::endl;
+	}
+	
+	os<<"signal cyc_mux: std_logic;"<<std::endl;
+	os<<"signal stb_mux: std_logic;"<<std::endl;
+	os<<"signal we_mux: std_logic;"<<std::endl;
+	if(_selRange.valid())
+		os<<"signal sel_mux: std_logic_vector("<<_selRange.toString()<<");"<<std::endl;
+	if(registeredFeedback()) {
+		os<<"signal cti_mux: std_logic_vector(2 downto 0);"<<std::endl;
+		os<<"signal bte_mux: std_logic_vector(1 downto 0);"<<std::endl;
+	}
+	os<<"signal adr_mux: std_logic_vector("<<_addrRange.toString()<<");"<<std::endl;
+	os<<"signal wdata_mux: std_logic_vector("<<_dataRange.toString()<<");"<<std::endl;
+	os<<std::endl;
+	
+	os<<"signal ack_mux: std_logic;"<<std::endl;
+	os<<"signal rdata_mux: std_logic_vector("<<_dataRange.toString()<<");"<<std::endl;
+	os<<std::endl;
+	
+	os<<"begin"<<std::endl;
+	os<<std::endl;
+	
+	if(masters()>1) writeArbiter(os);
+	writeMasterMux(os);
+	writeMasterDemux(os);
+	writeSlaveMux(os);
+	writeSlaveDemux(os);
+	
+	os<<"end architecture;"<<std::endl;
+}
+
+void Generator::writeArbiter(std::ostream &os) {
+	os<<"-- ARBITER"<<std::endl;
+	os<<"-- Selects the active master. Masters with lower port numbers"<<std::endl;
+	os<<"-- have higher priority. Ongoing cycles are not interrupted."<<std::endl;
+	os<<std::endl;
+	
+	os<<"request<=";
+	for(int i=_mastersRange.high();i>=_mastersRange.low();i--) {
+		os<<"s"<<i<<"_cyc_i";
+		if(i>0) os<<'&';
+	}
+	os<<';'<<std::endl<<std::endl;
+	
+	os<<"grant_next<=";
+	for(int i=0;i<masters();i++) {
+		if(i>0) os<<'\t';
+		os<<decodedLiteral(i,masters());
+		os<<" when request("<<i<<")=\'1\' else"<<std::endl;
+	}
+	os<<"\t(others=>\'0\');"<<std::endl;
+	os<<std::endl;
+	
+	if(!pipelinedArbiter()) {
+		os<<"grant<=grant_reg when (request and grant_reg)/=";
+		os<<binaryLiteral(0,masters());
+		os<<" else grant_next;"<<std::endl;
+		os<<std::endl;
+		
+		os<<"process (clk_i) is"<<std::endl;
+		os<<"begin"<<std::endl;
+		os<<"\tif rising_edge(clk_i) then"<<std::endl;
+		os<<"\t\tif rst_i=\'1\' then"<<std::endl;
+		os<<"\t\t\tgrant_reg<=(others=>\'0\');"<<std::endl;
+		os<<"\t\telse"<<std::endl;
+		os<<"\t\t\tgrant_reg<=grant;"<<std::endl;
+		os<<"\t\tend if;"<<std::endl;
+		os<<"\tend if;"<<std::endl;
+		os<<"end process;"<<std::endl;
+		os<<std::endl;
+	}
+	else {
+		os<<"process (clk_i) is"<<std::endl;
+		os<<"begin"<<std::endl;
+		os<<"\tif rising_edge(clk_i) then"<<std::endl;
+		os<<"\t\tif rst_i=\'1\' then"<<std::endl;
+		os<<"\t\t\tgrant<=(others=>\'0\');"<<std::endl;
+		os<<"\t\telsif (request and grant)="<<binaryLiteral(0,masters())<<" then"<<std::endl;
+		os<<"\t\t\tgrant<=grant_next;"<<std::endl;
+		os<<"\t\tend if;"<<std::endl;
+		os<<"\tend if;"<<std::endl;
+		os<<"end process;"<<std::endl;
+		os<<std::endl;
+	}
+}
+
+void Generator::writeMasterMux(std::ostream &os) {
+	os<<"-- MASTER->SLAVE MUX"<<std::endl;
+	os<<std::endl;
+	
+	if(masters()>1) {
+		os<<"cyc_mux<=";
+		for(int i=0;i<masters();i++) {
+			if(i>0) os<<'\t';
+			os<<"(s"<<i<<"_cyc_i and grant("<<i<<"))";
+			if(i<masters()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<std::endl;
+		
+		os<<"stb_mux<=";
+		for(int i=0;i<masters();i++) {
+			if(i>0) os<<'\t';
+			os<<"(s"<<i<<"_stb_i and grant("<<i<<"))";
+			if(i<masters()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<std::endl;
+		
+		os<<"we_mux<=";
+		for(int i=0;i<masters();i++) {
+			if(i>0) os<<'\t';
+			os<<"(s"<<i<<"_we_i and grant("<<i<<"))";
+			if(i<masters()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<std::endl;
+		
+		if(_selRange.valid()) {
+			os<<"sel_mux_gen: for i in sel_mux'range generate"<<std::endl;
+			os<<"\tsel_mux(i)<=";
+			for(int i=0;i<masters();i++) {
+				if(i>0) os<<"\t\t";
+				os<<"(s"<<i<<"_sel_i(i) and grant("<<i<<"))";
+				if(i<masters()-1) os<<" or"<<std::endl;
+				else os<<";"<<std::endl;
+			}
+			os<<"end generate;"<<std::endl;
+			os<<std::endl;
+		}
+		
+		if(registeredFeedback()) {
+			os<<"cti_mux_gen: for i in cti_mux'range generate"<<std::endl;
+			os<<"\tcti_mux(i)<=";
+			for(int i=0;i<masters();i++) {
+				if(i>0) os<<"\t\t";
+				os<<"(s"<<i<<"_cti_i(i) and grant("<<i<<"))";
+				if(i<masters()-1) os<<" or"<<std::endl;
+				else os<<";"<<std::endl;
+			}
+			os<<"end generate;"<<std::endl;
+			os<<std::endl;
+			
+			os<<"bte_mux_gen: for i in bte_mux'range generate"<<std::endl;
+			os<<"\tbte_mux(i)<=";
+			for(int i=0;i<masters();i++) {
+				if(i>0) os<<"\t\t";
+				os<<"(s"<<i<<"_bte_i(i) and grant("<<i<<"))";
+				if(i<masters()-1) os<<" or"<<std::endl;
+				else os<<";"<<std::endl;
+			}
+			os<<"end generate;"<<std::endl;
+			os<<std::endl;
+		}
+		
+		os<<"adr_mux_gen: for i in adr_mux'range generate"<<std::endl;
+		os<<"\tadr_mux(i)<=";
+		for(int i=0;i<masters();i++) {
+			if(i>0) os<<"\t\t";
+			os<<"(s"<<i<<"_adr_i(i) and grant("<<i<<"))";
+			if(i<masters()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<"end generate;"<<std::endl;
+		os<<std::endl;
+		
+		os<<"wdata_mux_gen: for i in wdata_mux'range generate"<<std::endl;
+		os<<"\twdata_mux(i)<=";
+		for(int i=0;i<masters();i++) {
+			if(i>0) os<<"\t\t";
+			os<<"(s"<<i<<"_dat_i(i) and grant("<<i<<"))";
+			if(i<masters()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<"end generate;"<<std::endl;
+		os<<std::endl;
+	}
+	else { // just one master
+		os<<"cyc_mux<=s0_cyc_i;"<<std::endl;
+		os<<"stb_mux<=s0_stb_i;"<<std::endl;
+		os<<"we_mux<=s0_we_i;"<<std::endl;
+		if(_selRange.valid()) os<<"sel_mux<=s0_sel_i;"<<std::endl;
+		if(registeredFeedback()) {
+			os<<"cti_mux<=s0_cti_i;"<<std::endl;
+			os<<"bte_mux<=s0_bte_i;"<<std::endl;
+		}
+		os<<"adr_mux<=s0_adr_i;"<<std::endl;
+		os<<"wdata_mux<=s0_dat_i;"<<std::endl;
+		os<<std::endl;
+	}
+}
+
+void Generator::writeMasterDemux(std::ostream &os) {
+	os<<"-- MASTER->SLAVE DEMUX"<<std::endl;
+	os<<std::endl;
+	
+	if(slaves()>1) {
+		os<<"select_slave<=";
+		for(int i=0;i<slaves();i++) {
+			if(i>0) os<<'\t';
+			os<<decodedLiteral(i,_slavesRange.length());
+			os<<" when adr_mux("<<_slaveDecoderRange.toString()<<")=";
+			os<<binaryLiteral(i,_slaveDecoderRange.length())<<" else"<<std::endl;
+		}
+		if(_fallbackSlave) {
+			os<<'\t'<<decodedLiteral(slaves(),_slavesRange.length())<<
+				"; -- fallback slave"<<std::endl;
+		}
+		else os<<"\t(others=>'-');"<<std::endl;
+		os<<std::endl;
+		
+		for(int i=0;i<slaves();i++) {
+			os<<'m'<<i<<"_cyc_o<=cyc_mux and select_slave("<<i<<");"<<std::endl;
+			os<<'m'<<i<<"_stb_o<=stb_mux and select_slave("<<i<<");"<<std::endl;
+			os<<'m'<<i<<"_we_o<=we_mux;"<<std::endl;
+			if(_selRange.valid()) os<<'m'<<i<<"_sel_o<=sel_mux;"<<std::endl;
+			if(registeredFeedback()) {
+				os<<'m'<<i<<"_cti_o<=cti_mux;"<<std::endl;
+				os<<'m'<<i<<"_bte_o<=bte_mux;"<<std::endl;
+			}
+			os<<'m'<<i<<"_adr_o<=adr_mux(m"<<i<<"_adr_o'range);"<<std::endl;
+			os<<'m'<<i<<"_dat_o<=wdata_mux;"<<std::endl;
+			os<<std::endl;
+		}
+	}
+	else { // just one slave
+		os<<"m0_cyc_o<=cyc_mux;"<<std::endl;
+		os<<"m0_stb_o<=stb_mux;"<<std::endl;
+		os<<"m0_we_o<=we_mux;"<<std::endl;
+		if(_selRange.valid()) os<<"m0_sel_o<=sel_mux;"<<std::endl;
+		if(registeredFeedback()) {
+			os<<"m0_cti_o<=cti_mux;"<<std::endl;
+			os<<"m0_bte_o<=bte_mux;"<<std::endl;
+		}
+		os<<"m0_adr_o<=adr_mux(m0_adr_o'range);"<<std::endl;
+		os<<"m0_dat_o<=wdata_mux;"<<std::endl;
+		os<<std::endl;
+	}
+}
+
+void Generator::writeSlaveMux(std::ostream &os) {
+	os<<"-- SLAVE->MASTER MUX"<<std::endl;
+	os<<std::endl;
+	
+	if(slaves()>1) {
+		os<<"ack_mux<=";
+		for(int i=0;i<slaves();i++) {
+			if(i>0) os<<'\t';
+			os<<"(m"<<i<<"_ack_i and select_slave("<<i<<"))";
+			if(i<slaves()-1||_fallbackSlave) os<<" or"<<std::endl;
+			else os<<';'<<std::endl;
+		}
+		if(_fallbackSlave) {
+			os<<"\t(cyc_mux and stb_mux and select_slave("<<slaves()<<
+				")); -- fallback slave"<<std::endl;
+		}
+		os<<std::endl;
+		
+		os<<"rdata_mux_gen: for i in rdata_mux'range generate"<<std::endl;
+		os<<"\trdata_mux(i)<=";
+		for(int i=0;i<slaves();i++) {
+			if(i>0) os<<"\t\t";
+			os<<"(m"<<i<<"_dat_i(i) and select_slave("<<i<<"))";
+			if(i<slaves()-1) os<<" or"<<std::endl;
+			else os<<";"<<std::endl;
+		}
+		os<<"end generate;"<<std::endl;
+		os<<std::endl;
+	}
+	else { // just one slave
+		os<<"ack_mux<=m0_ack_i;"<<std::endl;
+		os<<"rdata_mux<=m0_dat_i;"<<std::endl;
+		os<<std::endl;
+	}
+}
+
+void Generator::writeSlaveDemux(std::ostream &os) {
+	os<<"-- SLAVE->MASTER DEMUX"<<std::endl;
+	os<<std::endl;
+	
+	if(masters()>1) {
+		for(int i=0;i<masters();i++) {
+			os<<'s'<<i<<"_ack_o<=ack_mux and grant("<<i<<");"<<std::endl;
+			os<<'s'<<i<<"_dat_o<=rdata_mux;"<<std::endl;
+			os<<std::endl;
+		}
+	}
+	else { // just one master
+		os<<"s0_ack_o<=ack_mux;"<<std::endl;
+		os<<"s0_dat_o<=rdata_mux;"<<std::endl;
+		os<<std::endl;
+	}
+}
+
+std::string Generator::binaryLiteral(int value,int n) {
+	std::ostringstream oss;
+	oss.put('\"');
+	for(int i=n-1;i>=0;i--) {
+		if(value>=static_cast<int>(sizeof(int)*8)) oss.put('0');
+		else if((value>>i)&1) oss.put('1');
+		else oss.put('0');
+	}
+	oss.put('\"');
+	return oss.str();
+}
+
+std::string Generator::decodedLiteral(int value,int n) {
+	std::ostringstream oss;
+	oss.put('\"');
+	for(int i=n-1;i>=0;i--) {
+		if(value==i) oss.put('1');
+		else oss.put('0');
+	}
+	oss.put('\"');
+	return oss.str();
+}

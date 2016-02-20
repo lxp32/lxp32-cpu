@@ -1,0 +1,10 @@
+/.Xil
+/xsim.dir
+webtalk*
+xelab*
+xsim*
+xvhdl*
+hs_err*
+vivado*
+*.stamp
+*.wdb

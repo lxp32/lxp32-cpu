@@ -1,0 +1,5 @@
+*.vcd
+*.cf
+*.o
+tb
+compile.stamp

@@ -38,7 +38,7 @@ clean:
 # Normal targets
 ########################
 
-compile.stamp: $(LXP32_RTL) $(TB_SRC)
-	xvhdl$(BAT) $(LXP32_RTL) $(TB_SRC)
+compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
+	xvhdl$(BAT) $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
 	xelab$(BAT) work.tb -s tb_sim -debug typical
 	echo > compile.stamp

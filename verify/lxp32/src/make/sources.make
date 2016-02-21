@@ -22,6 +22,11 @@ LXP32_RTL=$(LXP32_DIR)/lxp32_mul16x16.vhd\
 	$(LXP32_DIR)/lxp32_icache.vhd\
 	$(LXP32_DIR)/lxp32c_top.vhd
 
+# Common package
+
+COMMON_PKG_DIR=../../../common_pkg
+COMMON_SRC=$(COMMON_PKG_DIR)/common_pkg.vhd $(COMMON_PKG_DIR)/common_pkg_body.vhd
+
 # Platform RTL
 
 PLATFORM_DIR=../../src/platform
@@ -39,9 +44,7 @@ PLATFORM_RTL=$(PLATFORM_DIR)/generic_dpram.vhd\
 
 COMMON_PKG_DIR=../../../common_pkg
 TB_DIR=../../src/tb
-TB_SRC=$(COMMON_PKG_DIR)/common_pkg.vhd\
-	$(COMMON_PKG_DIR)/common_pkg_body.vhd\
-	$(TB_DIR)/tb_pkg.vhd\
+TB_SRC=$(TB_DIR)/tb_pkg.vhd\
 	$(TB_DIR)/tb_pkg_body.vhd\
 	$(TB_DIR)/monitor.vhd\
 	$(TB_DIR)/tb.vhd

@@ -20,6 +20,7 @@ package common_pkg is
 	-- Output is stored in x
 	procedure rand(variable st: inout rng_state_type; a,b: integer; variable x: out integer);
 	
-	-- Convert std_logic_vector to a hexadecimal string
+	-- Convert std_logic_vector to a hexadecimal string (similar to
+	-- the "to_hstring" function from VHDL-2008
 	function hex_string(x: std_logic_vector) return string;
 end package;

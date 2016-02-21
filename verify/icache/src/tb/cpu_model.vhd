@@ -45,11 +45,10 @@ signal request_addr: std_logic_vector(29 downto 0);
 
 signal finish: std_logic:='0';
 
-shared variable current_latency: integer:=1;
-shared variable max_latency: integer:=-1;
-shared variable total_latency: integer:=0;
-shared variable total_requests: integer:=0;
-shared variable spurious_misses: integer:=0;
+signal current_latency: integer:=1;
+signal max_latency: integer:=-1;
+signal total_latency: integer:=0;
+signal spurious_misses: integer:=0;
 
 begin
 
@@ -61,6 +60,7 @@ process is
 	variable delay: integer;
 	variable rng_state: rng_state_type;
 	variable r: integer;
+	variable total_requests: integer:=0;
 begin
 	while b<=BLOCKS loop
 		rand(rng_state,1,10,r);
@@ -152,23 +152,28 @@ begin
 	if rising_edge(clk_i) then
 		if lli_busy_i='0' then
 			if request='1' then
-				total_latency:=total_latency+current_latency;
+				total_latency<=total_latency+current_latency;
 				if current_latency>max_latency then
-					max_latency:=current_latency;
+					max_latency<=current_latency;
 				end if;
 			end if;
-			current_latency:=1;
+			current_latency<=1;
 		else
 			if lli_dat_i=(("00"&request_addr) xor xor_constant) and current_latency=1 then
-				spurious_misses:=spurious_misses+1;
+				spurious_misses<=spurious_misses+1;
 			end if;
-			current_latency:=current_latency+1;
+			current_latency<=current_latency+1;
 		end if;
 	end if;
 end process;
 
-assert not rising_edge(clk_i) or lli_busy_i='0' or request='1'
-	report "LLI busy signal asserted without a request"
-	severity failure;
+process (clk_i) is
+begin
+	if rising_edge(clk_i) then
+		assert lli_busy_i='0' or request='1'
+			report "LLI busy signal asserted without a request"
+			severity failure;
+	end if;
+end process;
 
 end architecture;

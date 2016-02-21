@@ -6,26 +6,20 @@
 -- Copyright (c) 2016 by Alex I. Kuznetsov
 ---------------------------------------------------------------------
 
-use std.textio.all;
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 package body common_pkg is
-	impure function rand return integer is
-		variable r: unsigned(63 downto 0);
-	begin
-		r:=rand_state*to_unsigned(1103515245,32)+12345;
-		rand_state:=r(rand_state'range);
-		return to_integer(rand_state(30 downto 16));
-	end function;
-	
-	impure function rand(a: integer; b: integer) return integer is
+	procedure rand(variable st: inout rng_state_type; a,b: integer; variable x: out integer) is
+		variable r: real;
 	begin
 		assert a<=b report "Invalid range" severity failure;
-		return (rand mod (b-a+1))+a;
-	end function;
+		uniform(st.seed1,st.seed2,r);
+		r:=r*real(b-a+1);
+		x:=a+integer(floor(r));
+	end procedure;
 	
 	function hex_string(x: std_logic_vector) return string is
 		variable xx: std_logic_vector(x'length-1 downto 0);

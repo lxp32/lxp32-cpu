@@ -73,11 +73,9 @@ signal mul_result: std_logic_vector(31 downto 0);
 signal mul_ce: std_logic;
 signal mul_we: std_logic;
 
-signal div_quotient: std_logic_vector(31 downto 0);
-signal div_remainder: std_logic_vector(31 downto 0);
+signal div_result: std_logic_vector(31 downto 0);
 signal div_ce: std_logic;
 signal div_we: std_logic;
-signal div_select_remainder: std_logic;
 
 signal shift_result: std_logic_vector(31 downto 0);
 signal shift_ce: std_logic;
@@ -191,26 +189,16 @@ gen_divider: if DIVIDER_EN generate
 			op1_i=>op1_i,
 			op2_i=>op2_i,
 			signed_i=>cmd_signed_i,
+			rem_i=>cmd_div_mod_i,
 			ce_o=>div_we,
-			quotient_o=>div_quotient,
-			remainder_o=>div_remainder
+			result_o=>div_result
 		);
 end generate;
 
 gen_no_divider: if not DIVIDER_EN generate
 	div_we<=div_ce;
-	div_quotient<=(others=>'0');
-	div_remainder<=(others=>'0');
+	div_result<=(others=>'0');
 end generate;
-
-process (clk_i) is
-begin
-	if rising_edge(clk_i) then
-		if div_ce='1' then
-			div_select_remainder<=cmd_div_mod_i;
-		end if;
-	end if;
-end process;
 
 -- Shifter
 
@@ -237,8 +225,7 @@ result_mux_gen: for i in result_mux'range generate
 		(or_result(i) and or_we) or
 		(xor_result(i) and xor_we) or
 		(mul_result(i) and mul_we) or
-		(div_quotient(i) and div_we and not div_select_remainder) or
-		(div_remainder(i) and div_we and div_select_remainder) or
+		(div_result(i) and div_we) or
 		(shift_result(i) and shift_we);
 end generate;
 

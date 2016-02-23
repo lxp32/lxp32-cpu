@@ -21,9 +21,9 @@ entity lxp32_divider is
 		op1_i: in std_logic_vector(31 downto 0);
 		op2_i: in std_logic_vector(31 downto 0);
 		signed_i: in std_logic;
+		rem_i: in std_logic;
 		ce_o: out std_logic;
-		quotient_o: out std_logic_vector(31 downto 0);
-		remainder_o: out std_logic_vector(31 downto 0)
+		result_o: out std_logic_vector(31 downto 0)
 	);
 end entity;
 
@@ -38,8 +38,7 @@ signal compl2_mux: std_logic_vector(31 downto 0);
 signal compl1_out: std_logic_vector(31 downto 0);
 signal compl2_out: std_logic_vector(31 downto 0);
 
-signal inv_q: std_logic;
-signal inv_r: std_logic;
+signal inv_res: std_logic;
 
 -- Divider FSM signals
 
@@ -47,6 +46,7 @@ signal fsm_ce: std_logic:='0';
 
 signal dividend: unsigned(31 downto 0);
 signal divisor: unsigned(32 downto 0);
+signal want_remainder: std_logic;
 
 signal partial_remainder: unsigned(32 downto 0);
 signal addend: unsigned(32 downto 0);
@@ -61,16 +61,17 @@ signal ceo: std_logic:='0';
 -- Output restoration signals
 
 signal remainder_corrector: unsigned(31 downto 0);
-signal remainder_res: unsigned(31 downto 0);
-signal quotient_res: unsigned(31 downto 0);
+signal quotient_pos: unsigned(31 downto 0);
+signal remainder_pos: unsigned(31 downto 0);
+signal result_pos: unsigned(31 downto 0);
 
 begin
 
-compl1_inv<=op1_i(31) and signed_i when ce_i='1' else inv_q;
-compl2_inv<=op2_i(31) and signed_i when ce_i='1' else inv_r;
+compl1_inv<=op1_i(31) and signed_i when ce_i='1' else inv_res;
+compl2_inv<=op2_i(31) and signed_i;
 
-compl1_mux<=op1_i when ce_i='1' else std_logic_vector(quotient_res);
-compl2_mux<=op2_i when ce_i='1' else std_logic_vector(remainder_res);
+compl1_mux<=op1_i when ce_i='1' else std_logic_vector(result_pos);
+compl2_mux<=op2_i;
 
 compl_op1_inst: entity work.lxp32_compl(rtl)
 	port map(
@@ -96,8 +97,12 @@ begin
 		else
 			fsm_ce<=ce_i;
 			if ce_i='1' then
-				inv_q<=(op1_i(31) xor op2_i(31)) and signed_i;
-				inv_r<=op1_i(31) and signed_i;
+				want_remainder<=rem_i;
+				if rem_i='1' then
+					inv_res<=op1_i(31) and signed_i;
+				else
+					inv_res<=(op1_i(31) xor op2_i(31)) and signed_i;
+				end if;
 			end if;
 		end if;
 	end if;
@@ -112,7 +117,7 @@ end generate;
 sum<=partial_remainder+addend+(to_unsigned(0,32)&sum_subtract);
 sum_positive<=not sum(32);
 
--- Divisor state machine
+-- Divider state machine
 
 process (clk_i) is
 begin
@@ -153,13 +158,15 @@ begin
 		for i in remainder_corrector'range loop
 			remainder_corrector(i)<=divisor(i) and not sum_positive;
 		end loop;
-		quotient_res<=dividend;
-		remainder_res<=partial_remainder(32 downto 1)+remainder_corrector;
+		if want_remainder='1' then
+			result_pos<=partial_remainder(32 downto 1)+remainder_corrector;
+		else
+			result_pos<=dividend;
+		end if;
 	end if;
 end process;
 
-quotient_o<=compl1_out;
-remainder_o<=compl2_out;
+result_o<=compl1_out;
 ce_o<=ceo;
 
 end architecture;

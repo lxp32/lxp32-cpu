@@ -31,12 +31,9 @@ architecture rtl of lxp32_divider is
 
 -- Complementor signals
 
-signal compl1_inv: std_logic;
-signal compl2_inv: std_logic;
-signal compl1_mux: std_logic_vector(31 downto 0);
-signal compl2_mux: std_logic_vector(31 downto 0);
-signal compl1_out: std_logic_vector(31 downto 0);
-signal compl2_out: std_logic_vector(31 downto 0);
+signal compl_inv: std_logic;
+signal compl_mux: std_logic_vector(31 downto 0);
+signal compl_out: std_logic_vector(31 downto 0);
 
 signal inv_res: std_logic;
 
@@ -61,32 +58,22 @@ signal ceo: std_logic:='0';
 -- Output restoration signals
 
 signal remainder_corrector: unsigned(31 downto 0);
+signal remainder_corrector_1: std_logic;
 signal quotient_pos: unsigned(31 downto 0);
 signal remainder_pos: unsigned(31 downto 0);
 signal result_pos: unsigned(31 downto 0);
 
 begin
 
-compl1_inv<=op1_i(31) and signed_i when ce_i='1' else inv_res;
-compl2_inv<=op2_i(31) and signed_i;
-
-compl1_mux<=op1_i when ce_i='1' else std_logic_vector(result_pos);
-compl2_mux<=op2_i;
+compl_inv<=op1_i(31) and signed_i when ce_i='1' else inv_res;
+compl_mux<=op1_i when ce_i='1' else std_logic_vector(result_pos);
 
 compl_op1_inst: entity work.lxp32_compl(rtl)
 	port map(
 		clk_i=>clk_i,
-		compl_i=>compl1_inv,
-		d_i=>compl1_mux,
-		d_o=>compl1_out
-	);
-
-compl_op2_inst: entity work.lxp32_compl(rtl)
-	port map(
-		clk_i=>clk_i,
-		compl_i=>compl2_inv,
-		d_i=>compl2_mux,
-		d_o=>compl2_out
+		compl_i=>compl_inv,
+		d_i=>compl_mux,
+		d_o=>compl_out
 	);
 
 process (clk_i) is
@@ -127,15 +114,17 @@ begin
 			ceo<='0';
 		else
 			ceo<='0';
-			if fsm_ce='1' then
-				dividend<=unsigned(compl1_out(30 downto 0)&"0");
-				divisor<=unsigned("0"&compl2_out);
-				partial_remainder<=to_unsigned(0,32)&compl1_out(31);
-				sum_subtract<='1';
+			if ce_i='1' then
+				divisor(31 downto 0)<=unsigned(op2_i);
+				divisor(32)<=op2_i(31) and signed_i;
+			elsif fsm_ce='1' then
+				dividend<=unsigned(compl_out(30 downto 0)&"0");
+				partial_remainder<=to_unsigned(0,32)&compl_out(31);
+				sum_subtract<=not divisor(32);
 				cnt<=34;
 			elsif cnt>0 then
 				partial_remainder<=sum(31 downto 0)&dividend(31);
-				sum_subtract<=sum_positive;
+				sum_subtract<=sum_positive xor divisor(32);
 				dividend<=dividend(30 downto 0)&sum_positive;
 				if cnt=1 then
 					ceo<='1';
@@ -156,17 +145,19 @@ process (clk_i) is
 begin
 	if rising_edge(clk_i) then
 		for i in remainder_corrector'range loop
-			remainder_corrector(i)<=divisor(i) and not sum_positive;
+			remainder_corrector(i)<=(divisor(i) xor divisor(32)) and not sum_positive;
 		end loop;
+		remainder_corrector_1<=divisor(32) and not sum_positive;
 		if want_remainder='1' then
-			result_pos<=partial_remainder(32 downto 1)+remainder_corrector;
+			result_pos<=partial_remainder(32 downto 1)+remainder_corrector+
+				(to_unsigned(0,31)&remainder_corrector_1);
 		else
 			result_pos<=dividend;
 		end if;
 	end if;
 end process;
 
-result_o<=compl1_out;
+result_o<=compl_out;
 ce_o<=ceo;
 
 end architecture;

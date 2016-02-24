@@ -76,7 +76,11 @@ port_a_dont_care_gen: if MODE="DONTCARE" generate
 					ram(to_integer(unsigned(addra_i)))<=da_i;
 					da_o<=(others=>'-');
 				else
-					da_o<=ram(to_integer(to_01(unsigned(addra_i))));
+					if is_x(addra_i) then
+						da_o<=(others=>'X');
+					else
+						da_o<=ram(to_integer(unsigned(addra_i)));
+					end if;
 				end if;
 			end if;
 		end if;
@@ -92,7 +96,11 @@ port_a_write_first_gen: if MODE="WR_FIRST" generate
 					ram(to_integer(unsigned(addra_i)))<=da_i;
 					da_o<=da_i;
 				else
-					da_o<=ram(to_integer(to_01(unsigned(addra_i))));
+					if is_x(addra_i) then
+						da_o<=(others=>'X');
+					else
+						da_o<=ram(to_integer(unsigned(addra_i)));
+					end if;
 				end if;
 			end if;
 		end if;
@@ -107,7 +115,11 @@ port_a_read_first_gen: if MODE="RD_FIRST" generate
 				if wea_i='1' then
 					ram(to_integer(unsigned(addra_i)))<=da_i;
 				end if;
-				da_o<=ram(to_integer(to_01(unsigned(addra_i))));
+				if is_x(addra_i) then
+					da_o<=(others=>'X');
+				else
+					da_o<=ram(to_integer(unsigned(addra_i)));
+				end if;
 			end if;
 		end if;
 	end process;
@@ -121,7 +133,11 @@ port_a_no_change_gen: if MODE="NOCHANGE" generate
 				if wea_i='1' then
 					ram(to_integer(unsigned(addra_i)))<=da_i;
 				else
-					da_o<=ram(to_integer(to_01(unsigned(addra_i))));
+					if is_x(addra_i) then
+						da_o<=(others=>'X');
+					else
+						da_o<=ram(to_integer(unsigned(addra_i)));
+					end if;
 				end if;
 			end if;
 		end if;
@@ -134,7 +150,11 @@ process (clkb_i) is
 begin
 	if rising_edge(clkb_i) then
 		if ceb_i='1' then
-			db_o<=ram(to_integer(to_01(unsigned(addrb_i))));
+			if is_x(addrb_i) then
+				db_o<=(others=>'X');
+			else
+				db_o<=ram(to_integer(unsigned(addrb_i)));
+			end if;
 		end if;
 	end if;
 end process;

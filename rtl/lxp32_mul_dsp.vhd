@@ -28,9 +28,9 @@ end entity;
 
 architecture rtl of lxp32_mul_dsp is
 
-signal pp00: unsigned(31 downto 0);
-signal pp01: unsigned(31 downto 0);
-signal pp10: unsigned(31 downto 0);
+signal pp00: std_logic_vector(31 downto 0);
+signal pp01: std_logic_vector(31 downto 0);
+signal pp10: std_logic_vector(31 downto 0);
 
 signal product: unsigned(31 downto 0);
 
@@ -43,7 +43,7 @@ mul00_inst: entity work.lxp32_mul16x16
 		clk_i=>clk_i,
 		a_i=>op1_i(15 downto 0),
 		b_i=>op2_i(15 downto 0),
-		unsigned(p_o)=>pp00
+		p_o=>pp00
 	);
 
 mul01_inst: entity work.lxp32_mul16x16
@@ -51,7 +51,7 @@ mul01_inst: entity work.lxp32_mul16x16
 		clk_i=>clk_i,
 		a_i=>op1_i(15 downto 0),
 		b_i=>op2_i(31 downto 16),
-		unsigned(p_o)=>pp01
+		p_o=>pp01
 	);
 
 mul10_inst: entity work.lxp32_mul16x16
@@ -59,11 +59,11 @@ mul10_inst: entity work.lxp32_mul16x16
 		clk_i=>clk_i,
 		a_i=>op1_i(31 downto 16),
 		b_i=>op2_i(15 downto 0),
-		unsigned(p_o)=>pp10
+		p_o=>pp10
 	);
 
-product(31 downto 16)<=pp00(31 downto 16)+pp01(15 downto 0)+pp10(15 downto 0);
-product(15 downto 0)<=pp00(15 downto 0);
+product(31 downto 16)<=unsigned(pp00(31 downto 16))+unsigned(pp01(15 downto 0))+unsigned(pp10(15 downto 0));
+product(15 downto 0)<=unsigned(pp00(15 downto 0));
 result_o<=std_logic_vector(product);
 
 process (clk_i) is

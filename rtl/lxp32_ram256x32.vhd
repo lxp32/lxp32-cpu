@@ -58,7 +58,11 @@ process (rclk_i) is
 begin
 	if rising_edge(rclk_i) then
 		if re_i='1' then
-			rdata_o<=ram(to_integer(to_01(unsigned(raddr_i))));
+			if is_x(raddr_i) then -- to avoid numeric_std warnings during simulation
+				rdata_o<=(others=>'X');
+			else
+				rdata_o<=ram(to_integer(unsigned(raddr_i)));
+			end if;
 		end if;
 	end if;
 end process;

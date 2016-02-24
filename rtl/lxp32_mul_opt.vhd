@@ -110,21 +110,25 @@ begin
 			ceo<='0';
 			cnt<=0;
 		else
-			ceo<='0';
+			if cnt=1 then
+				ceo<='1';
+			else
+				ceo<='0';
+			end if;
+			
 			if ce_i='1' then
 				cnt<=4;
 				reg1<=unsigned(op1_i);
 				reg2<=unsigned(op2_i);
 				acc_sum<=(others=>'0');
 				acc_carry<=(others=>'0');
-			elsif cnt>0 then
+			else
 				acc_sum<=pp_sum(7);
 				acc_carry<=pp_carry(7)(acc_carry'range);
 				reg1<=reg1(reg1'high-8 downto 0)&X"00";
 				reg2<=X"00"&reg2(reg2'high downto 8);
-				cnt<=cnt-1;
-				if cnt=1 then
-					ceo<='1';
+				if cnt>0 then
+					cnt<=cnt-1;
 				end if;
 			end if;
 		end if;

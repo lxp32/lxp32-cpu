@@ -59,8 +59,6 @@ signal ceo: std_logic:='0';
 
 signal remainder_corrector: unsigned(31 downto 0);
 signal remainder_corrector_1: std_logic;
-signal quotient_pos: unsigned(31 downto 0);
-signal remainder_pos: unsigned(31 downto 0);
 signal result_pos: unsigned(31 downto 0);
 
 begin
@@ -113,7 +111,12 @@ begin
 			cnt<=0;
 			ceo<='0';
 		else
-			ceo<='0';
+			if cnt=1 then
+				ceo<='1';
+			else
+				ceo<='0';
+			end if;
+			
 			if ce_i='1' then
 				divisor(31 downto 0)<=unsigned(op2_i);
 				divisor(32)<=op2_i(31) and signed_i;
@@ -122,18 +125,13 @@ begin
 				partial_remainder<=to_unsigned(0,32)&compl_out(31);
 				sum_subtract<=not divisor(32);
 				cnt<=34;
-			elsif cnt>0 then
+			else
 				partial_remainder<=sum(31 downto 0)&dividend(31);
 				sum_subtract<=sum_positive xor divisor(32);
 				dividend<=dividend(30 downto 0)&sum_positive;
-				if cnt=1 then
-					ceo<='1';
+				if cnt>0 then
+					cnt<=cnt-1;
 				end if;
-				cnt<=cnt-1;
-			else
-				dividend<=(others=>'-');
-				divisor<=(others=>'-');
-				partial_remainder<=(others=>'-');
 			end if;
 		end if;
 	end if;

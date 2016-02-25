@@ -8,6 +8,8 @@
 -- Simulates LXP32 test platform, verifies results.
 --
 -- Parameters:
+--     CPU_DBUS_RMW:    DBUS_RMW CPU generic
+--     CPU_MUL_ARCH:    MUL_ARCH CPU generic
 --     MODEL_LXP32C:    when true, simulates LXP32C variant (with
 --                      instruction cache), otherwise LXP32U
 --     TEST_CASE:       If non-empty, selects a test case to run.
@@ -29,6 +31,8 @@ use work.tb_pkg.all;
 
 entity tb is
 	generic(
+		CPU_DBUS_RMW: boolean:=false;
+		CPU_MUL_ARCH: string:="dsp";
 		MODEL_LXP32C: boolean:=true;
 		TEST_CASE: string:="";
 		THROTTLE_DBUS: boolean:=true;
@@ -55,6 +59,8 @@ begin
 
 dut: entity work.platform(rtl)
 	generic map(
+		CPU_DBUS_RMW=>CPU_DBUS_RMW,
+		CPU_MUL_ARCH=>CPU_MUL_ARCH,
 		MODEL_LXP32C=>MODEL_LXP32C,
 		THROTTLE_DBUS=>THROTTLE_DBUS,
 		THROTTLE_IBUS=>THROTTLE_IBUS

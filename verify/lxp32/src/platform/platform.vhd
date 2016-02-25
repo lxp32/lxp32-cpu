@@ -17,6 +17,8 @@ use ieee.std_logic_1164.all;
 
 entity platform is
 	generic(
+		CPU_DBUS_RMW: boolean;
+		CPU_MUL_ARCH: string;
 		MODEL_LXP32C: boolean;
 		THROTTLE_DBUS: boolean;
 		THROTTLE_IBUS: boolean
@@ -178,9 +180,9 @@ cpu_irq<="00000"&coprocessor_irq&timer_elapsed&timer_elapsed;
 gen_lxp32u: if not MODEL_LXP32C generate
 	lxp32u_top_inst: entity work.lxp32u_top(rtl)
 		generic map(
-			DBUS_RMW=>false,
+			DBUS_RMW=>CPU_DBUS_RMW,
 			DIVIDER_EN=>true,
-			MUL_ARCH=>"dsp",
+			MUL_ARCH=>CPU_MUL_ARCH,
 			START_ADDR=>(others=>'0')
 		)
 		port map(
@@ -208,11 +210,11 @@ end generate;
 gen_lxp32c: if MODEL_LXP32C generate
 	lxp32c_top_inst: entity work.lxp32c_top(rtl)
 		generic map(
-			DBUS_RMW=>false,
+			DBUS_RMW=>CPU_DBUS_RMW,
 			DIVIDER_EN=>true,
 			IBUS_BURST_SIZE=>16,
 			IBUS_PREFETCH_SIZE=>32,
-			MUL_ARCH=>"dsp",
+			MUL_ARCH=>CPU_MUL_ARCH,
 			START_ADDR=>(others=>'0')
 		)
 		port map(

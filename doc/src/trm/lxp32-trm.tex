@@ -601,6 +601,8 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 Simulation parameters can be configured by overriding generics defined by the \shellcmd{tb} design unit:
 
 \begin{itemize}
+	\item \code{CPU\_DBUS\_RMW} -- \code{DBUS\_RMW} CPU generic value (see Section \ref{sec:generics}).
+	\item \code{CPU\_MUL\_ARCH} -- \code{MUL\_ARCH} CPU generic value (see Section \ref{sec:generics}).
 	\item \code{MODEL\_LXP32C} -- simulate the \lxp{}C version. By default, this option is set to \code{true}. If set to \code{false}, \lxp{}U is simulated instead.
 	\item \code{TEST\_CASE} -- if set to a non-empty string, specifies the file name of a test case to run. If set to an empty string (default), all tests are executed.
 	\item \code{THROTTLE\_DBUS} -- perform pseudo-random data bus throttling. By default, this option is set to \code{true}.

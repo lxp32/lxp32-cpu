@@ -494,6 +494,8 @@ Typical timing diagrams for write and read cycles are shown on Figure \ref{fig:d
 
 These design units contain behavioral description of respective hardware that is recognizable by FPGA synthesis tools. Usually no adjustments are needed as the synthesizer will automatically infer an appropriate primitive from its behavioral description. If automatic inference produces unsatisfactory results, these design units can be replaced with library element wrappers. The same is true for ASIC logic synthesis software which is unlikely to infer complex primitives.
 
+\lxp{} implements its own bypass logic dealing with situations when RAM read and write addresses collide. It does not depend on the read/write conflict resolution behavior of the underlying primitive.
+
 \subsection{General optimization guidelines}
 
 This subsection contains general advice on achieving satisfactory synthesis results regardless of the optimization goal. Some of these suggestions are also mentioned in other parts of this manual.

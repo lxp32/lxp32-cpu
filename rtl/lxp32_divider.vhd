@@ -120,7 +120,9 @@ begin
 			if ce_i='1' then
 				divisor(31 downto 0)<=unsigned(op2_i);
 				divisor(32)<=op2_i(31) and signed_i;
-			elsif fsm_ce='1' then
+			end if;
+			
+			if fsm_ce='1' then
 				dividend<=unsigned(compl_out(30 downto 0)&"0");
 				partial_remainder<=to_unsigned(0,32)&compl_out(31);
 				sum_subtract<=not divisor(32);

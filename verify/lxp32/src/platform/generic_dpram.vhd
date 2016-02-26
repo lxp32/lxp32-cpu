@@ -49,7 +49,7 @@ type ram_type is array(SIZE-1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 
 signal ram: ram_type;
 
 attribute syn_ramstyle: string;
-attribute syn_ramstyle of ram: signal is "block_ram,no_rw_check";
+attribute syn_ramstyle of ram: signal is "no_rw_check";
 attribute ram_style: string; -- for Xilinx
 attribute ram_style of ram: signal is "block";
 

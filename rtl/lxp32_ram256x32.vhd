@@ -35,7 +35,7 @@ type ram_type is array(255 downto 0) of std_logic_vector(31 downto 0);
 signal ram: ram_type:=(others=>(others=>'0')); -- zero-initialize for SRAM-based FPGAs
 
 attribute syn_ramstyle: string;
-attribute syn_ramstyle of ram: signal is "block_ram,no_rw_check";
+attribute syn_ramstyle of ram: signal is "no_rw_check";
 attribute ram_style: string; -- for Xilinx
 attribute ram_style of ram: signal is "block";
 

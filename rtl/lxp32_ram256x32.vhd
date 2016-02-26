@@ -17,12 +17,12 @@ use ieee.numeric_std.all;
 
 entity lxp32_ram256x32 is
 	port(
-		wclk_i: in std_logic;
+		clk_i: in std_logic;
+		
 		we_i: in std_logic;
 		waddr_i: in std_logic_vector(7 downto 0);
 		wdata_i: in std_logic_vector(31 downto 0);
 		
-		rclk_i: in std_logic;
 		re_i: in std_logic;
 		raddr_i: in std_logic_vector(7 downto 0);
 		rdata_o: out std_logic_vector(31 downto 0)
@@ -43,9 +43,9 @@ begin
 
 -- Write port
 
-process (wclk_i) is
+process (clk_i) is
 begin
-	if rising_edge(wclk_i) then
+	if rising_edge(clk_i) then
 		if we_i='1' then
 			ram(to_integer(unsigned(waddr_i)))<=wdata_i;
 		end if;
@@ -54,9 +54,9 @@ end process;
 
 -- Read port
 
-process (rclk_i) is
+process (clk_i) is
 begin
-	if rising_edge(rclk_i) then
+	if rising_edge(clk_i) then
 		if re_i='1' then
 			if is_x(raddr_i) then -- to avoid numeric_std warnings during simulation
 				rdata_o<=(others=>'X');

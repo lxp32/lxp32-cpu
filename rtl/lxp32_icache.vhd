@@ -111,12 +111,12 @@ ram_re<=lli_re_i or miss;
 
 ram_inst: entity work.lxp32_ram256x32(rtl)
 	port map(
-		wclk_i=>clk_i,
+		clk_i=>clk_i,
+		
 		we_i=>ram_we,
 		waddr_i=>ram_waddr,
 		wdata_i=>wbm_dat_i,
 		
-		rclk_i=>clk_i,
 		re_i=>ram_re,
 		raddr_i=>ram_raddr,
 		rdata_o=>lli_dat_o

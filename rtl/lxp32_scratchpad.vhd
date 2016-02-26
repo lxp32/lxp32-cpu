@@ -42,12 +42,12 @@ begin
 
 ram_inst1: entity work.lxp32_ram256x32(rtl)
 	port map(
-		wclk_i=>clk_i,
+		clk_i=>clk_i,
+		
 		we_i=>we_i,
 		waddr_i=>waddr_i,
 		wdata_i=>wdata_i,
 		
-		rclk_i=>clk_i,
 		re_i=>'1',
 		raddr_i=>raddr1_i,
 		rdata_o=>ram1_rdata
@@ -57,12 +57,12 @@ ram_inst1: entity work.lxp32_ram256x32(rtl)
 
 ram_inst2: entity work.lxp32_ram256x32(rtl)
 	port map(
-		wclk_i=>clk_i,
+		clk_i=>clk_i,
+		
 		we_i=>we_i,
 		waddr_i=>waddr_i,
 		wdata_i=>wdata_i,
 		
-		rclk_i=>clk_i,
 		re_i=>'1',
 		raddr_i=>raddr2_i,
 		rdata_o=>ram2_rdata

@@ -62,12 +62,8 @@ signal cmp_carry: std_logic;
 signal cmp_s1: std_logic;
 signal cmp_s2: std_logic;
 
-signal and_result: std_logic_vector(31 downto 0);
-signal and_we: std_logic;
-signal or_result: std_logic_vector(31 downto 0);
-signal or_we: std_logic;
-signal xor_result: std_logic_vector(31 downto 0);
-signal xor_we: std_logic;
+signal logic_result: std_logic_vector(31 downto 0);
+signal logic_we: std_logic;
 
 signal mul_result: std_logic_vector(31 downto 0);
 signal mul_ce: std_logic;
@@ -124,14 +120,15 @@ cmp_sg_o<=((cmp_s1 and cmp_s2 and cmp_carry) or
 	(not cmp_s1 and not cmp_s2 and cmp_carry) or
 	(not cmp_s1 and cmp_s2)) and not cmp_eq;
 
--- Logical functions
+-- Bitwise operations (and, or, xor)
 
-and_result<=op1_i and op2_i;
-and_we<=cmd_and_i and valid_i;
-or_result<=op1_i or op2_i;
-or_we<=cmd_or_i and valid_i;
-xor_result<=op1_i xor op2_i;
-xor_we<=cmd_xor_i and valid_i;
+logic_result_gen: for i in logic_result'range generate
+	logic_result(i)<=((op1_i(i) and op2_i(i)) and cmd_and_i) or
+		((op1_i(i) or op2_i(i)) and cmd_or_i) or
+		((op1_i(i) xor op2_i(i)) and cmd_xor_i);
+end generate;
+
+logic_we<=(cmd_and_i or cmd_or_i or cmd_xor_i) and valid_i;
 
 -- Multiplier
 
@@ -221,9 +218,7 @@ shifter_inst: entity work.lxp32_shifter(rtl)
 
 result_mux_gen: for i in result_mux'range generate
 	result_mux(i)<=(adder_result(i) and adder_we) or
-		(and_result(i) and and_we) or
-		(or_result(i) and or_we) or
-		(xor_result(i) and xor_we) or
+		(logic_result(i) and logic_we) or
 		(mul_result(i) and mul_we) or
 		(div_result(i) and div_we) or
 		(shift_result(i) and shift_we);
@@ -231,7 +226,7 @@ end generate;
 
 result_o<=result_mux;
 
-result_we<=adder_we or and_we or or_we or xor_we or mul_we or div_we or shift_we;
+result_we<=adder_we or logic_we or mul_we or div_we or shift_we;
 we_o<=result_we;
 
 -- Pipeline control

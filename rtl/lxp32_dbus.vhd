@@ -72,10 +72,10 @@ begin
 					sig<=cmd_signed_i;
 					
 					dbus_adr_o<=addr_i(31 downto 2);
-					dbus_dat_o<=wdata_i;
 					
 					if cmd_dbus_byte_i='0' then
 						byte_mode<='0';
+						dbus_dat_o<=wdata_i;
 						sel<="1111";
 						
 						-- synthesis translate_off
@@ -85,11 +85,14 @@ begin
 						-- synthesis translate_on
 					else
 						byte_mode<='1';
+						dbus_dat_o<=wdata_i(7 downto 0)&wdata_i(7 downto 0)&
+							wdata_i(7 downto 0)&wdata_i(7 downto 0);
+						
 						case addr_i(1 downto 0) is
-						when "00" => sel<="0001"; dbus_dat_o(7 downto 0)<=wdata_i(7 downto 0);
-						when "01" => sel<="0010"; dbus_dat_o(15 downto 8)<=wdata_i(7 downto 0);
-						when "10" => sel<="0100"; dbus_dat_o(23 downto 16)<=wdata_i(7 downto 0);
-						when "11" => sel<="1000"; dbus_dat_o(31 downto 24)<=wdata_i(7 downto 0);
+						when "00" => sel<="0001";
+						when "01" => sel<="0010";
+						when "10" => sel<="0100";
+						when "11" => sel<="1000";
 						when others =>
 						end case;
 					end if;

@@ -55,10 +55,12 @@ begin
 			full<='0';
 		else
 			if re='0' then
-				regs<=regs_mux;
+				regs(0)<=regs_mux(0);
 			else
 				regs(0)<=regs_mux(1);
 			end if;
+			
+			regs(1)<=regs_mux(1);
 			
 			if we='1' and re='0' then
 				empty<='0';

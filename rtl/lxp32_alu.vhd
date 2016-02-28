@@ -91,7 +91,11 @@ assert MUL_ARCH="dsp" or MUL_ARCH="seq" or MUL_ARCH="opt"
 -- Add/subtract
 
 addend1<=unsigned(op1_i);
-addend2<=unsigned(op2_i) when cmd_negate_op2_i='0' else not unsigned(op2_i);
+
+addend2_gen: for i in addend2'range generate
+	addend2(i)<=op2_i(i) xor cmd_negate_op2_i;
+end generate;
+
 adder_result<=("0"&addend1)+("0"&addend2)+(to_unsigned(0,adder_result'length-1)&cmd_negate_op2_i);
 adder_we<=cmd_addsub_i and valid_i;
 

@@ -238,15 +238,10 @@ we_o<=result_we;
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
-		if rst_i='1' then
+		if rst_i='1' or result_we='1' then
 			busy<='0';
-		else
-			if shift_ce='1' or mul_ce='1' or div_ce='1' then
-				busy<='1';
-			end if;
-			if result_we='1' then
-				busy<='0';
-			end if;
+		elsif shift_ce='1' or mul_ce='1' or div_ce='1' then
+			busy<='1';
 		end if;
 	end if;
 end process;

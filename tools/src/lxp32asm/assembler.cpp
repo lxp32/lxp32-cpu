@@ -598,11 +598,6 @@ void Assembler::encodeCjmpxx(const TokenList &list) {
 void Assembler::encodeDivs(const TokenList &list) {
 	auto args=getOperands(list);
 	if(args.size()!=3) throw std::runtime_error("divs instruction requires 3 operands");
-	if(args[2].type==Operand::NumericLiteral&&args[2].i==0) {
-		std::cerr<<currentFileName()<<":"<<line()<<": ";
-		std::cerr<<"Warning: Division by zero"<<std::endl;
-	}
-	
 	LinkableObject::Word w=0x54000000;
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);
@@ -613,11 +608,6 @@ void Assembler::encodeDivs(const TokenList &list) {
 void Assembler::encodeDivu(const TokenList &list) {
 	auto args=getOperands(list);
 	if(args.size()!=3) throw std::runtime_error("divu instruction requires 3 operands");
-	if(args[2].type==Operand::NumericLiteral&&args[2].i==0) {
-		std::cerr<<currentFileName()<<":"<<line()<<": ";
-		std::cerr<<"Warning: Division by zero"<<std::endl;
-	}
-	
 	LinkableObject::Word w=0x50000000;
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);

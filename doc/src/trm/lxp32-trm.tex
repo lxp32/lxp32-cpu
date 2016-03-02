@@ -1434,8 +1434,8 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 		\instr{and} & 1 & \instr{mov} & 1 \\
 		\instr{call} & $\ge$ 4\footnotemark[1] & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
 		\instr{cjmp\emph{xxx}} & $\ge$ 5\footnotemark[1] & \instr{nop} & 1 \\
-		\instr{divs} & 37 & \instr{not} & 1 \\
-		\instr{divu} & 37 & \instr{or} & 1 \\
+		\instr{divs} & 36 & \instr{not} & 1 \\
+		\instr{divu} & 36 & \instr{or} & 1 \\
 		\instr{hlt} & N/A & \instr{ret} & $\ge$ 4\footnotemark[1] \\
 		\instr{jmp} & $\ge$ 4\footnotemark[1] & \instr{sb} & $\ge$ 2\footnotemark[2] \\
 		\instr{iret} & $\ge$ 4\footnotemark[1] & \instr{sl} & 2 \\
@@ -1448,9 +1448,11 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 	\end{tabularx}
 \end{table}
 
-\footnotetext[1]{Depends on instruction bus latency. Includes pipeline flushing overhead.}
-\footnotetext[2]{Depends on data bus latency.}
-\footnotetext[3]{Depends on multiplier architecture set with the \code{MUL\_ARCH} generic. See Section \ref{sec:generics}.}
+The CPU pipeline can be stalled by instruction and data buses. There are no internal pipeline stalls, that is, an instruction can use the result of the previous one without introducing additional wait cycles.
+
+\footnotetext[1]{Depends on the instruction bus latency. Includes pipeline flushing overhead.}
+\footnotetext[2]{Depends on the data bus latency.}
+\footnotetext[3]{Depends on the multiplier architecture set with the \code{MUL\_ARCH} generic. See Section \ref{sec:generics}.}
 
 \chapter{LXP32 assembly language}
 \label{app:assemblylanguage}

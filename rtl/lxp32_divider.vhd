@@ -5,8 +5,8 @@
 --
 -- Copyright (c) 2016 by Alex I. Kuznetsov
 --
--- Based on the NRD (Non Restoring Division) algorithm. One division
--- takes 37 cycles.
+-- Based on the NRD (Non Restoring Division) algorithm. Takes
+-- 36 cycles to calculate quotient (37 for remainder).
 ---------------------------------------------------------------------
 
 library ieee;
@@ -59,6 +59,7 @@ signal ceo: std_logic:='0';
 
 signal remainder_corrector: unsigned(31 downto 0);
 signal remainder_corrector_1: std_logic;
+signal remainder_pos: unsigned(31 downto 0);
 signal result_pos: unsigned(31 downto 0);
 
 begin
@@ -126,7 +127,11 @@ begin
 				dividend<=unsigned(compl_out(30 downto 0)&"0");
 				partial_remainder<=to_unsigned(0,32)&compl_out(31);
 				sum_subtract<=not divisor(32);
-				cnt<=34;
+				if want_remainder='1' then
+					cnt<=34;
+				else
+					cnt<=33;
+				end if;
 			else
 				partial_remainder<=sum(31 downto 0)&dividend(31);
 				sum_subtract<=sum_positive xor divisor(32);
@@ -148,14 +153,12 @@ begin
 			remainder_corrector(i)<=(divisor(i) xor divisor(32)) and not sum_positive;
 		end loop;
 		remainder_corrector_1<=divisor(32) and not sum_positive;
-		if want_remainder='1' then
-			result_pos<=partial_remainder(32 downto 1)+remainder_corrector+
-				(to_unsigned(0,31)&remainder_corrector_1);
-		else
-			result_pos<=dividend;
-		end if;
+		remainder_pos<=partial_remainder(32 downto 1)+remainder_corrector+
+			(to_unsigned(0,31)&remainder_corrector_1);
 	end if;
 end process;
+
+result_pos<=remainder_pos when want_remainder='1' else dividend;
 
 result_o<=compl_out;
 ce_o<=ceo;

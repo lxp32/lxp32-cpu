@@ -136,6 +136,9 @@ begin
 				self_busy<='0';
 				state<=Regular;
 			elsif downstream_busy='0' then
+				op3_o<=(others=>'-');
+				rd1_direct<=std_logic_vector(resize(signed(rd1),rd1_direct'length));
+				rd2_direct<=std_logic_vector(resize(signed(rd2),rd2_direct'length));
 				case state is
 				when Regular =>
 					cmd_loadop3_o<='0';
@@ -155,8 +158,6 @@ begin
 					cmd_xor_o<='0';
 					cmd_shift_o<='0';
 					cmd_shift_right_o<='0';
-					
-					op3_o<=(others=>'-');
 					
 					jump_type_o<=opcode(3 downto 0);
 					
@@ -235,9 +236,7 @@ begin
 						end if;
 						
 						rd1_select<=t1;
-						rd1_direct<=std_logic_vector(resize(signed(rd1),rd1_direct'length));
 						rd2_select<=t2;
-						rd2_direct<=std_logic_vector(resize(signed(rd2),rd2_direct'length));
 						
 						dst_out<=destination;
 						

@@ -184,9 +184,9 @@ begin
 			interrupt_return<='0';
 		else
 			if jump_valid='0' then
+				jump_dst<=op1_i(31 downto 2);
 				if can_execute='1' and cmd_jump_i='1' and jump_condition='1' then
 					jump_valid<='1';
-					jump_dst<=op1_i(31 downto 2);
 					interrupt_return<=op1_i(0);
 				end if;
 			elsif jump_ready_i='1' then

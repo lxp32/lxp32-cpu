@@ -31,7 +31,6 @@ entity lxp32_alu is
 		cmd_cmp_i: in std_logic;
 		cmd_negate_op2_i: in std_logic;
 		cmd_and_i: in std_logic;
-		cmd_or_i: in std_logic;
 		cmd_xor_i: in std_logic;
 		cmd_shift_i: in std_logic;
 		cmd_shift_right_i: in std_logic;
@@ -125,14 +124,14 @@ cmp_sg_o<=((cmp_s1 and cmp_s2 and cmp_carry) or
 	(not cmp_s1 and cmp_s2)) and not cmp_eq;
 
 -- Bitwise operations (and, or, xor)
+-- Note: (a or b) = (a and b) or (a xor b)
 
 logic_result_gen: for i in logic_result'range generate
 	logic_result(i)<=((op1_i(i) and op2_i(i)) and cmd_and_i) or
-		((op1_i(i) or op2_i(i)) and cmd_or_i) or
 		((op1_i(i) xor op2_i(i)) and cmd_xor_i);
 end generate;
 
-logic_we<=(cmd_and_i or cmd_or_i or cmd_xor_i) and valid_i;
+logic_we<=(cmd_and_i or cmd_xor_i) and valid_i;
 
 -- Multiplier
 

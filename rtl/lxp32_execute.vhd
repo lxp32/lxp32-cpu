@@ -34,7 +34,6 @@ entity lxp32_execute is
 		cmd_jump_i: in std_logic;
 		cmd_negate_op2_i: in std_logic;
 		cmd_and_i: in std_logic;
-		cmd_or_i: in std_logic;
 		cmd_xor_i: in std_logic;
 		cmd_shift_i: in std_logic;
 		cmd_shift_right_i: in std_logic;
@@ -148,7 +147,6 @@ alu_inst: entity work.lxp32_alu(rtl)
 		cmd_cmp_i=>cmd_cmp_i,
 		cmd_negate_op2_i=>cmd_negate_op2_i,
 		cmd_and_i=>cmd_and_i,
-		cmd_or_i=>cmd_or_i,
 		cmd_xor_i=>cmd_xor_i,
 		cmd_shift_i=>cmd_shift_i,
 		cmd_shift_right_i=>cmd_shift_right_i,

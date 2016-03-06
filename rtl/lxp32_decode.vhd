@@ -48,7 +48,6 @@ entity lxp32_decode is
 		cmd_jump_o: out std_logic;
 		cmd_negate_op2_o: out std_logic;
 		cmd_and_o: out std_logic;
-		cmd_or_o: out std_logic;
 		cmd_xor_o: out std_logic;
 		cmd_shift_o: out std_logic;
 		cmd_shift_right_o: out std_logic;
@@ -142,7 +141,6 @@ begin
 			cmd_cmp_o<='-';
 			cmd_jump_o<='-';
 			cmd_and_o<='-';
-			cmd_or_o<='-';
 			cmd_xor_o<='-';
 			cmd_shift_o<='-';
 			cmd_shift_right_o<='-';
@@ -178,7 +176,6 @@ begin
 					cmd_cmp_o<='0';
 					cmd_jump_o<='0';
 					cmd_and_o<='0';
-					cmd_or_o<='0';
 					cmd_xor_o<='0';
 					cmd_shift_o<='0';
 					cmd_shift_right_o<='0';
@@ -236,15 +233,13 @@ begin
 							op3_o<=next_ip_i&"00";
 						end if;
 						
-						if opcode="011000" then
+						-- Note: (a or b) = (a and b) or (a xor b)
+						
+						if opcode(5 downto 1)="01100" then
 							cmd_and_o<='1';
 						end if;
 						
-						if opcode="011001" then
-							cmd_or_o<='1';
-						end if;
-						
-						if opcode="011010" then
+						if opcode="011010" or opcode="011001" then
 							cmd_xor_o<='1';
 						end if;
 						

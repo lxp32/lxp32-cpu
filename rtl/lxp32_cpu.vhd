@@ -61,7 +61,6 @@ signal decode_cmd_cmp: std_logic;
 signal decode_cmd_jump: std_logic;
 signal decode_cmd_negate_op2: std_logic;
 signal decode_cmd_and: std_logic;
-signal decode_cmd_or: std_logic;
 signal decode_cmd_xor: std_logic;
 signal decode_cmd_shift: std_logic;
 signal decode_cmd_shift_right: std_logic;
@@ -153,7 +152,6 @@ decode_inst: entity work.lxp32_decode(rtl)
 		cmd_jump_o=>decode_cmd_jump,
 		cmd_negate_op2_o=>decode_cmd_negate_op2,
 		cmd_and_o=>decode_cmd_and,
-		cmd_or_o=>decode_cmd_or,
 		cmd_xor_o=>decode_cmd_xor,
 		cmd_shift_o=>decode_cmd_shift,
 		cmd_shift_right_o=>decode_cmd_shift_right,
@@ -189,7 +187,6 @@ execute_inst: entity work.lxp32_execute(rtl)
 		cmd_jump_i=>decode_cmd_jump,
 		cmd_negate_op2_i=>decode_cmd_negate_op2,
 		cmd_and_i=>decode_cmd_and,
-		cmd_or_i=>decode_cmd_or,
 		cmd_xor_i=>decode_cmd_xor,
 		cmd_shift_i=>decode_cmd_shift,
 		cmd_shift_right_i=>decode_cmd_shift_right,

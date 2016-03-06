@@ -182,6 +182,7 @@ begin
 		if rst_i='1' then
 			jump_valid<='0';
 			interrupt_return<='0';
+			jump_dst<=(others=>'-');
 		else
 			if jump_valid='0' then
 				jump_dst<=op1_i(31 downto 2);

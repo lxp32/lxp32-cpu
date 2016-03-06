@@ -44,6 +44,9 @@ begin
 		if rst_i='1' then
 			ceo<='0';
 			cnt<=0;
+			reg1<=(others=>'-');
+			reg2<=(others=>'-');
+			acc_sum<=(others=>'-');
 		else
 			if cnt=1 then
 				ceo<='1';

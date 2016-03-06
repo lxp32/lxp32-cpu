@@ -68,6 +68,10 @@ begin
 	if rising_edge(clk_i) then
 		if rst_i='1' then
 			ceo<='0';
+			stage2_data<=(others=>'-');
+			stage2_s<=(others=>'-');
+			stage2_fill<='-';
+			stage2_right<='-';
 		else
 			ceo<=ce_i;
 			stage2_data<=cascades(2);

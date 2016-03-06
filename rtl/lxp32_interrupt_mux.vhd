@@ -57,6 +57,7 @@ begin
 			pending_interrupts<=(others=>'0');
 			state<=Ready;
 			interrupt_valid<='0';
+			interrupt_vector_o<=(others=>'-');
 		else
 			irq_reg<=irq_i;
 			

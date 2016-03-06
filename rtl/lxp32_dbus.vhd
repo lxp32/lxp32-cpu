@@ -65,6 +65,13 @@ begin
 		if rst_i='1' then
 			we_out<='0';
 			strobe<='0';
+			sig<='-';
+			byte_mode<='-';
+			sel<=(others=>'-');
+			we<='-';
+			rmw_mode<='-';
+			dbus_adr_o<=(others=>'-');
+			dbus_dat_o<=(others=>'-');
 		else
 			we_out<='0';
 			if strobe='0' then

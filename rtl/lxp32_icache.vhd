@@ -202,6 +202,22 @@ begin
 			burst_cnt<=0;
 			wb_stb<='0';
 			wrap_cnt<=0;
+			wb_cti<=(others=>'-');
+			burst1<='-';
+			current_offset<=(others=>'-');
+			start_offset<=(others=>'-');
+			current_base<=(others=>'-');
+			next_base<=(others=>'-');
+			prev_base<=(others=>'-');
+			
+			-- To suppress numeric_std warnings
+			-- synthesis translate_off
+			current_offset<=(others=>'0');
+			start_offset<=(others=>'0');
+			current_base<=(others=>'0');
+			next_base<=(others=>'0');
+			prev_base<=(others=>'0');
+			-- synthesis translate_on
 		else
 			if burst_cnt=0 and init='1' then
 				if miss='1' and near_miss='0' then

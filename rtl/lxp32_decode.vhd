@@ -129,6 +129,30 @@ begin
 			self_busy<='0';
 			state<=Regular;
 			interrupt_ready<='0';
+			cmd_loadop3_o<='-';
+			cmd_signed_o<='-';
+			cmd_dbus_o<='-';
+			cmd_dbus_store_o<='-';
+			cmd_dbus_byte_o<='-';
+			cmd_addsub_o<='-';
+			cmd_negate_op2_o<='-';
+			cmd_mul_o<='-';
+			cmd_div_o<='-';
+			cmd_div_mod_o<='-';
+			cmd_cmp_o<='-';
+			cmd_jump_o<='-';
+			cmd_and_o<='-';
+			cmd_or_o<='-';
+			cmd_xor_o<='-';
+			cmd_shift_o<='-';
+			cmd_shift_right_o<='-';
+			rd1_select<='-';
+			rd1_direct<=(others=>'-');
+			rd2_select<='-';
+			rd2_direct<=(others=>'-');
+			op3_o<=(others=>'-');
+			jump_type_o<=(others=>'-');
+			dst_out<=(others=>'-');
 		else
 			interrupt_ready<='0';
 			if jump_valid_i='1' then

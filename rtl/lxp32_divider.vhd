@@ -80,6 +80,8 @@ begin
 	if rising_edge(clk_i) then
 		if rst_i='1' then
 			fsm_ce<='0';
+			want_remainder<='-';
+			inv_res<='-';
 		else
 			fsm_ce<=ce_i;
 			if ce_i='1' then
@@ -111,6 +113,10 @@ begin
 		if rst_i='1' then
 			cnt<=0;
 			ceo<='0';
+			divisor<=(others=>'-');
+			dividend<=(others=>'-');
+			partial_remainder<=(others=>'-');
+			sum_subtract<='-';
 		else
 			if cnt=1 then
 				ceo<='1';

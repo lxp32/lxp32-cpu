@@ -53,6 +53,7 @@ begin
 		if rst_i='1' then
 			empty<='1';
 			full<='0';
+			regs<=(others=>(others=>'-'));
 		else
 			if re='0' then
 				regs(0)<=regs_mux(0);

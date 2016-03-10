@@ -88,8 +88,6 @@ signal interrupt_valid: std_logic;
 signal interrupt_vector: std_logic_vector(2 downto 0);
 signal interrupt_ready: std_logic;
 signal interrupt_return: std_logic;
-signal interrupts_enabled: std_logic_vector(7 downto 0);
-signal interrupts_blocked: std_logic_vector(7 downto 0);
 
 begin
 
@@ -218,9 +216,7 @@ execute_inst: entity work.lxp32_execute(rtl)
 		jump_dst_o=>execute_jump_dst,
 		jump_ready_i=>fetch_jump_ready,
 		
-		interrupt_return_o=>interrupt_return,
-		interrupts_enabled_o=>interrupts_enabled,
-		interrupts_blocked_o=>interrupts_blocked
+		interrupt_return_o=>interrupt_return
 	);
 
 scratchpad_inst: entity work.lxp32_scratchpad(rtl)
@@ -244,13 +240,14 @@ interrupt_mux_inst: entity work.lxp32_interrupt_mux(rtl)
 		
 		irq_i=>irq_i,
 		
-		interrupts_enabled_i=>interrupts_enabled,
-		interrupts_blocked_i=>interrupts_blocked,
-		
 		interrupt_valid_o=>interrupt_valid,
 		interrupt_vector_o=>interrupt_vector,
 		interrupt_ready_i=>interrupt_ready,
-		interrupt_return_i=>interrupt_return
+		interrupt_return_i=>interrupt_return,
+		
+		sp_waddr_i=>sp_waddr,
+		sp_we_i=>sp_we,
+		sp_wdata_i=>sp_wdata
 	);
 
 end architecture;

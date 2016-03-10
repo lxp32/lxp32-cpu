@@ -115,8 +115,6 @@ signal dst_reg: std_logic_vector(7 downto 0);
 -- Signals related to interrupt handling
 
 signal interrupt_return: std_logic:='0';
-signal interrupts_enabled: std_logic_vector(7 downto 0):=(others=>'0');
-signal interrupts_blocked: std_logic_vector(7 downto 0):=(others=>'0');
 
 begin
 
@@ -260,23 +258,5 @@ result_regaddr<=dst_i when can_execute='1' else dst_reg;
 sp_we_o<=result_valid;
 sp_waddr_o<=result_regaddr;
 sp_wdata_o<=result_mux;
-
-process (clk_i) is
-begin
-	if rising_edge(clk_i) then
-		if rst_i='1' then
-			interrupts_enabled<=(others=>'0');
-			interrupts_blocked<=(others=>'0');
-		else
-			if result_valid='1' and result_regaddr=X"FC" then
-				interrupts_enabled<=result_mux(7 downto 0);
-				interrupts_blocked<=result_mux(15 downto 8);
-			end if;
-		end if;
-	end if;
-end process;
-
-interrupts_enabled_o<=interrupts_enabled;
-interrupts_blocked_o<=interrupts_blocked;
 
 end architecture;

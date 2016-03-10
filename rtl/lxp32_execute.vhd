@@ -65,9 +65,7 @@ entity lxp32_execute is
 		jump_dst_o: out std_logic_vector(29 downto 0);
 		jump_ready_i: in std_logic;
 		
-		interrupt_return_o: out std_logic;
-		interrupts_enabled_o: out std_logic_vector(7 downto 0);
-		interrupts_blocked_o: out std_logic_vector(7 downto 0)
+		interrupt_return_o: out std_logic
 	);
 end entity;
 

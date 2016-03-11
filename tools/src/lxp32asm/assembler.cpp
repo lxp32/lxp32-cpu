@@ -63,6 +63,8 @@ void Assembler::processFileRecursive(const std::string &filename) {
 		_line++;
 	}
 	
+	if(_state!=Initial) throw std::runtime_error("Unexpected end of file");
+	
 	_line=savedLine;
 	_state=savedState;
 	_currentFileName=savedFileName;

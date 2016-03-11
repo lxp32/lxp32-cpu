@@ -1479,7 +1479,7 @@ From a parser's point of view comments are equivalent to whitespace.
 
 Numeric literals can take form of decimal, hexadecimal or octal numbers. Literals prefixed with \code{0x} are interpreted as hexadecimal, literals prefixed with \code{0} are interpreted as octal, other literals are interpreted as decimal. A numeric literal can also start with an unary plus or minus sign which is also considered a part of the literal.
 
-String literals must be enclosed in double quotes. The most common escape sequences used in C are supported (Table \ref{tab:stringescape}).
+String literals must be enclosed in double quotes. The most common escape sequences used in C are supported (Table \ref{tab:stringescape}). Note that strings are not null-terminated in the LXP32 assembly language; when required, terminating null character must be inserted explicitly.
 
 \begin{table}[htbp]
 	\caption{Escape sequences used in string literals}

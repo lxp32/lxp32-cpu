@@ -14,7 +14,8 @@ entity lxp32_cpu is
 		DBUS_RMW: boolean;
 		DIVIDER_EN: boolean;
 		MUL_ARCH: string;
-		START_ADDR: std_logic_vector(29 downto 0)
+		START_ADDR: std_logic_vector(29 downto 0);
+		USE_RISCV : boolean := false
 	);
 	port(
 		clk_i: in std_logic;
@@ -114,7 +115,9 @@ fetch_inst: entity work.lxp32_fetch(rtl)
 		jump_ready_o=>fetch_jump_ready
 	);
 
-decode_inst: entity work.lxp32_decode(rtl)
+
+lxp32decode: if not USE_RISCV generate 
+  decode_inst: entity work.lxp32_decode(rtl)
 	port map(
 		clk_i=>clk_i,
 		rst_i=>rst_i,
@@ -161,6 +164,57 @@ decode_inst: entity work.lxp32_decode(rtl)
 		op3_o=>decode_op3,
 		dst_o=>decode_dst
 	);
+end generate;
+
+riscv_decode: if USE_RISCV generate 
+decode_inst: entity work.riscv_decode(rtl)
+	port map(
+		clk_i=>clk_i,
+		rst_i=>rst_i,
+		
+		word_i=>fetch_word,
+		next_ip_i=>fetch_next_ip,
+		valid_i=>fetch_valid,
+		jump_valid_i=>execute_jump_valid,
+		ready_o=>decode_ready,
+		
+		interrupt_valid_i=>interrupt_valid,
+		interrupt_vector_i=>interrupt_vector,
+		interrupt_ready_o=>interrupt_ready,
+		
+		sp_raddr1_o=>sp_raddr1,
+		sp_rdata1_i=>sp_rdata1,
+		sp_raddr2_o=>sp_raddr2,
+		sp_rdata2_i=>sp_rdata2,
+		
+		ready_i=>execute_ready,
+		valid_o=>decode_valid,
+		
+		cmd_loadop3_o=>decode_cmd_loadop3,
+		cmd_signed_o=>decode_cmd_signed,
+		cmd_dbus_o=>decode_cmd_dbus,
+		cmd_dbus_store_o=>decode_cmd_dbus_store,
+		cmd_dbus_byte_o=>decode_cmd_dbus_byte,
+		cmd_addsub_o=>decode_cmd_addsub,
+		cmd_mul_o=>decode_cmd_mul,
+		cmd_div_o=>decode_cmd_div,
+		cmd_div_mod_o=>decode_cmd_div_mod,
+		cmd_cmp_o=>decode_cmd_cmp,
+		cmd_jump_o=>decode_cmd_jump,
+		cmd_negate_op2_o=>decode_cmd_negate_op2,
+		cmd_and_o=>decode_cmd_and,
+		cmd_xor_o=>decode_cmd_xor,
+		cmd_shift_o=>decode_cmd_shift,
+		cmd_shift_right_o=>decode_cmd_shift_right,
+		
+		jump_type_o=>decode_jump_type,
+		
+		op1_o=>decode_op1,
+		op2_o=>decode_op2,
+		op3_o=>decode_op3,
+		dst_o=>decode_dst
+	);
+end generate;
 
 execute_inst: entity work.lxp32_execute(rtl)
 	generic map(

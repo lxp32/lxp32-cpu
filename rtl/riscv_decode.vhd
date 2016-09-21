@@ -110,9 +110,11 @@ signal interrupt_ready: std_logic:='0';
 signal rd1,rd1_reg: std_logic_vector(7 downto 0);
 signal rd2,rd2_reg: std_logic_vector(7 downto 0);
 
-signal rd1_select: std_logic;
+type SourceSelect  is (Undef,Reg,Imm,Base); -- Source selector Register, Immediate, Base+Immediate
+
+signal rd1_select: SourceSelect;
 signal rd1_direct: std_logic_vector(31 downto 0);
-signal rd2_select: std_logic;
+signal rd2_select: SourceSelect;
 signal rd2_direct: std_logic_vector(31 downto 0);
 
 
@@ -175,9 +177,9 @@ begin
 			cmd_xor_o<='-';
 			cmd_shift_o<='-';
 			cmd_shift_right_o<='-';
-			rd1_select<='-';
+			rd1_select<=Undef;
 			rd1_direct<=(others=>'-');
-			rd2_select<='-';
+			rd2_select<=Undef;
 			rd2_direct<=(others=>'-');
 			op3_o<=(others=>'-');
 			jump_type_o<=(others=>'-');
@@ -210,9 +212,9 @@ begin
 
 				   if opcode=OP_IMM then 
 					 
-					  rd1_select<='1';
+					  rd1_select<=Reg;
 					  rd2_direct<=std_logic_vector(get_I_immediate(word_i));
-					  rd2_select<='0';
+					  rd2_select<=Imm;
 					  dst_out<="000"&rd;
 					  case funct3 is 
 					    when ADDI =>
@@ -229,10 +231,30 @@ begin
 					  end case;
 					  valid_out<='1';
 					elsif opcode=OP_JAL then
-                  rd1_select<='0';
+                  rd1_select<=Imm;
                   rd1_direct<=std_logic_vector(signed(current_ip&"00")+get_UJ_immediate(word_i));
                   cmd_jump_o<='1';			
                   jump_type_o<="0000";		
+                  valid_out<='1';	
+               elsif opcode=OP_LOAD  then
+                  rd1_select<=Base;
+                  rd1_direct<=std_logic_vector(get_I_immediate(word_i));
+						cmd_dbus_o<='1';
+						dst_out<="000"&rd;
+						if funct3(1 downto 0)="00" then -- Byte access
+						  cmd_dbus_byte_o<='1';
+						end if; -- TODO: Implement 16 BIT (H) instructons
+                  cmd_signed_o <= not funct3(2); 	
+                  valid_out<='1';						
+               elsif opcode=OP_STORE then
+                  rd1_select<=Base;
+                	rd1_direct<=std_logic_vector(get_S_immediate(word_i));
+                  rd2_select<=Reg;						
+                  cmd_dbus_o<='1';	
+                  cmd_dbus_store_o<='1';	
+                  if funct3(1 downto 0)="00" then -- Byte access
+						  cmd_dbus_byte_o<='1';
+						end if; -- TODO: Implement 16 BIT (H) instructons		
                   valid_out<='1';						
 				   end if;
 				
@@ -266,29 +288,37 @@ sp_raddr1_o <= radr1_out;
 radr2_out<=rd2_reg when busy='1' else rd2;
 sp_raddr2_o <= radr2_out;
 
-process(rd1_direct,rd1_select,sp_rdata1_i,radr1_out) is
+
+--Operand 1 multiplexer
+process(rd1_direct,rd1_select,sp_rdata1_i,rd1_reg) is
+variable rdata : std_logic_vector(31 downto 0);
 begin
-  if rd1_select='0' then
-    op1_o<= rd1_direct;
-  else 
-    if radr1_out = X"00" then
-   	op1_o<=X"00000000";
-	 else
-      op1_o<=sp_rdata1_i;
-    end if;
-  end if;
+  if rd1_reg = X"00" then -- Register x0 is contant zero 
+    rdata:=X"00000000";
+  else
+    rdata:=sp_rdata1_i;
+  end if;	 
+  
+  case rd1_select is 
+    when Imm =>
+      op1_o<= rd1_direct; -- Imediate operand 
+	 when Base =>
+      op1_o <= std_logic_vector(signed(rdata)+signed(rd1_direct)); -- Base + Offset
+    when Reg =>		
+        op1_o<=rdata;
+	 when Undef =>
+	   op1_o <= (others=> 'X'); -- don't care...
+  end case;
 end process;  
 
---op1_o<=  rd1_direct when rd1_select='0' else 
---         sp_rdata1_i when rd1_select='1' and not radr1_out=X"00"  else
---         X"00000000" when rd1_select='1' and radr1_out=X"00"; -- r0 is constant zero in RISCV               
-
-process(rd2_direct,rd2_select,sp_rdata2_i,radr2_out) is
+            
+--operand 2 multiplexer
+process(rd2_direct,rd2_select,sp_rdata2_i,rd2_reg) is
 begin
-  if rd2_select='0' then
+  if rd2_select=Imm then
     op2_o<= rd2_direct;
   else 
-    if radr2_out = X"00" then
+    if rd2_reg = X"00" then
    	op2_o<=X"00000000";
 	 else
       op2_o<=sp_rdata2_i;
@@ -296,15 +326,6 @@ begin
   end if;
 end process;  
 
-		   
---						 
---op2_o<=  rd2_direct when rd2_select='0' else 
---         sp_rdata2_i when rd2_select='1' and not radr2_out=X"00"  else 
---         X"00000000" when rd2_select='1' and radr2_out=X"00";  -- r0 is constant zero in RISCV     
-        
-
-
-
-
+  
 end rtl;
 

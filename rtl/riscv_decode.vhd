@@ -210,23 +210,35 @@ begin
 					cmd_shift_o<='0';
 					cmd_shift_right_o<='0';
 
-				   if opcode=OP_IMM then 
-					 
+				   if opcode=OP_IMM or opcode=OP_OP then 
 					  rd1_select<=Reg;
-					  rd2_direct<=std_logic_vector(get_I_immediate(word_i));
-					  rd2_select<=Imm;
 					  dst_out<="000"&rd;
+					  if opcode(5)='1' then -- OP_OP...
+					    rd2_select<=Reg;						 		
+					  else --OP_IMM
+					    rd2_direct<=std_logic_vector(get_I_immediate(word_i));
+					    rd2_select<=Imm;
+					  end if;	
+					
 					  case funct3 is 
-					    when ADDI =>
-						   cmd_addsub_o<='1';
-							cmd_negate_op2_o<='0';
-						 when ANDI =>
+					    when ADD =>
+						   cmd_addsub_o<='1';							
+							if opcode(5)='1' then
+                       cmd_negate_op2_o<=word_i(30);
+							end if;  
+						 when F_AND =>
                      cmd_and_o<='1';
-                   when XORI =>							
+                   when F_XOR =>							
 							cmd_xor_o<='1';
-						 when ORI =>	
+						 when F_OR =>	
 							cmd_and_o<='1';
 							cmd_xor_o<='1';
+						 when SL  =>
+                     cmd_shift_o<='1';
+                   when SR => 
+						   cmd_shift_o<='1';
+							cmd_shift_right_o<='1';
+						   cmd_signed_o<=word_i(30);						
 						 when others => 	
 					  end case;
 					  valid_out<='1';

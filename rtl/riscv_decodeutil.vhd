@@ -12,16 +12,19 @@ subtype t_funct3 is std_logic_vector(2 downto 0);
 
 -- Opcodes
 constant OP_IMM : t_opcode := "0010011";
+constant OP_OP :  t_opcode := "0110011";
 constant OP_JAL : t_opcode := "1101111";
 constant OP_LOAD   : t_opcode := "0000011";
 constant OP_STORE  : t_opcode := "0100011";
-
-constant ADDI : t_funct3  :="000";
+ 
+constant ADD :  t_funct3  :="000";
 constant SLTI : t_funct3  :="010";
 constant SLTIU : t_funct3 :="011";
-constant XORI : t_funct3  :="100";
-constant ORI  : t_funct3  :="110";
-constant ANDI : t_funct3  :="111";
+constant F_XOR :  t_funct3  :="100";
+constant F_OR  :  t_funct3  :="110";
+constant F_AND  : t_funct3  :="111";
+constant SL   : t_funct3  :="001";
+constant SR   : t_funct3  :="101";
 
 constant XLEN : natural := 32;
 

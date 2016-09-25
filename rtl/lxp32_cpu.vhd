@@ -220,7 +220,8 @@ execute_inst: entity work.lxp32_execute(rtl)
 	generic map(
 		DBUS_RMW=>DBUS_RMW,
 		DIVIDER_EN=>DIVIDER_EN,
-		MUL_ARCH=>MUL_ARCH
+		MUL_ARCH=>MUL_ARCH,
+		USE_RISCV=>USE_RISCV
 	)
 	port map(
 		clk_i=>clk_i,

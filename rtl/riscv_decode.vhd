@@ -155,6 +155,7 @@ begin
 
 process (clk_i) is
 variable branch_target : std_logic_vector(31 downto 0);
+variable U_immed : xsigned;
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -184,7 +185,7 @@ begin
          rd2_direct<=(others=>'-');
          op3_o<=(others=>'-');
          jump_type_o<=(others=>'-');
-         dst_out<=(others=>'-');
+         dst_out<=(others=>'0'); -- defaults to register 0, which is never read
       else
         if jump_valid_i='1' then
             -- When exeuction stage exeuctes jump do nothing
@@ -248,7 +249,8 @@ begin
                   rd1_direct<=std_logic_vector(signed(current_ip&"00")+get_UJ_immediate(word_i));
                   cmd_jump_o<='1';      
                   cmd_loadop3_o<='1';
-                  op3_o<=next_ip_i&"00";                  
+                  op3_o<=next_ip_i&"00";
+                  dst_out<="000"&rd;                  
                   jump_type_o<="0000";      
                   valid_out<='1';   
                elsif opcode=OP_BRANCH then
@@ -273,15 +275,30 @@ begin
                   valid_out<='1';                  
                elsif opcode=OP_STORE then
                   rd1_select<=Base;
-                   rd1_direct<=std_logic_vector(get_S_immediate(word_i));
+                  rd1_direct<=std_logic_vector(get_S_immediate(word_i));
                   rd2_select<=Reg;                  
                   cmd_dbus_o<='1';   
                   cmd_dbus_store_o<='1';   
                   if funct3(1 downto 0)="00" then -- Byte access
                     cmd_dbus_byte_o<='1';
                   end if; -- TODO: Implement 16 BIT (H) instructons      
-                  valid_out<='1';                  
-               end if;
+                  valid_out<='1';
+                elsif opcode=OP_LUI or opcode=OP_AUIPC then
+                  -- we will use the ALU to calculate the result
+                  -- this saves an adder and time
+                  U_immed:=get_U_immediate(word_i);
+                  rd2_select<=Imm;
+                  rd2_direct<=std_logic_vector(U_immed);
+                  rd1_select<=Imm;  
+                  cmd_addsub_o<='1';                   
+                  if word_i(5)='1' then -- LUI
+                    rd1_direct<= (others=>'0');
+                  else
+                    rd1_direct<=std_logic_vector(current_ip)&"00";
+                  end if;                  
+                  dst_out<="000"&rd;
+                  valid_out<='1';
+                end if;
 
             when ContinueCjmp =>
                rd1_select<=Imm;
@@ -334,7 +351,7 @@ begin
   
   case rd1_select is 
     when Imm =>
-      op1_o<= rd1_direct; -- Imediate operand 
+      op1_o<= rd1_direct; -- Immediate operand 
     when Base =>
       op1_o <= std_logic_vector(signed(rdata)+signed(rd1_direct)); -- Base + Offset
     when Reg =>      

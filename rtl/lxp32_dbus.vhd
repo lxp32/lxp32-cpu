@@ -28,7 +28,7 @@ entity lxp32_dbus is
 		cmd_signed_i: in std_logic;
 		addr_i: in std_logic_vector(31 downto 0);
 		wdata_i: in std_logic_vector(31 downto 0);
-		
+      		
 		rdata_o: out std_logic_vector(31 downto 0);
 		we_o: out std_logic;
 		busy_o: out std_logic;
@@ -77,7 +77,7 @@ begin
 			if strobe='0' then
 				if valid_i='1' and cmd_dbus_i='1' then
 					strobe<='1';
-					sig<=cmd_signed_i;
+					sig<=cmd_signed_i;					
 					
 					dbus_adr_o<=addr_i(31 downto 2);
 					

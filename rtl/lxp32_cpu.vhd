@@ -85,6 +85,8 @@ signal sp_waddr: std_logic_vector(7 downto 0);
 signal sp_we: std_logic;
 signal sp_wdata: std_logic_vector(31 downto 0);
 
+signal displacement : std_logic_vector(11 downto 0):= (others=>'0');
+
 signal interrupt_valid: std_logic;
 signal interrupt_vector: std_logic_vector(2 downto 0);
 signal interrupt_ready: std_logic;
@@ -136,7 +138,7 @@ lxp32decode: if not USE_RISCV generate
 		sp_rdata1_i=>sp_rdata1,
 		sp_raddr2_o=>sp_raddr2,
 		sp_rdata2_i=>sp_rdata2,
-		
+      		
 		ready_i=>execute_ready,
 		valid_o=>decode_valid,
 		
@@ -186,6 +188,8 @@ decode_inst: entity work.riscv_decode(rtl)
 		sp_rdata1_i=>sp_rdata1,
 		sp_raddr2_o=>sp_raddr2,
 		sp_rdata2_i=>sp_rdata2,
+      
+      displacement_o=>displacement,
 		
 		ready_i=>execute_ready,
 		valid_o=>decode_valid,
@@ -254,6 +258,7 @@ execute_inst: entity work.lxp32_execute(rtl)
 		sp_waddr_o=>sp_waddr,
 		sp_we_o=>sp_we,
 		sp_wdata_o=>sp_wdata,
+      displacement_i=>displacement,
 		
 		valid_i=>decode_valid,
 		ready_o=>execute_ready,

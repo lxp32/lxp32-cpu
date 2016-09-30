@@ -55,6 +55,8 @@ port(
       sp_raddr2_o: out std_logic_vector(7 downto 0);
       sp_rdata2_i: in std_logic_vector(31 downto 0);
       
+      displacement_o : out std_logic_vector(11 downto 0); --TH Pass Load/Store displacement to execute stage
+      
       ready_i: in std_logic; -- ready signal from execute stage
       valid_o: out std_logic; -- output status valid 
       
@@ -110,7 +112,8 @@ signal interrupt_ready: std_logic:='0';
 signal rd1,rd1_reg: std_logic_vector(7 downto 0);
 signal rd2,rd2_reg: std_logic_vector(7 downto 0);
 
-type SourceSelect  is (Undef,Reg,Imm,Base); -- Source selector Register, Immediate, Base+Immediate
+type SourceSelect  is (Undef,Reg,Imm); -- Source selector Register, Immediate 
+
 
 signal rd1_select: SourceSelect;
 signal rd1_direct: std_logic_vector(31 downto 0);
@@ -156,6 +159,7 @@ begin
 process (clk_i) is
 variable branch_target : std_logic_vector(31 downto 0);
 variable U_immed : xsigned;
+variable displacement : t_displacement;
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -186,6 +190,7 @@ begin
          op3_o<=(others=>'-');
          jump_type_o<=(others=>'-');
          dst_out<=(others=>'0'); -- defaults to register 0, which is never read
+         displacement:= (others=>'-');
       else
         if jump_valid_i='1' then
             -- When exeuction stage exeuctes jump do nothing
@@ -211,6 +216,7 @@ begin
                cmd_xor_o<='0';
                cmd_shift_o<='0';
                cmd_shift_right_o<='0';
+               displacement:= (others=>'0');
 
                if opcode=OP_IMM or opcode=OP_OP then 
                  rd1_select<=Reg;
@@ -252,7 +258,16 @@ begin
                   op3_o<=next_ip_i&"00";
                   dst_out<="000"&rd;                  
                   jump_type_o<="0000";      
-                  valid_out<='1';   
+                  valid_out<='1';    
+               elsif opcode=OP_JALR then
+                  rd1_select<=Reg; 
+                  cmd_jump_o<='1';      
+                  cmd_loadop3_o<='1';
+                  op3_o<=next_ip_i&"00";
+                  dst_out<="000"&rd;     
+                  displacement:=get_I_displacement(word_i);
+                  jump_type_o<="0000";      
+                  valid_out<='1';
                elsif opcode=OP_BRANCH then
                   branch_target:=std_logic_vector(signed(current_ip&"00")+get_SB_immediate(word_i));
                   rd1_select<=Reg;
@@ -264,8 +279,8 @@ begin
                   self_busy<='1';
                   state<=ContinueCjmp;
                elsif opcode=OP_LOAD  then
-                  rd1_select<=Base;
-                  rd1_direct<=std_logic_vector(get_I_immediate(word_i));
+                  rd1_select<=Reg;
+                  displacement:=get_I_displacement(word_i);
                   cmd_dbus_o<='1';
                   dst_out<="000"&rd;
                   if funct3(1 downto 0)="00" then -- Byte access
@@ -274,8 +289,8 @@ begin
                   cmd_signed_o <= not funct3(2);    
                   valid_out<='1';                  
                elsif opcode=OP_STORE then
-                  rd1_select<=Base;
-                  rd1_direct<=std_logic_vector(get_S_immediate(word_i));
+                  rd1_select<=Reg;
+                  displacement:=get_S_displacement(word_i);
                   rd2_select<=Reg;                  
                   cmd_dbus_o<='1';   
                   cmd_dbus_store_o<='1';   
@@ -316,6 +331,7 @@ begin
            end case;
         end if; 
       end if;   
+      displacement_o<=displacement;
     end if;      
 end process;
 
@@ -352,8 +368,6 @@ begin
   case rd1_select is 
     when Imm =>
       op1_o<= rd1_direct; -- Immediate operand 
-    when Base =>
-      op1_o <= std_logic_vector(signed(rdata)+signed(rd1_direct)); -- Base + Offset
     when Reg =>      
         op1_o<=rdata;
     when Undef =>

@@ -10,6 +10,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use IEEE.NUMERIC_STD.ALL;
 
 entity lxp32_execute is
    generic(
@@ -49,6 +50,8 @@ entity lxp32_execute is
       sp_waddr_o: out std_logic_vector(7 downto 0);
       sp_we_o: out std_logic;
       sp_wdata_o: out std_logic_vector(31 downto 0);
+      
+      displacement_i : in std_logic_vector(11 downto 0);
       
       valid_i: in std_logic;
       ready_o: out std_logic;
@@ -97,9 +100,13 @@ signal jump_condition: std_logic;
 signal jump_valid: std_logic:='0';
 signal jump_dst: std_logic_vector(jump_dst_o'range);
 
+-- Target Address for load/store/jump
+
+signal target_address : std_logic_vector(31 downto 0);
+
 -- DBUS signals
 
-signal dbus_result: std_logic_vector(31 downto 0);
+signal dbus_result : std_logic_vector(31 downto 0);
 signal dbus_busy: std_logic;
 signal dbus_we: std_logic;
 
@@ -195,6 +202,15 @@ riscvjump: if USE_RISCV generate
 
 end generate;
      
+-- Displacement adder
+-- is used for load/store but also as jump target 
+process(op1_i,displacement_i) 
+variable d : signed(displacement_i'length-1 downto 0);
+begin
+  d:=signed(displacement_i);
+  target_address<=std_logic_vector(signed(op1_i)+resize(d,op1_i'length));
+end process;
+
 
 process (clk_i) is
 begin
@@ -205,7 +221,7 @@ begin
          jump_dst<=(others=>'-');
       else
          if jump_valid='0' then            
-            jump_dst<=op1_i(31 downto 2);
+            jump_dst<=target_address(31 downto 2);
             if can_execute='1' and cmd_jump_i='1' and jump_condition='1' then
                jump_valid<='1';
                interrupt_return<=op1_i(0);
@@ -225,6 +241,9 @@ interrupt_return_o<=interrupt_return;
 
 -- DBUS access
 
+
+
+
 dbus_inst: entity work.lxp32_dbus(rtl)
    generic map(
       RMW=>DBUS_RMW
@@ -239,7 +258,7 @@ dbus_inst: entity work.lxp32_dbus(rtl)
       cmd_dbus_store_i=>cmd_dbus_store_i,
       cmd_dbus_byte_i=>cmd_dbus_byte_i,
       cmd_signed_i=>cmd_signed_i,
-      addr_i=>op1_i,
+      addr_i=>target_address,
       wdata_i=>op2_i,
       
       rdata_o=>dbus_result,

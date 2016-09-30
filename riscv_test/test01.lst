@@ -1,10 +1,10 @@
 
-a.out:     Dateiformat elf32-littleriscv
+test01.elf:     file format elf32-littleriscv
 
 
-Disassembly of section text:
+Disassembly of section .text:
 
-00000000 <__bss_begin>:
+00000000 <_start>:
    0:	00100093          	li	ra,1
    4:	0080e093          	ori	ra,ra,8
 

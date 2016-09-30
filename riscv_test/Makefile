@@ -20,3 +20,7 @@ HEXDUMP ?= hexdump
 test02.hex : test02.S
 test01.hex : test01.S
 test03.hex : test03.S
+branch.hex : branch.S
+
+all: test02.hex test01.hex test03.hex branch.hex
+

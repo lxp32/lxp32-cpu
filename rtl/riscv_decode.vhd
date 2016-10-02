@@ -217,104 +217,104 @@ begin
                cmd_shift_o<='0';
                cmd_shift_right_o<='0';
                displacement:= (others=>'0');
-
-               if opcode=OP_IMM or opcode=OP_OP then 
-                 rd1_select<=Reg;
-                 dst_out<="000"&rd;
-                 if opcode(5)='1' then -- OP_OP...
-                   rd2_select<=Reg;                         
-                 else --OP_IMM
-                   rd2_direct<=std_logic_vector(get_I_immediate(word_i));
-                   rd2_select<=Imm;
-                 end if;   
-               
-                 case funct3 is 
-                   when ADD =>
-                     cmd_addsub_o<='1';                     
-                     if opcode(5)='1' then
-                       cmd_negate_op2_o<=word_i(30);
-                     end if;  
-                   when F_AND =>
-                     cmd_and_o<='1';
-                   when F_XOR =>                     
-                     cmd_xor_o<='1';
-                   when F_OR =>   
-                     cmd_and_o<='1';
-                     cmd_xor_o<='1';
-                   when SL  =>
-                     cmd_shift_o<='1';
-                   when SR => 
-                     cmd_shift_o<='1';
-                     cmd_shift_right_o<='1';
-                     cmd_signed_o<=word_i(30);                  
-                   when others =>    
-                 end case;
-                 valid_out<='1';
-               elsif opcode=OP_JAL then
-                  rd1_select<=Imm;
-                  rd1_direct<=std_logic_vector(signed(current_ip&"00")+get_UJ_immediate(word_i));
-                  cmd_jump_o<='1';      
-                  cmd_loadop3_o<='1';
-                  op3_o<=next_ip_i&"00";
-                  dst_out<="000"&rd;                  
-                  jump_type_o<="0000";      
-                  valid_out<='1';    
-               elsif opcode=OP_JALR then
-                  rd1_select<=Reg; 
-                  cmd_jump_o<='1';      
-                  cmd_loadop3_o<='1';
-                  op3_o<=next_ip_i&"00";
-                  dst_out<="000"&rd;     
-                  displacement:=get_I_displacement(word_i);
-                  jump_type_o<="0000";      
-                  valid_out<='1';
-               elsif opcode=OP_BRANCH then
-                  branch_target:=std_logic_vector(signed(current_ip&"00")+get_SB_immediate(word_i));
-                  rd1_select<=Reg;
-                  rd2_select<=Reg;                                              
-                  jump_type_o<="0"&funct3; -- "reuse" lxp jump_type for the funct3 field, see generated coding in lxp32_execute
-                  cmd_cmp_o<='1';
-                  cmd_negate_op2_o<='1'; -- needed by ALU comparator to work correctly 
-                  valid_out<='1';   
-                  self_busy<='1';
-                  state<=ContinueCjmp;
-               elsif opcode=OP_LOAD  then
-                  rd1_select<=Reg;
-                  displacement:=get_I_displacement(word_i);
-                  cmd_dbus_o<='1';
-                  dst_out<="000"&rd;
-                  if funct3(1 downto 0)="00" then -- Byte access
-                    cmd_dbus_byte_o<='1';
-                  end if; -- TODO: Implement 16 BIT (H) instructons
-                  cmd_signed_o <= not funct3(2);    
-                  valid_out<='1';                  
-               elsif opcode=OP_STORE then
-                  rd1_select<=Reg;
-                  displacement:=get_S_displacement(word_i);
-                  rd2_select<=Reg;                  
-                  cmd_dbus_o<='1';   
-                  cmd_dbus_store_o<='1';   
-                  if funct3(1 downto 0)="00" then -- Byte access
-                    cmd_dbus_byte_o<='1';
-                  end if; -- TODO: Implement 16 BIT (H) instructons      
-                  valid_out<='1';
-                elsif opcode=OP_LUI or opcode=OP_AUIPC then
-                  -- we will use the ALU to calculate the result
-                  -- this saves an adder and time
-                  U_immed:=get_U_immediate(word_i);
-                  rd2_select<=Imm;
-                  rd2_direct<=std_logic_vector(U_immed);
-                  rd1_select<=Imm;  
-                  cmd_addsub_o<='1';                   
-                  if word_i(5)='1' then -- LUI
-                    rd1_direct<= (others=>'0');
-                  else
-                    rd1_direct<=std_logic_vector(current_ip)&"00";
-                  end if;                  
-                  dst_out<="000"&rd;
-                  valid_out<='1';
+               if valid_i='1' then   
+                  if opcode=OP_IMM or opcode=OP_OP then 
+                    rd1_select<=Reg;
+                    dst_out<="000"&rd;
+                    if opcode(5)='1' then -- OP_OP...
+                      rd2_select<=Reg;                         
+                    else --OP_IMM
+                      rd2_direct<=std_logic_vector(get_I_immediate(word_i));
+                      rd2_select<=Imm;
+                    end if;   
+                  
+                    case funct3 is 
+                      when ADD =>
+                        cmd_addsub_o<='1';                     
+                        if opcode(5)='1' then
+                          cmd_negate_op2_o<=word_i(30);
+                        end if;  
+                      when F_AND =>
+                        cmd_and_o<='1';
+                      when F_XOR =>                     
+                        cmd_xor_o<='1';
+                      when F_OR =>   
+                        cmd_and_o<='1';
+                        cmd_xor_o<='1';
+                      when SL  =>
+                        cmd_shift_o<='1';
+                      when SR => 
+                        cmd_shift_o<='1';
+                        cmd_shift_right_o<='1';
+                        cmd_signed_o<=word_i(30);                  
+                      when others =>    
+                    end case;
+                    valid_out<='1';
+                  elsif opcode=OP_JAL then
+                     rd1_select<=Imm;
+                     rd1_direct<=std_logic_vector(signed(current_ip&"00")+get_UJ_immediate(word_i));
+                     cmd_jump_o<='1';      
+                     cmd_loadop3_o<='1';
+                     op3_o<=next_ip_i&"00";
+                     dst_out<="000"&rd;                  
+                     jump_type_o<="0000";      
+                     valid_out<='1';    
+                  elsif opcode=OP_JALR then
+                     rd1_select<=Reg; 
+                     cmd_jump_o<='1';      
+                     cmd_loadop3_o<='1';
+                     op3_o<=next_ip_i&"00";
+                     dst_out<="000"&rd;     
+                     displacement:=get_I_displacement(word_i);
+                     jump_type_o<="0000";      
+                     valid_out<='1';
+                  elsif opcode=OP_BRANCH then
+                     branch_target:=std_logic_vector(signed(current_ip&"00")+get_SB_immediate(word_i));
+                     rd1_select<=Reg;
+                     rd2_select<=Reg;                                              
+                     jump_type_o<="0"&funct3; -- "reuse" lxp jump_type for the funct3 field, see generated coding in lxp32_execute
+                     cmd_cmp_o<='1';
+                     cmd_negate_op2_o<='1'; -- needed by ALU comparator to work correctly 
+                     valid_out<='1';   
+                     self_busy<='1';
+                     state<=ContinueCjmp;
+                  elsif opcode=OP_LOAD  then
+                     rd1_select<=Reg;
+                     displacement:=get_I_displacement(word_i);
+                     cmd_dbus_o<='1';
+                     dst_out<="000"&rd;
+                     if funct3(1 downto 0)="00" then -- Byte access
+                       cmd_dbus_byte_o<='1';
+                     end if; -- TODO: Implement 16 BIT (H) instructons
+                     cmd_signed_o <= not funct3(2);    
+                     valid_out<='1';                  
+                  elsif opcode=OP_STORE then
+                     rd1_select<=Reg;
+                     displacement:=get_S_displacement(word_i);
+                     rd2_select<=Reg;                  
+                     cmd_dbus_o<='1';   
+                     cmd_dbus_store_o<='1';   
+                     if funct3(1 downto 0)="00" then -- Byte access
+                       cmd_dbus_byte_o<='1';
+                     end if; -- TODO: Implement 16 BIT (H) instructons      
+                     valid_out<='1';
+                   elsif opcode=OP_LUI or opcode=OP_AUIPC then
+                     -- we will use the ALU to calculate the result
+                     -- this saves an adder and time
+                     U_immed:=get_U_immediate(word_i);
+                     rd2_select<=Imm;
+                     rd2_direct<=std_logic_vector(U_immed);
+                     rd1_select<=Imm;  
+                     cmd_addsub_o<='1';                   
+                     if word_i(5)='1' then -- LUI
+                       rd1_direct<= (others=>'0');
+                     else
+                       rd1_direct<=std_logic_vector(current_ip)&"00";
+                     end if;                  
+                     dst_out<="000"&rd;
+                     valid_out<='1';
+                   end if;
                 end if;
-
             when ContinueCjmp =>
                rd1_select<=Imm;
                rd1_direct<=branch_target;

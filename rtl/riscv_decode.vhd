@@ -160,6 +160,7 @@ process (clk_i) is
 variable branch_target : std_logic_vector(31 downto 0);
 variable U_immed : xsigned;
 variable displacement : t_displacement;
+variable funct3_21 : std_logic_vector(1 downto 0);
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -227,28 +228,43 @@ begin
                       rd2_direct<=std_logic_vector(get_I_immediate(word_i));
                       rd2_select<=Imm;
                     end if;   
-                  
-                    case funct3 is 
-                      when ADD =>
-                        cmd_addsub_o<='1';                     
-                        if opcode(5)='1' then
-                          cmd_negate_op2_o<=word_i(30);
-                        end if;  
-                      when F_AND =>
-                        cmd_and_o<='1';
-                      when F_XOR =>                     
-                        cmd_xor_o<='1';
-                      when F_OR =>   
-                        cmd_and_o<='1';
-                        cmd_xor_o<='1';
-                      when SL  =>
-                        cmd_shift_o<='1';
-                      when SR => 
-                        cmd_shift_o<='1';
-                        cmd_shift_right_o<='1';
-                        cmd_signed_o<=word_i(30);                  
-                      when others =>    
-                    end case;
+                              
+                    if funct7=MULEXT and opcode=OP_OP then
+                       -- M extension 
+                       if funct3(2)='0' then
+                         cmd_mul_o <= '1';
+                         --TODO: Implement the other mul operations
+                       else                  
+                         cmd_div_o <= '1';
+                         cmd_div_mod_o <= funct3(1);
+                         funct3_21:=funct3(2 downto 1);
+                         if funct3_21="101" or funct3_21="111" then
+                           cmd_signed_o <= '1';
+                         end if;                           
+                       end if;                            
+                    else 
+                       case funct3 is 
+                         when ADD =>
+                           cmd_addsub_o<='1';                     
+                           if opcode(5)='1' then
+                             cmd_negate_op2_o<=word_i(30);
+                           end if;  
+                         when F_AND =>
+                           cmd_and_o<='1';
+                         when F_XOR =>                     
+                           cmd_xor_o<='1';
+                         when F_OR =>   
+                           cmd_and_o<='1';
+                           cmd_xor_o<='1';
+                         when SL  =>
+                           cmd_shift_o<='1';
+                         when SR => 
+                           cmd_shift_o<='1';
+                           cmd_shift_right_o<='1';
+                           cmd_signed_o<=word_i(30);                  
+                         when others =>    
+                       end case;
+                    end if;  
                     valid_out<='1';
                   elsif opcode=OP_JAL then
                      rd1_select<=Imm;

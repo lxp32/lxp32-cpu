@@ -9,6 +9,7 @@ package riscv_decodeutil is
 
 subtype t_opcode is std_logic_vector(6 downto 0);
 subtype t_funct3 is std_logic_vector(2 downto 0);
+subtype t_funct7 is std_logic_vector(6 downto 0);
 
 -- Opcodes
 constant OP_IMM : t_opcode := "0010011";
@@ -29,6 +30,16 @@ constant F_OR  :  t_funct3  :="110";
 constant F_AND  : t_funct3  :="111";
 constant SL   : t_funct3  :="001";
 constant SR   : t_funct3  :="101";
+
+constant MULEXT : t_funct7 := "0000001";
+
+constant MUL  : t_funct3 := "000";
+constant MULH : t_funct3 := "001";
+constant DIV  : t_funct3 := "100";
+constant DIVU : t_funct3 := "101";
+constant F_REM  :  t_funct3  :="110";
+constant REMU  : t_funct3  :="111";
+
 
 
 constant XLEN : natural := 32;

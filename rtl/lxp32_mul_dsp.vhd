@@ -8,15 +8,9 @@
 -- This multiplier is designed for technologies that provide fast
 -- 16x16 multipliers, including most modern FPGA families. One
 -- multiplication takes 2 cycles.
-
-
-
---AB * CD
-
---           BD
---          DA0
---          CB0
---         AC00
+-- TH:
+-- extended multiplier to provide also the high 32 Bits of the 64 Bit result
+-- TODO: Add support for signed high word mult.  
 
 ---------------------------------------------------------------------
 

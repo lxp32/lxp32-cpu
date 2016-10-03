@@ -76,6 +76,7 @@ port(
       cmd_xor_o: out std_logic;
       cmd_shift_o: out std_logic;
       cmd_shift_right_o: out std_logic;
+      cmd_mul_high_o : out std_logic;
       
       jump_type_o: out std_logic_vector(3 downto 0);
       
@@ -160,7 +161,7 @@ process (clk_i) is
 variable branch_target : std_logic_vector(31 downto 0);
 variable U_immed : xsigned;
 variable displacement : t_displacement;
-variable funct3_21 : std_logic_vector(1 downto 0);
+variable t_valid : std_logic;
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -190,8 +191,9 @@ begin
          rd2_direct<=(others=>'-');
          op3_o<=(others=>'-');
          jump_type_o<=(others=>'-');
-         dst_out<=(others=>'0'); -- defaults to register 0, which is never read
+         dst_out<=(others=>'-'); -- defaults to register 0, which is never read
          displacement:= (others=>'-');
+         cmd_mul_high_o<='-';
       else
         if jump_valid_i='1' then
             -- When exeuction stage exeuctes jump do nothing
@@ -211,13 +213,18 @@ begin
                cmd_mul_o<='0';
                cmd_div_o<='0';
                cmd_div_mod_o<='0';
+               cmd_mul_high_o<='0';
                cmd_cmp_o<='0';
                cmd_jump_o<='0';
                cmd_and_o<='0';
                cmd_xor_o<='0';
                cmd_shift_o<='0';
                cmd_shift_right_o<='0';
+              
+               dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
+               t_valid := '0';
+               
                if valid_i='1' then   
                   if opcode=OP_IMM or opcode=OP_OP then 
                     rd1_select<=Reg;
@@ -233,16 +240,16 @@ begin
                        -- M extension 
                        if funct3(2)='0' then
                          cmd_mul_o <= '1';
-                         --TODO: Implement the other mul operations
+                         if funct3(1 downto 0) /= "00" then 
+                           cmd_mul_high_o<='1';
+                         end if;  
+                         --TODO: Implement the signed mul High variants 
                        else                  
                          cmd_div_o <= '1';
-                         cmd_div_mod_o <= funct3(1);
-                         funct3_21:=funct3(2 downto 1);
-                         if funct3_21="101" or funct3_21="111" then
-                           cmd_signed_o <= '1';
-                         end if;                           
+                         cmd_div_mod_o <= funct3(1);                         
+                         cmd_signed_o <= not funct3(0);                                                    
                        end if;                            
-                    else 
+                     else 
                        case funct3 is 
                          when ADD =>
                            cmd_addsub_o<='1';                     
@@ -265,8 +272,9 @@ begin
                          when others =>    
                        end case;
                     end if;  
-                    valid_out<='1';
-                  elsif opcode=OP_JAL then
+                    t_valid:='1';
+                  end if;  
+                  if opcode=OP_JAL then
                      rd1_select<=Imm;
                      rd1_direct<=std_logic_vector(signed(current_ip&"00")+get_UJ_immediate(word_i));
                      cmd_jump_o<='1';      
@@ -274,8 +282,9 @@ begin
                      op3_o<=next_ip_i&"00";
                      dst_out<="000"&rd;                  
                      jump_type_o<="0000";      
-                     valid_out<='1';    
-                  elsif opcode=OP_JALR then
+                     t_valid:='1';
+                  end if;                      
+                  if opcode=OP_JALR then
                      rd1_select<=Reg; 
                      cmd_jump_o<='1';      
                      cmd_loadop3_o<='1';
@@ -283,18 +292,20 @@ begin
                      dst_out<="000"&rd;     
                      displacement:=get_I_displacement(word_i);
                      jump_type_o<="0000";      
-                     valid_out<='1';
-                  elsif opcode=OP_BRANCH then
+                     t_valid:='1';
+                  end if;   
+                  if opcode=OP_BRANCH then
                      branch_target:=std_logic_vector(signed(current_ip&"00")+get_SB_immediate(word_i));
                      rd1_select<=Reg;
                      rd2_select<=Reg;                                              
                      jump_type_o<="0"&funct3; -- "reuse" lxp jump_type for the funct3 field, see generated coding in lxp32_execute
                      cmd_cmp_o<='1';
                      cmd_negate_op2_o<='1'; -- needed by ALU comparator to work correctly 
-                     valid_out<='1';   
+                     t_valid:='1';   
                      self_busy<='1';
                      state<=ContinueCjmp;
-                  elsif opcode=OP_LOAD  then
+                  end if;   
+                  if opcode=OP_LOAD  then
                      rd1_select<=Reg;
                      displacement:=get_I_displacement(word_i);
                      cmd_dbus_o<='1';
@@ -303,8 +314,9 @@ begin
                        cmd_dbus_byte_o<='1';
                      end if; -- TODO: Implement 16 BIT (H) instructons
                      cmd_signed_o <= not funct3(2);    
-                     valid_out<='1';                  
-                  elsif opcode=OP_STORE then
+                     t_valid:='1';
+                  end if;                      
+                  if opcode=OP_STORE then
                      rd1_select<=Reg;
                      displacement:=get_S_displacement(word_i);
                      rd2_select<=Reg;                  
@@ -313,8 +325,9 @@ begin
                      if funct3(1 downto 0)="00" then -- Byte access
                        cmd_dbus_byte_o<='1';
                      end if; -- TODO: Implement 16 BIT (H) instructons      
-                     valid_out<='1';
-                   elsif opcode=OP_LUI or opcode=OP_AUIPC then
+                     t_valid:='1';
+                   end if;  
+                   if opcode=OP_LUI or opcode=OP_AUIPC then
                      -- we will use the ALU to calculate the result
                      -- this saves an adder and time
                      U_immed:=get_U_immediate(word_i);
@@ -328,9 +341,11 @@ begin
                        rd1_direct<=std_logic_vector(current_ip)&"00";
                      end if;                  
                      dst_out<="000"&rd;
-                     valid_out<='1';
+                     t_valid:='1';  
                    end if;
-                end if;
+                   --TODO: CHeck t_valid=0 which means unkown opcode
+                   valid_out<=t_valid;
+               end if; -- if valid_i='1' 
             when ContinueCjmp =>
                rd1_select<=Imm;
                rd1_direct<=branch_target;

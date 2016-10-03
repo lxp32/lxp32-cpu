@@ -6,6 +6,9 @@
 -- Copyright (c) 2016 by Alex I. Kuznetsov
 --
 -- Performs arithmetic and logic operations.
+
+-- TH: Added Support for high word of multipler result 
+-- Attention: Only works with mul_dsp architecture currently !!!!
 ---------------------------------------------------------------------
 
 library ieee;
@@ -34,6 +37,7 @@ entity lxp32_alu is
 		cmd_xor_i: in std_logic;
 		cmd_shift_i: in std_logic;
 		cmd_shift_right_i: in std_logic;
+      cmd_mul_high_i : in std_logic; -- TH: Get high word of mult result
 		
 		op1_i: in std_logic_vector(31 downto 0);
 		op2_i: in std_logic_vector(31 downto 0);
@@ -64,9 +68,10 @@ signal cmp_s2: std_logic;
 signal logic_result: std_logic_vector(31 downto 0);
 signal logic_we: std_logic;
 
-signal mul_result: std_logic_vector(31 downto 0);
+signal mul_result,mul_result_high, mul_result_low: std_logic_vector(31 downto 0);
 signal mul_ce: std_logic;
 signal mul_we: std_logic;
+signal mul_high : std_logic; -- TH : registered signal..
 
 signal div_result: std_logic_vector(31 downto 0);
 signal div_ce: std_logic;
@@ -137,6 +142,15 @@ logic_we<=(cmd_and_i or cmd_xor_i) and valid_i;
 
 mul_ce<=cmd_mul_i and valid_i;
 
+mul_reg: process(clk_i)  begin
+  if rising_edge(clk_i) then
+    if mul_ce='1' then
+      mul_high<= cmd_mul_high_i;
+    end if;
+  end if;
+end process;  
+
+
 gen_mul_dsp: if MUL_ARCH="dsp" generate
 	mul_inst: entity work.lxp32_mul_dsp(rtl)
 		port map(
@@ -146,7 +160,8 @@ gen_mul_dsp: if MUL_ARCH="dsp" generate
 			op1_i=>op1_i,
 			op2_i=>op2_i,
 			ce_o=>mul_we,
-			result_o=>mul_result
+			result_o=>mul_result_low,
+         result_high_o=>mul_result_high
 		);
 end generate;
 
@@ -159,8 +174,9 @@ gen_mul_opt: if MUL_ARCH="opt" generate
 			op1_i=>op1_i,
 			op2_i=>op2_i,
 			ce_o=>mul_we,
-			result_o=>mul_result
+			result_o=>mul_result_low
 		);
+      mul_result_high<=(others=>'0');
 end generate;
 
 gen_mul_seq: if MUL_ARCH="seq" generate
@@ -172,9 +188,13 @@ gen_mul_seq: if MUL_ARCH="seq" generate
 			op1_i=>op1_i,
 			op2_i=>op2_i,
 			ce_o=>mul_we,
-			result_o=>mul_result
+			result_o=>mul_result_low
 		);
+      mul_result_high<=(others=>'0');
 end generate;
+
+mul_result <= mul_result_high when mul_high='1'
+              else mul_result_low;
 
 -- Divider
 

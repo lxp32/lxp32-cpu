@@ -39,6 +39,7 @@ entity lxp32_execute is
       cmd_xor_i: in std_logic;
       cmd_shift_i: in std_logic;
       cmd_shift_right_i: in std_logic;
+      cmd_mul_high_i : in std_logic; -- TH: Get high word of mult result
       
       jump_type_i: in std_logic_vector(3 downto 0);
       
@@ -154,7 +155,7 @@ alu_inst: entity work.lxp32_alu(rtl)
       cmd_xor_i=>cmd_xor_i,
       cmd_shift_i=>cmd_shift_i,
       cmd_shift_right_i=>cmd_shift_right_i,
-      
+      cmd_mul_high_i=>cmd_mul_high_i,
       op1_i=>op1_i,
       op2_i=>op2_i,
       

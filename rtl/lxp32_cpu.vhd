@@ -65,6 +65,7 @@ signal decode_cmd_and: std_logic;
 signal decode_cmd_xor: std_logic;
 signal decode_cmd_shift: std_logic;
 signal decode_cmd_shift_right: std_logic;
+signal decode_cmd_mul_high : std_logic; -- TH
 
 signal decode_jump_type: std_logic_vector(3 downto 0);
 
@@ -166,6 +167,7 @@ lxp32decode: if not USE_RISCV generate
 		op3_o=>decode_op3,
 		dst_o=>decode_dst
 	);
+   decode_cmd_mul_high<='0'; -- TH
 end generate;
 
 riscv_decode: if USE_RISCV generate 
@@ -210,6 +212,7 @@ decode_inst: entity work.riscv_decode(rtl)
 		cmd_xor_o=>decode_cmd_xor,
 		cmd_shift_o=>decode_cmd_shift,
 		cmd_shift_right_o=>decode_cmd_shift_right,
+      cmd_mul_high_o=>decode_cmd_mul_high, -- TH
 		
 		jump_type_o=>decode_jump_type,
 		
@@ -247,6 +250,7 @@ execute_inst: entity work.lxp32_execute(rtl)
 		cmd_xor_i=>decode_cmd_xor,
 		cmd_shift_i=>decode_cmd_shift,
 		cmd_shift_right_i=>decode_cmd_shift_right,
+      cmd_mul_high_i=>decode_cmd_mul_high, --TH
 		
 		jump_type_i=>decode_jump_type,
 		

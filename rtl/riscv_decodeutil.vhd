@@ -23,8 +23,8 @@ constant OP_LUI    : t_opcode := "0110111";
 constant OP_AUIPC  : t_opcode := "0010111";
  
 constant ADD :  t_funct3  :="000";
-constant SLTI : t_funct3  :="010";
-constant SLTIU : t_funct3 :="011";
+constant SLT :  t_funct3  :="010";
+constant SLTU : t_funct3  :="011";
 constant F_XOR :  t_funct3  :="100";
 constant F_OR  :  t_funct3  :="110";
 constant F_AND  : t_funct3  :="111";

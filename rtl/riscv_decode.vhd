@@ -77,6 +77,7 @@ port(
       cmd_shift_o: out std_logic;
       cmd_shift_right_o: out std_logic;
       cmd_mul_high_o : out std_logic;
+      cmd_slt_o : out std_logic; -- TH: RISC-V SLT/SLTU command 
       
       jump_type_o: out std_logic_vector(3 downto 0);
       
@@ -194,6 +195,7 @@ begin
          dst_out<=(others=>'-'); -- defaults to register 0, which is never read
          displacement:= (others=>'-');
          cmd_mul_high_o<='-';
+         cmd_slt_o<='-';
       else
         if jump_valid_i='1' then
             -- When exeuction stage exeuctes jump do nothing
@@ -220,6 +222,7 @@ begin
                cmd_xor_o<='0';
                cmd_shift_o<='0';
                cmd_shift_right_o<='0';
+               cmd_slt_o<='0';
               
                dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
@@ -268,7 +271,17 @@ begin
                          when SR => 
                            cmd_shift_o<='1';
                            cmd_shift_right_o<='1';
-                           cmd_signed_o<=word_i(30);                  
+                           cmd_signed_o<=word_i(30);
+                         when SLT =>
+                           cmd_cmp_o<='1';
+                           cmd_negate_op2_o<='1'; -- needed by ALU comparator to work correctly
+                           cmd_slt_o<='1';
+                           jump_type_o<="0100";
+                         when SLTU =>
+                           cmd_cmp_o<='1';
+                           cmd_negate_op2_o<='1'; -- needed by ALU comparator to work correctly
+                           cmd_slt_o<='1';
+                           jump_type_o<="0110";
                          when others =>    
                        end case;
                     end if;  

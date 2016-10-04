@@ -40,6 +40,7 @@ entity lxp32_execute is
       cmd_shift_i: in std_logic;
       cmd_shift_right_i: in std_logic;
       cmd_mul_high_i : in std_logic; -- TH: Get high word of mult result
+      cmd_slt_i : in std_logic; -- TH: RISC-V SLT/SLTU command 
       
       jump_type_i: in std_logic_vector(3 downto 0);
       
@@ -100,6 +101,12 @@ signal loadop3_we: std_logic;
 signal jump_condition: std_logic;
 signal jump_valid: std_logic:='0';
 signal jump_dst: std_logic_vector(jump_dst_o'range);
+signal cond_reg : std_logic_vector (2 downto 0);
+
+-- SLT 
+signal slt_we,slt_ce : std_logic;
+signal slt_result : std_logic_vector(31 downto 0) := (others=>'0');
+signal slt_busy : std_logic :='0';
 
 -- Target Address for load/store/jump
 
@@ -127,7 +134,7 @@ begin
 
 -- Pipeline control
 
-busy<=alu_busy or dbus_busy;
+busy<=alu_busy or dbus_busy or slt_busy;
 ready_o<=not busy;
 can_execute<=valid_i and not busy;
 
@@ -185,23 +192,49 @@ end generate;
 
 riscvjump: if USE_RISCV generate
  
-  process(cmd_cmp_i,jump_type_i,alu_cmp_eq,alu_cmp_ug,alu_cmp_sg,op1_i,op3_i) begin
-    if cmd_cmp_i = '0' then
-      jump_condition<= '1';
-    else 
-      case jump_type_i(2 downto 0) is
-        when "000" => jump_condition<=alu_cmp_eq; -- BEQ
-        when "001" => jump_condition<= not alu_cmp_eq; -- BNE
-        when "100" => jump_condition <= not alu_cmp_eq and not alu_cmp_sg; -- BLT
-        when "101" => jump_condition <= alu_cmp_eq or alu_cmp_sg; -- BGE
-        when "110" => jump_condition <= not alu_cmp_eq and not alu_cmp_ug; -- BLTU
-        when "111" => jump_condition <= alu_cmp_eq or alu_cmp_ug; -- BGEU
-        when others => jump_condition<= 'X'; -- dont care
+  process(cmd_cmp_i,jump_type_i,alu_cmp_eq,alu_cmp_ug,alu_cmp_sg) 
+  variable c: std_logic;
+  
+  begin
+    
+      case cond_reg is
+        when "000" => c:= alu_cmp_eq; -- BEQ
+        when "001" => c:= not alu_cmp_eq; -- BNE
+        when "100" => c:=  not alu_cmp_eq and not alu_cmp_sg; -- BLT
+        when "101" => c:= alu_cmp_eq or alu_cmp_sg; -- BGE
+        when "110" => c:= not alu_cmp_eq and not alu_cmp_ug; -- BLTU
+        when "111" => c:= alu_cmp_eq or alu_cmp_ug; -- BGEU
+        when others => c:= 'X'; -- dont care
       end case;  
-    end if;    
+      slt_result(0)<=c;
+      if cmd_cmp_i = '0' then
+        jump_condition<='1';
+      else 
+        jump_condition<=c;
+      end if;    
+    
   end process;  
 
 end generate;
+
+--SLT/SLTU command
+-- will use the jump logic above. so for executing SLT(U) cmd_cmp_i and cmd_neg_op2_i together with cmd_slt_i should be set
+-- jumptype must be set to 100 or 110 (see above)
+
+slt_ce <=   cmd_slt_i and can_execute;
+
+slt_ctrl: process(clk_i) begin
+  if rising_edge(clk_i) then
+     -- ALU comparator results have a latency of one clock     
+       slt_we <= slt_ce;
+       if slt_we='1' or rst_i='1' then
+         slt_busy<='0';
+       elsif slt_ce='1' then
+          slt_busy<='1';
+       end if;          
+  end if;   
+end process;  
+  
      
 -- Displacement adder
 -- is used for load/store but also as jump target 
@@ -281,18 +314,21 @@ dbus_inst: entity work.lxp32_dbus(rtl)
 result_mux_gen: for i in result_mux'range generate
    result_mux(i)<=(alu_result(i) and alu_we) or
       (op3_i(i) and loadop3_we) or
-      (dbus_result(i) and dbus_we);
+      (dbus_result(i) and dbus_we) or 
+      (slt_result(i) and slt_we);
 end generate;
 
-result_valid<=alu_we or loadop3_we or dbus_we;
+result_valid<=alu_we or loadop3_we or dbus_we or slt_we;
 
 -- Write destination register
+-- Write cond code register
 
 process (clk_i) is
 begin
    if rising_edge(clk_i) then
       if can_execute='1' then
          dst_reg<=dst_i;
+         cond_reg <= jump_type_i(2 downto 0); --TH
       end if;
    end if;
 end process;

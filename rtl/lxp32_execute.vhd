@@ -225,6 +225,11 @@ slt_ce <=   cmd_slt_i and can_execute;
 
 slt_ctrl: process(clk_i) begin
   if rising_edge(clk_i) then
+     -- Write cond code register, will also be used for branches
+     if cmd_cmp_i='1' then
+       cond_reg <= jump_type_i(2 downto 0); --TH
+     end if;
+  
      -- ALU comparator results have a latency of one clock     
        slt_we <= slt_ce;
        if slt_we='1' or rst_i='1' then
@@ -321,14 +326,14 @@ end generate;
 result_valid<=alu_we or loadop3_we or dbus_we or slt_we;
 
 -- Write destination register
--- Write cond code register
+
 
 process (clk_i) is
 begin
    if rising_edge(clk_i) then
       if can_execute='1' then
          dst_reg<=dst_i;
-         cond_reg <= jump_type_i(2 downto 0); --TH
+         
       end if;
    end if;
 end process;

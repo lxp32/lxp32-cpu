@@ -54,6 +54,7 @@ signal decode_cmd_signed: std_logic;
 signal decode_cmd_dbus: std_logic;
 signal decode_cmd_dbus_store: std_logic;
 signal decode_cmd_dbus_byte: std_logic;
+signal decode_cmd_dbus_hword: std_logic:='0';
 signal decode_cmd_addsub: std_logic;
 signal decode_cmd_mul: std_logic;
 signal decode_cmd_div: std_logic;
@@ -203,6 +204,7 @@ decode_inst: entity work.riscv_decode(rtl)
 		cmd_dbus_o=>decode_cmd_dbus,
 		cmd_dbus_store_o=>decode_cmd_dbus_store,
 		cmd_dbus_byte_o=>decode_cmd_dbus_byte,
+      cmd_dbus_hword_o=>decode_cmd_dbus_hword, -- TH
 		cmd_addsub_o=>decode_cmd_addsub,
 		cmd_mul_o=>decode_cmd_mul,
 		cmd_div_o=>decode_cmd_div,
@@ -242,6 +244,7 @@ execute_inst: entity work.lxp32_execute(rtl)
 		cmd_dbus_i=>decode_cmd_dbus,
 		cmd_dbus_store_i=>decode_cmd_dbus_store,
 		cmd_dbus_byte_i=>decode_cmd_dbus_byte,
+      cmd_dbus_hword_i=>decode_cmd_dbus_hword, -- TH
 		cmd_addsub_i=>decode_cmd_addsub,
 		cmd_mul_i=>decode_cmd_mul,
 		cmd_div_i=>decode_cmd_div,

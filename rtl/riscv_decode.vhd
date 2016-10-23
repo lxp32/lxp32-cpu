@@ -65,6 +65,7 @@ port(
       cmd_dbus_o: out std_logic;
       cmd_dbus_store_o: out std_logic;
       cmd_dbus_byte_o: out std_logic;
+      cmd_dbus_hword_o: out std_logic; -- TH
       cmd_addsub_o: out std_logic;
       cmd_mul_o: out std_logic;
       cmd_div_o: out std_logic;
@@ -175,6 +176,7 @@ begin
          cmd_dbus_o<='-';
          cmd_dbus_store_o<='-';
          cmd_dbus_byte_o<='-';
+         cmd_dbus_hword_o<='-'; -- TH
          cmd_addsub_o<='-';
          cmd_negate_op2_o<='-';
          cmd_mul_o<='-';
@@ -210,6 +212,7 @@ begin
                cmd_dbus_o<='0';
                cmd_dbus_store_o<='0';
                cmd_dbus_byte_o<='0';
+               cmd_dbus_hword_o<='0'; -- TH
                cmd_addsub_o<='0';
                cmd_negate_op2_o<='0';
                cmd_mul_o<='0';
@@ -325,7 +328,9 @@ begin
                      dst_out<="000"&rd;
                      if funct3(1 downto 0)="00" then -- Byte access
                        cmd_dbus_byte_o<='1';
-                     end if; -- TODO: Implement 16 BIT (H) instructons
+                     elsif funct3(1 downto 0)="01" then --  16 BIT (H) access 
+                       cmd_dbus_hword_o<='1';
+                     end if; 
                      cmd_signed_o <= not funct3(2);    
                      t_valid:='1';
                   end if;                      
@@ -337,6 +342,8 @@ begin
                      cmd_dbus_store_o<='1';   
                      if funct3(1 downto 0)="00" then -- Byte access
                        cmd_dbus_byte_o<='1';
+                     elsif funct3(1 downto 0)="01" then --  16 BIT (H) access 
+                       cmd_dbus_hword_o<='1';  
                      end if; -- TODO: Implement 16 BIT (H) instructons      
                      t_valid:='1';
                    end if;  

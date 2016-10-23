@@ -6,6 +6,10 @@
 -- Copyright (c) 2016 by Alex I. Kuznetsov
 --
 -- Manages data bus (DBUS) access.
+
+-- Extension TH 22.10.2016:
+-- Support for hword (16 Bit) Bus Access analogous to byte access
+-- needed to implement lhu/lh/shu/sh RISC-V instructions.
 ---------------------------------------------------------------------
 
 library ieee;
@@ -25,6 +29,7 @@ entity lxp32_dbus is
 		cmd_dbus_i: in std_logic;
 		cmd_dbus_store_i: in std_logic;
 		cmd_dbus_byte_i: in std_logic;
+      cmd_dbus_hword_i : in std_logic; -- TH: half word (16Bit) access
 		cmd_signed_i: in std_logic;
 		addr_i: in std_logic_vector(31 downto 0);
 		wdata_i: in std_logic_vector(31 downto 0);
@@ -49,10 +54,11 @@ architecture rtl of lxp32_dbus is
 signal strobe: std_logic:='0';
 signal we_out: std_logic:='0';
 signal we: std_logic;
-signal byte_mode: std_logic;
+signal byte_mode,hword_mode: std_logic;
 signal sel: std_logic_vector(3 downto 0);
 signal sig: std_logic;
 signal rmw_mode: std_logic;
+signal adr_reg : std_logic_vector(1 downto 0); -- TH: Lower two bits of address bus
 
 signal dbus_rdata: std_logic_vector(31 downto 0);
 signal selected_byte: std_logic_vector(7 downto 0);
@@ -80,19 +86,11 @@ begin
 					sig<=cmd_signed_i;					
 					
 					dbus_adr_o<=addr_i(31 downto 2);
-					
-					if cmd_dbus_byte_i='0' then
-						byte_mode<='0';
-						dbus_dat_o<=wdata_i;
-						sel<="1111";
-						
-						-- synthesis translate_off
-						assert addr_i(1 downto 0)="00"
-							report "Misaligned word-granular access on data bus"
-							severity warning;
-						-- synthesis translate_on
-					else
-						byte_mode<='1';
+               adr_reg<=addr_i(1 downto 0);
+               
+               if cmd_dbus_byte_i='1' then
+                 byte_mode<='1';
+                 hword_mode<='0';
 						dbus_dat_o<=wdata_i(7 downto 0)&wdata_i(7 downto 0)&
 							wdata_i(7 downto 0)&wdata_i(7 downto 0);
 						
@@ -103,14 +101,41 @@ begin
 						when "11" => sel<="1000";
 						when others =>
 						end case;
+               elsif cmd_dbus_hword_i='1' then   
+                 byte_mode<='0';
+                 hword_mode<='1';
+                 dbus_dat_o<=wdata_i(15 downto 0)&wdata_i(15 downto 0);
+                 -- synthesis translate_off
+						assert addr_i(0)='0'
+							report "Misaligned word-granular access on data bus"
+							severity warning;
+						-- synthesis translate_on                 
+                  if addr_i(1)='0' then
+                    sel<="0011";
+                  else
+                    sel<="1100";
+                  end if;                    
+					
+					else -- word mode 
+						byte_mode<='0';
+                  hword_mode<='0';
+						dbus_dat_o<=wdata_i;
+						sel<="1111";
+						
+						-- synthesis translate_off
+						assert addr_i(1 downto 0)="00"
+							report "Misaligned word-granular access on data bus"
+							severity warning;
+						-- synthesis translate_on
 					end if;
+						
 					
 					if not RMW then
 						we<=cmd_dbus_store_i;
 						rmw_mode<='0';
 					else
-						we<=cmd_dbus_store_i and not cmd_dbus_byte_i;
-						rmw_mode<=cmd_dbus_store_i and cmd_dbus_byte_i;
+						we<=cmd_dbus_store_i and not (cmd_dbus_byte_i or cmd_dbus_hword_i);
+						rmw_mode<=cmd_dbus_store_i and (cmd_dbus_byte_i or cmd_dbus_hword_i);
 					end if;
 				end if;
 			else
@@ -154,16 +179,39 @@ begin
 	end if;
 end process;
 
-selected_byte_gen: for i in selected_byte'range generate
-	selected_byte(i)<=(dbus_rdata(i) and sel(0)) or
-		(dbus_rdata(i+8) and sel(1)) or
-		(dbus_rdata(i+16) and sel(2)) or
-		(dbus_rdata(i+24) and sel(3));
-end generate;
-
-rdata_o<=dbus_rdata when byte_mode='0' else
-	X"000000"&selected_byte when selected_byte(selected_byte'high)='0' or sig='0' else
-	X"FFFFFF"&selected_byte;
+-- TH: New mux coding...
+rdata_mux: process(dbus_rdata,sel,byte_mode,hword_mode,sig,adr_reg)
+variable byte : std_logic_vector(7 downto 0);
+variable hword : std_logic_vector(15 downto 0);
+begin
+  if byte_mode='1' then
+    case adr_reg is 
+      when "00" =>  byte:=dbus_rdata(7 downto 0);
+      when "01" =>  byte:=dbus_rdata(15 downto 8);
+      when "10" =>  byte:=dbus_rdata(23 downto 16);
+      when "11" =>  byte:=dbus_rdata(31 downto 24);
+      when others => byte:=(others=> 'X');
+    end case;
+    if sig='0' or byte(7)='0' then    
+      rdata_o<=X"000000"&byte;
+    else
+      rdata_o<=X"FFFFFF"&byte;    
+    end if;
+  elsif hword_mode='1' then 
+    case adr_reg(1) is
+      when '0' => hword:=dbus_rdata(15 downto 0);
+      when '1' => hword:=dbus_rdata(31 downto 16);
+      when others => hword:=(others => 'X');
+    end case;
+    if sig='0' or hword(15)='0' then    
+      rdata_o<=X"0000"&hword;
+    else
+      rdata_o<=X"FFFF"&hword;    
+    end if;
+  else   
+    rdata_o<=dbus_rdata;
+  end if;  
+end process;
 
 we_o<=we_out;
 busy_o<=strobe or we_out;

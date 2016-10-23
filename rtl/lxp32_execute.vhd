@@ -28,6 +28,7 @@ entity lxp32_execute is
       cmd_dbus_i: in std_logic;
       cmd_dbus_store_i: in std_logic;
       cmd_dbus_byte_i: in std_logic;
+      cmd_dbus_hword_i : in std_logic; -- TH
       cmd_addsub_i: in std_logic;
       cmd_mul_i: in std_logic;
       cmd_div_i: in std_logic;
@@ -296,6 +297,7 @@ dbus_inst: entity work.lxp32_dbus(rtl)
       cmd_dbus_i=>cmd_dbus_i,
       cmd_dbus_store_i=>cmd_dbus_store_i,
       cmd_dbus_byte_i=>cmd_dbus_byte_i,
+      cmd_dbus_hword_i=>cmd_dbus_hword_i, -- TH
       cmd_signed_i=>cmd_signed_i,
       addr_i=>target_address,
       wdata_i=>op2_i,

@@ -29,6 +29,7 @@ sh t1,14(a1) // Store Upper half of a2
  
 lw t4,12(a1) // should be FA55AA55
 jal store
+
 lhu t4,14(a1) // => 0000FA55
 jal store
 lh  t4,14(a1) // => FFFFFA55
@@ -37,6 +38,13 @@ lhu t4,12(a1) // => 0000AA55
 jal store
 lh  t4,12(a1) // => FFFFAA55
 jal store
+
+sh t1,17(a1) // test store of "middle" half word
+lw t4,16(a1) // => 00FA5500
+jal store
+lhu t4,1(a1) // => 000055AA
+jal store 
+
 j loop
 
 store: // store t4 to mem and increment

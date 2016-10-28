@@ -79,6 +79,10 @@ port(
       cmd_shift_right_o: out std_logic;
       cmd_mul_high_o : out std_logic;
       cmd_slt_o : out std_logic; -- TH: RISC-V SLT/SLTU command 
+      -- TH: RISC-V CSR commands
+      cmd_csr_o : out std_logic;
+      csr_x0_o : out STD_LOGIC; -- should be set when rs field is x0
+      csr_op_o : out  STD_LOGIC_VECTOR (1 downto 0); -- lower bits of funct3
       
       jump_type_o: out std_logic_vector(3 downto 0);
       
@@ -142,6 +146,7 @@ begin
    rs2<=word_i(24 downto 20);
    funct7<=word_i(31 downto 25);
    
+   
    -- decode Register addresses 
    rd1<="000"&rs1; 
    rd2<="000"&rs2; 
@@ -171,6 +176,7 @@ begin
          self_busy<='0';
          state<=Regular;
          interrupt_ready<='0';
+         -- all the following values are only initalized for simulation.
          cmd_loadop3_o<='-';
          cmd_signed_o<='-';
          cmd_dbus_o<='-';
@@ -194,10 +200,12 @@ begin
          rd2_direct<=(others=>'-');
          op3_o<=(others=>'-');
          jump_type_o<=(others=>'-');
-         dst_out<=(others=>'-'); -- defaults to register 0, which is never read
+         dst_out<=(others=>'-'); 
          displacement:= (others=>'-');
          cmd_mul_high_o<='-';
          cmd_slt_o<='-';
+         cmd_csr_o <= '-';
+         
       else
         if jump_valid_i='1' then
             -- When exeuction stage exeuctes jump do nothing
@@ -226,6 +234,7 @@ begin
                cmd_shift_o<='0';
                cmd_shift_right_o<='0';
                cmd_slt_o<='0';
+               cmd_csr_o <= '0';
               
                dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
@@ -362,6 +371,29 @@ begin
                      end if;                  
                      dst_out<="000"&rd;
                      t_valid:='1';  
+                   end if;
+                   if opcode=SYSTEM then 
+                     if funct3="000" then
+                       -- ECALL EBEAK
+                       -- TODO: Implement..
+                     else         
+                        cmd_csr_o<='1';     
+                        csr_op_o<=funct3(1 downto 0);
+                        if rs1="00000" then
+                          csr_x0_o <= '1';
+                        else 
+                          csr_x0_o <= '0';
+                        end if;                          
+                        displacement:=word_i(31 downto 20); -- CSR address
+                        if funct3(2)='1' then
+                          rd1_select<=Imm;
+                          rd1_direct<=std_logic_vector(resize(unsigned(word_i(19 downto 15)),rd1_direct'length));
+                        else
+                          rd1_select<=Reg;
+                        end if;
+                        dst_out<="000"&rd;  
+                        t_valid:='1';                        
+                     end if;                     
                    end if;
                    --TODO: CHeck t_valid=0 which means unkown opcode
                    valid_out<=t_valid;

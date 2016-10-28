@@ -68,6 +68,8 @@ signal decode_cmd_shift: std_logic;
 signal decode_cmd_shift_right: std_logic;
 signal decode_cmd_mul_high : std_logic; -- TH
 signal decode_cmd_slt : std_logic; -- TH
+signal decode_cmd_csr : std_logic; -- TH
+
 
 signal decode_jump_type: std_logic_vector(3 downto 0);
 
@@ -75,6 +77,9 @@ signal decode_op1: std_logic_vector(31 downto 0);
 signal decode_op2: std_logic_vector(31 downto 0);
 signal decode_op3: std_logic_vector(31 downto 0);
 signal decode_dst: std_logic_vector(7 downto 0);
+
+signal decode_csr_x0_o :  STD_LOGIC; -- should be set when rs field is x0
+signal decode_csr_op_o :  STD_LOGIC_VECTOR (1 downto 0); -- lower bits of funct3
 
 signal execute_ready: std_logic;
 signal execute_jump_valid: std_logic;
@@ -161,6 +166,8 @@ lxp32decode: if not USE_RISCV generate
 		cmd_xor_o=>decode_cmd_xor,
 		cmd_shift_o=>decode_cmd_shift,
 		cmd_shift_right_o=>decode_cmd_shift_right,
+		
+		
 	
 		jump_type_o=>decode_jump_type,
 		
@@ -216,8 +223,13 @@ decode_inst: entity work.riscv_decode(rtl)
 		cmd_xor_o=>decode_cmd_xor,
 		cmd_shift_o=>decode_cmd_shift,
 		cmd_shift_right_o=>decode_cmd_shift_right,
-      cmd_mul_high_o=>decode_cmd_mul_high, -- TH
-      cmd_slt_o => decode_cmd_slt, --TH
+        cmd_mul_high_o=>decode_cmd_mul_high, -- TH
+        cmd_slt_o => decode_cmd_slt, --TH
+      
+        -- TH: CSR 
+        cmd_csr_o=>decode_cmd_csr,
+		csr_x0_o=>decode_csr_x0_o,
+		csr_op_o=>decode_csr_op_o,
 		
 		jump_type_o=>decode_jump_type,
 		
@@ -258,6 +270,10 @@ execute_inst: entity work.lxp32_execute(rtl)
 		cmd_shift_right_i=>decode_cmd_shift_right,
       cmd_mul_high_i=>decode_cmd_mul_high, --TH
       cmd_slt_i => decode_cmd_slt, -- TH
+      
+      cmd_csr_i=>decode_cmd_csr,
+      csr_op_i=>decode_csr_op_o,
+      csr_x0_i=>decode_csr_x0_o,  
 		
 		jump_type_i=>decode_jump_type,
 		

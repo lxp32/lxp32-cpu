@@ -21,6 +21,7 @@ constant OP_STORE  : t_opcode := "0100011";
 constant OP_BRANCH : t_opcode := "1100011";
 constant OP_LUI    : t_opcode := "0110111";
 constant OP_AUIPC  : t_opcode := "0010111";
+constant SYSTEM    : t_opcode := "1110011";
  
 constant ADD :  t_funct3  :="000";
 constant SLT :  t_funct3  :="010";

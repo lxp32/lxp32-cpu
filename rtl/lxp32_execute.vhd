@@ -43,6 +43,11 @@ entity lxp32_execute is
       cmd_mul_high_i : in std_logic; -- TH: Get high word of mult result
       cmd_slt_i : in std_logic; -- TH: RISC-V SLT/SLTU command 
       
+      -- Control Unit 
+      cmd_csr_i : in std_logic;
+      csr_x0_i : in STD_LOGIC; -- should be set when rs field is x0
+      csr_op_i : in  STD_LOGIC_VECTOR (1 downto 0);
+      
       jump_type_i: in std_logic_vector(3 downto 0);
       
       op1_i: in std_logic_vector(31 downto 0);
@@ -109,6 +114,12 @@ signal slt_we,slt_ce : std_logic;
 signal slt_result : std_logic_vector(31 downto 0) := (others=>'0');
 signal slt_busy : std_logic :='0';
 
+-- Control unit
+signal csr_we : std_logic := '0';
+signal csr_ce,csr_exception : std_logic;
+signal csr_busy : std_logic := '0';
+signal csr_result :  std_logic_vector(31 downto 0);
+
 -- Target Address for load/store/jump
 
 signal target_address : std_logic_vector(31 downto 0);
@@ -135,7 +146,7 @@ begin
 
 -- Pipeline control
 
-busy<=alu_busy or dbus_busy or slt_busy;
+busy<=alu_busy or dbus_busy or slt_busy or csr_busy;
 ready_o<=not busy;
 can_execute<=valid_i and not busy;
 
@@ -281,9 +292,6 @@ interrupt_return_o<=interrupt_return;
 
 -- DBUS access
 
-
-
-
 dbus_inst: entity work.lxp32_dbus(rtl)
    generic map(
       RMW=>DBUS_RMW
@@ -316,16 +324,43 @@ dbus_inst: entity work.lxp32_dbus(rtl)
       dbus_dat_i=>dbus_dat_i
    );
 
+
+-- RISCV control unit
+
+riscv_cu: if USE_RISCV  generate
+
+   csr_ce <= cmd_csr_i and can_execute;
+   
+   Inst_riscv_control_unit: entity work.riscv_control_unit PORT MAP(
+		op1_i => op1_i,
+		wdata_o => csr_result,
+		we_o => csr_we ,
+		csr_exception =>csr_exception ,
+		csr_adr => displacement_i,
+		ce_i => csr_ce,
+		busy_o => csr_busy,
+		csr_x0_i => csr_x0_i,
+		csr_op_i => csr_op_i,
+		clk_i => clk_i ,
+		rst_i => rst_i
+	);
+
+end generate;
+
+
+
+
 -- Result multiplexer
 
 result_mux_gen: for i in result_mux'range generate
    result_mux(i)<=(alu_result(i) and alu_we) or
       (op3_i(i) and loadop3_we) or
       (dbus_result(i) and dbus_we) or 
+      (csr_result(i) and csr_we) or 
       (slt_result(i) and slt_we);
 end generate;
 
-result_valid<=alu_we or loadop3_we or dbus_we or slt_we;
+result_valid<=alu_we or loadop3_we or dbus_we or slt_we or csr_we;
 
 -- Write destination register
 

@@ -43,10 +43,15 @@ entity riscv_control_unit is
            busy_o : out STD_LOGIC;
            csr_x0_i : in STD_LOGIC; -- should be set when rs field is x0
            csr_op_i : in  STD_LOGIC_VECTOR (1 downto 0);
-           -- external registers
+           -- export CSR registers
            
+           mtvec_o : out std_logic_vector(31 downto 2);
            
-           
+           -- trap info import
+           mcause_i : in STD_LOGIC_VECTOR (31 downto 0);
+           mepc_i : in std_logic_vector(31 downto 2);
+           mtrap_strobe_i : in STD_LOGIC; -- indicates that mcause_i and mepc_i should be registered
+                      
            clk_i : in  STD_LOGIC;
            rst_i : in  STD_LOGIC);
 end riscv_control_unit;
@@ -66,12 +71,17 @@ signal exception : std_logic :='0';
 signal mtvec : std_logic_vector(31 downto 2) := (others=>'0');
 signal mscratch : std_logic_vector(31 downto 0) := (others=>'0');
 
+-- trap info
+signal mepc : std_logic_vector(31 downto 2) := (others=>'0');
+signal mcause : std_logic_vector(31 downto 0) := (others=>'0');
+
 begin
 
 -- output wiring
 we_o <= we;
 busy_o<=busy;
 csr_exception <= exception;
+mtvec_o <= mtvec;
 
 
 csr_offset <= csr_adr(7 downto 0);
@@ -102,37 +112,52 @@ variable l_exception : std_logic;
 begin
    
    if rising_edge(clk_i) then
-     we <= ce_i; -- Pipeline control, latency one cycle
-     
-     if we='1' or rst_i='1' then
-         busy<='0';
+     if rst_i='1' then
          exception  <= '0';
          mtvec <=  (others=>'0');
-                
-     elsif ce_i='1' then
-       busy <= '1'; 
-       l_exception:='0'; 
-       
-       if csr_adr(11 downto 8)=m_stdprefix then
-         case csr_adr(7 downto 0) is
-           when tvec =>             
-              mtvec<=csr_out(31 downto 2);
-           when scratch =>                        
-              mscratch<=csr_out;   
-           when others=> 
-             l_exception:='1';            
-         end case;         
-       else 
-         l_exception:='1'; 
-       end if;
-       if l_exception = '0'  then -- and csr_x0_i='0'
-         wdata_o <= csr_in;
-       else
-         wdata_o <= (others => '0');       
-       end if;  
-       exception<=l_exception;       
-     end if;    
-   end if;
+         busy <= '0';
+     else
+        -- mtrap_strobe_i has precedence over ce_i.
+        -- When both signals are asserted in the same clock cycle, the CSR processing
+        -- will be delayed by one cycle
+        -- execution control must ensure that no data hazzards are created.
+        if mtrap_strobe_i='1' then
+          mcause <= mcause_i;
+          mepc <= mepc_i;          
+        else        
+           we <= ce_i; -- Pipeline control, latency one cycle        
+           if we='1' then
+               busy <= '0';                   
+           elsif ce_i='1' then
+             busy <= '1'; 
+             l_exception:='0'; 
+             
+             if csr_adr(11 downto 8)=m_stdprefix then
+               case csr_adr(7 downto 0) is
+                 when tvec =>             
+                    mtvec<=csr_out(31 downto 2);
+                 when scratch =>                        
+                    mscratch<=csr_out;   
+                 when epc =>
+                    mepc <= csr_out(31 downto 2);
+                 when cause =>
+                    mcause <= csr_out;                 
+                 when others=> 
+                   l_exception:='1';            
+               end case;         
+             else 
+               l_exception:='1'; 
+             end if;
+             if l_exception = '0'  then -- and csr_x0_i='0'
+               wdata_o <= csr_in;
+             else
+               wdata_o <= (others => '0');       
+             end if;  
+             exception<=l_exception;       
+           end if;    
+        end if;   
+      end if;
+   end if;   
 end process;
 
 

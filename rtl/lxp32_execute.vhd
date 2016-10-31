@@ -48,6 +48,11 @@ entity lxp32_execute is
       csr_x0_i : in STD_LOGIC; -- should be set when rs field is x0
       csr_op_i : in  STD_LOGIC_VECTOR (1 downto 0);
       
+      cmd_trap_i : in STD_LOGIC; -- TH: Execute trap 
+      trap_cause_i : in STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
+      interrupt_i : in STD_LOGIC; -- Trap is interrupt 
+      
+      
       jump_type_i: in std_logic_vector(3 downto 0);
       
       op1_i: in std_logic_vector(31 downto 0);
@@ -119,6 +124,10 @@ signal csr_we : std_logic := '0';
 signal csr_ce,csr_exception : std_logic;
 signal csr_busy : std_logic := '0';
 signal csr_result :  std_logic_vector(31 downto 0);
+
+signal mcause :  STD_LOGIC_VECTOR (31 downto 0);
+signal mepc,mtvec :  std_logic_vector(31 downto 2);
+signal mtrap_strobe : STD_LOGIC; 
 
 -- Target Address for load/store/jump
 
@@ -271,11 +280,19 @@ begin
          interrupt_return<='0';
          jump_dst<=(others=>'-');
       else
-         if jump_valid='0' then            
-            jump_dst<=target_address(31 downto 2);
-            if can_execute='1' and cmd_jump_i='1' and jump_condition='1' then
+         if jump_valid='0' then    
+            if cmd_trap_i = '1' then
+              jump_dst<=mtvec;
+            else              
+              jump_dst<=target_address(31 downto 2);
+            end if;  
+            if can_execute='1' and ((cmd_jump_i='1' and jump_condition='1') or cmd_trap_i = '1') then
                jump_valid<='1';
-               interrupt_return<=op1_i(0);
+               --TODO : Hier gehts weiter ......
+               if cmd_trap_i = '1' then
+                 mtrap_strobe <= '1';
+               end if;  
+               if not RISCV then interrupt_return<=op1_i(0); end if;
             end if;
          elsif jump_ready_i='1' then
             jump_valid<='0';
@@ -331,7 +348,7 @@ riscv_cu: if USE_RISCV  generate
 
    csr_ce <= cmd_csr_i and can_execute;
    
-   Inst_riscv_control_unit: entity work.riscv_control_unit PORT MAP(
+   csr_inst: entity work.riscv_control_unit PORT MAP(
 		op1_i => op1_i,
 		wdata_o => csr_result,
 		we_o => csr_we ,
@@ -342,7 +359,12 @@ riscv_cu: if USE_RISCV  generate
 		csr_x0_i => csr_x0_i,
 		csr_op_i => csr_op_i,
 		clk_i => clk_i ,
-		rst_i => rst_i
+		rst_i => rst_i,
+      
+      mtvec_o => mtvec,
+      mcause_i => mcause,
+      mepc_i => mepc,
+      mtrap_strobe_i => mtrap_strobe
 	);
 
 end generate;

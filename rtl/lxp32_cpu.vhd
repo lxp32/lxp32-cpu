@@ -69,7 +69,8 @@ signal decode_cmd_shift_right: std_logic;
 signal decode_cmd_mul_high : std_logic; -- TH
 signal decode_cmd_slt : std_logic; -- TH
 signal decode_cmd_csr : std_logic; -- TH
-
+signal decode_cmd_trap :  STD_LOGIC; -- TH: Execute trap
+signal decode_cmd_tret :  STD_LOGIC; -- TH: return from trap
 
 signal decode_jump_type: std_logic_vector(3 downto 0);
 
@@ -80,6 +81,7 @@ signal decode_dst: std_logic_vector(7 downto 0);
 
 signal decode_csr_x0_o :  STD_LOGIC; -- should be set when rs field is x0
 signal decode_csr_op_o :  STD_LOGIC_VECTOR (1 downto 0); -- lower bits of funct3
+
 
 signal execute_ready: std_logic;
 signal execute_jump_valid: std_logic;
@@ -100,10 +102,10 @@ signal interrupt_vector: std_logic_vector(2 downto 0);
 signal interrupt_ready: std_logic;
 signal interrupt_return: std_logic;
 
-
-signal decode_cmd_trap :  STD_LOGIC; -- TH: Execute trap 
+ 
 signal decode_trap_cause :  STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
 signal decode_interrupt : STD_LOGIC; -- Trap is interrupt 
+signal decode_epc : std_logic_vector(31 downto 2);
 
 
 begin
@@ -182,8 +184,12 @@ lxp32decode: if not USE_RISCV generate
         op3_o=>decode_op3,
         dst_o=>decode_dst
     );
+    
    decode_cmd_mul_high<='0'; -- TH
    decode_cmd_slt <= '0'; -- TH
+   decode_cmd_trap <= '0';
+   decode_cmd_tret <= '0';
+   decode_cmd_csr <= '0';
 end generate;
 
 riscv_decode: if USE_RISCV generate 
@@ -207,7 +213,7 @@ decode_inst: entity work.riscv_decode(rtl)
         sp_raddr2_o=>sp_raddr2,
         sp_rdata2_i=>sp_rdata2,
       
-      displacement_o=>displacement,
+        displacement_o=>displacement,
         
         ready_i=>execute_ready,
         valid_o=>decode_valid,
@@ -238,8 +244,10 @@ decode_inst: entity work.riscv_decode(rtl)
         csr_op_o=>decode_csr_op_o,
         
         cmd_trap_o => decode_cmd_trap,
+        cmd_tret_o => decode_cmd_tret,
         trap_cause_o => decode_trap_cause,
         interrupt_o => decode_interrupt,
+        epc_o => decode_epc,
         
         jump_type_o=>decode_jump_type,
         
@@ -286,8 +294,10 @@ execute_inst: entity work.lxp32_execute(rtl)
         csr_x0_i=>decode_csr_x0_o,  
         
         cmd_trap_i=>decode_cmd_trap,
+        cmd_tret_i=>decode_cmd_tret,
         trap_cause_i => decode_trap_cause,
         interrupt_i => decode_interrupt,
+        epc_i => decode_epc,
         
         jump_type_i=>decode_jump_type,
         

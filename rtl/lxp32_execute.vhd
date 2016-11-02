@@ -49,8 +49,10 @@ entity lxp32_execute is
       csr_op_i : in  STD_LOGIC_VECTOR (1 downto 0);
       
       cmd_trap_i : in STD_LOGIC; -- TH: Execute trap 
+      cmd_tret_i : in STD_LOGIC; -- TH: return from trap 
       trap_cause_i : in STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
       interrupt_i : in STD_LOGIC; -- Trap is interrupt 
+      epc_i : std_logic_vector(31 downto 2);
       
       
       jump_type_i: in std_logic_vector(3 downto 0);
@@ -111,7 +113,7 @@ signal loadop3_we: std_logic;
 
 signal jump_condition: std_logic;
 signal jump_valid: std_logic:='0';
-signal jump_dst: std_logic_vector(jump_dst_o'range);
+signal jump_dst, jump_dst_r: std_logic_vector(jump_dst_o'range);
 signal cond_reg : std_logic_vector (2 downto 0);
 
 -- SLT 
@@ -125,9 +127,8 @@ signal csr_ce,csr_exception : std_logic;
 signal csr_busy : std_logic := '0';
 signal csr_result :  std_logic_vector(31 downto 0);
 
-signal mcause :  STD_LOGIC_VECTOR (31 downto 0);
 signal mepc,mtvec :  std_logic_vector(31 downto 2);
-signal mtrap_strobe : STD_LOGIC; 
+
 
 -- Target Address for load/store/jump
 
@@ -271,6 +272,19 @@ begin
   target_address<=std_logic_vector(signed(op1_i)+resize(d,op1_i'length));
 end process;
 
+-- Jump Destination determination
+process(target_address,mtvec,mepc,cmd_tret_i,cmd_trap_i)
+begin
+   if cmd_tret_i = '1' then
+     jump_dst<=mepc;
+   elsif cmd_trap_i = '1' then
+     jump_dst<=mtvec;
+   else              
+     jump_dst<=target_address(31 downto 2);
+   end if; 
+end process;
+
+
 
 process (clk_i) is
 begin
@@ -278,21 +292,13 @@ begin
       if rst_i='1' then
          jump_valid<='0';
          interrupt_return<='0';
-         jump_dst<=(others=>'-');
+         jump_dst_r<=(others=>'-');
       else
          if jump_valid='0' then    
-            if cmd_trap_i = '1' then
-              jump_dst<=mtvec;
-            else              
-              jump_dst<=target_address(31 downto 2);
-            end if;  
-            if can_execute='1' and ((cmd_jump_i='1' and jump_condition='1') or cmd_trap_i = '1') then
+            jump_dst_r <= jump_dst; -- latch jump destination 
+            if can_execute='1' and cmd_jump_i='1' and jump_condition='1' then
                jump_valid<='1';
-               --TODO : Hier gehts weiter ......
-               if cmd_trap_i = '1' then
-                 mtrap_strobe <= '1';
-               end if;  
-               if not RISCV then interrupt_return<=op1_i(0); end if;
+               if not USE_RISCV then interrupt_return<=op1_i(0); end if;
             end if;
          elsif jump_ready_i='1' then
             jump_valid<='0';
@@ -303,7 +309,8 @@ begin
 end process;
 
 jump_valid_o<=jump_valid or (can_execute and cmd_jump_i and jump_condition);
-jump_dst_o<=jump_dst when jump_valid='1' else op1_i(31 downto 2);
+jump_dst_o<=jump_dst_r when jump_valid='1' else jump_dst;
+  
 
 interrupt_return_o<=interrupt_return;
 
@@ -348,6 +355,7 @@ riscv_cu: if USE_RISCV  generate
 
    csr_ce <= cmd_csr_i and can_execute;
    
+   
    csr_inst: entity work.riscv_control_unit PORT MAP(
 		op1_i => op1_i,
 		wdata_o => csr_result,
@@ -362,9 +370,11 @@ riscv_cu: if USE_RISCV  generate
 		rst_i => rst_i,
       
       mtvec_o => mtvec,
-      mcause_i => mcause,
-      mepc_i => mepc,
-      mtrap_strobe_i => mtrap_strobe
+      mepc_o  => mepc,
+      
+      mcause_i => trap_cause_i,
+      mepc_i => epc_i,
+      mtrap_strobe_i => cmd_trap_i
 	);
 
 end generate;

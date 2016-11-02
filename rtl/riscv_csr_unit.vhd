@@ -46,9 +46,9 @@ entity riscv_control_unit is
            -- export CSR registers
            
            mtvec_o : out std_logic_vector(31 downto 2);
-           
+           mepc_o  : out std_logic_vector(31 downto 2);           
            -- trap info import
-           mcause_i : in STD_LOGIC_VECTOR (31 downto 0);
+           mcause_i : in STD_LOGIC_VECTOR (3 downto 0);
            mepc_i : in std_logic_vector(31 downto 2);
            mtrap_strobe_i : in STD_LOGIC; -- indicates that mcause_i and mepc_i should be registered
                       
@@ -73,7 +73,7 @@ signal mscratch : std_logic_vector(31 downto 0) := (others=>'0');
 
 -- trap info
 signal mepc : std_logic_vector(31 downto 2) := (others=>'0');
-signal mcause : std_logic_vector(31 downto 0) := (others=>'0');
+signal mcause : std_logic_vector(3 downto 0) := (others=>'0');
 
 begin
 
@@ -82,7 +82,7 @@ we_o <= we;
 busy_o<=busy;
 csr_exception <= exception;
 mtvec_o <= mtvec;
-
+mepc_o <= mepc;
 
 csr_offset <= csr_adr(7 downto 0);
 
@@ -90,7 +90,8 @@ csr_offset <= csr_adr(7 downto 0);
 with csr_offset select 
    csr_in <= mtvec&"00" when tvec,
              mscratch   when scratch,
-             
+             X"0000000"&mcause when cause,
+             mepc&"00" when epc,             
              (others=>'X') when others;
    
 
@@ -115,6 +116,8 @@ begin
      if rst_i='1' then
          exception  <= '0';
          mtvec <=  (others=>'0');
+         mepc <= (others=>'0');
+         mcause <= (others=>'0');
          busy <= '0';
      else
         -- mtrap_strobe_i has precedence over ce_i.
@@ -141,7 +144,7 @@ begin
                  when epc =>
                     mepc <= csr_out(31 downto 2);
                  when cause =>
-                    mcause <= csr_out;                 
+                    mcause <= csr_out(3 downto 0);                 
                  when others=> 
                    l_exception:='1';            
                end case;         

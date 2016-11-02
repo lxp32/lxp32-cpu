@@ -88,8 +88,11 @@ port(
 
       -- TH: RISC-V Interrupt/Trap Handling
       cmd_trap_o : out STD_LOGIC; -- TH: Execute trap
+      cmd_tret_o :  out STD_LOGIC; -- TH: Execute trap returen
       trap_cause_o : out STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
       interrupt_o : out STD_LOGIC; -- Trap is interrupt
+      
+      epc_o :  out std_logic_vector(31 downto 2);
 
       jump_type_o: out std_logic_vector(3 downto 0);
 
@@ -213,6 +216,7 @@ begin
          cmd_slt_o<='-';
          cmd_csr_o <= '-';
          cmd_trap_o <= '-';
+         cmd_tret_o <= '-';
 
       else
         if jump_valid_i='1' then
@@ -244,6 +248,7 @@ begin
                cmd_slt_o<='0';
                cmd_csr_o <= '0';
                cmd_trap_o <= '0';
+               cmd_tret_o <= '0';
 
                dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
@@ -382,15 +387,29 @@ begin
                      t_valid:='1';
                    end if;
                    if opcode=SYSTEM then
-                     if funct3="000" then
+                     if funct3="000" then                     
                        -- ECALL EBREAK
-                       if word_i(20) = '1' then
-                         trap_cause_o <= X"3"; -- EBREAK
-                       else
-                         trap_cause_o <= X"11"; -- ECALL
-                       end if;
-                       cmd_trap_o <= '1';
+                       cmd_jump_o<='1';
+                       jump_type_o<="0000";
                        interrupt_o <= '0';
+                       case word_i(21 downto 20) is
+                         when  "01" =>  -- EBREAK
+                           trap_cause_o <= X"3"; 
+                           cmd_trap_o <= '1';                           
+                           epc_o <= next_ip_i;
+                           t_valid:='1';
+                         when "00" =>  -- ECALL
+                           trap_cause_o <= X"B"; 
+                           cmd_trap_o <= '1';                           
+                           epc_o <= next_ip_i;
+                           t_valid:='1';
+                         when "10" => -- XRET  
+                           cmd_tret_o <= '1';
+                           t_valid:='1';
+                         when others =>
+                           -- nothing...                         
+                       end case;
+                       
                      else
                         cmd_csr_o<='1';
                         csr_op_o<=funct3(1 downto 0);
@@ -407,8 +426,9 @@ begin
                           rd1_select<=Reg;
                         end if;
                         dst_out<="000"&rd;
+                        t_valid:='1';
                      end if;
-                     t_valid:='1';
+                    
                    end if;
                    --TODO: CHeck t_valid=0 which means unkown opcode
                    valid_out<=t_valid;

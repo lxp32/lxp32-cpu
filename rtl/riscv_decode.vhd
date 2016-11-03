@@ -136,6 +136,7 @@ signal rd1_select: SourceSelect;
 signal rd1_direct: std_logic_vector(31 downto 0);
 signal rd2_select: SourceSelect;
 signal rd2_direct: std_logic_vector(31 downto 0);
+signal rd1_zero,rd2_zero : std_logic; -- TH: Buffered zero address flags
 
 
 signal dst_out,radr1_out,radr2_out : std_logic_vector(7 downto 0);
@@ -461,7 +462,17 @@ begin
    if rising_edge(clk_i) then
       if busy='0' then
          rd1_reg<=rd1;
+         if rd1(4 downto 0)="00000" then
+           rd1_zero<='1';
+         else
+           rd1_zero<='0';
+         end if;           
          rd2_reg<=rd2;
+          if rd2(4 downto 0)="00000" then
+           rd2_zero<='1';
+         else
+           rd2_zero<='0';
+         end if; 
       end if;
    end if;
 end process;
@@ -474,33 +485,28 @@ sp_raddr2_o <= radr2_out;
 
 
 --Operand 1 multiplexer
-process(rd1_direct,rd1_select,sp_rdata1_i,rd1_reg) is
+process(rd1_direct,rd1_select,sp_rdata1_i,rd1_zero) is
 variable rdata : std_logic_vector(31 downto 0);
 begin
-  if rd1_reg = X"00" then -- Register x0 is contant zero
-    rdata:=X"00000000";
+  if rd1_select=Imm then
+    op1_o<= rd1_direct;
   else
-    rdata:=sp_rdata1_i;
+    if rd1_zero = '1' then
+      op1_o<=X"00000000";
+    else
+      op1_o<=sp_rdata1_i;
+    end if;
   end if;
-
-  case rd1_select is
-    when Imm =>
-      op1_o<= rd1_direct; -- Immediate operand
-    when Reg =>
-        op1_o<=rdata;
-    when Undef =>
-      op1_o <= (others=> 'X'); -- don't care...
-  end case;
 end process;
 
 
 --operand 2 multiplexer
-process(rd2_direct,rd2_select,sp_rdata2_i,rd2_reg) is
+process(rd2_direct,rd2_select,sp_rdata2_i,rd2_zero) is
 begin
   if rd2_select=Imm then
     op2_o<= rd2_direct;
   else
-    if rd2_reg = X"00" then
+    if rd2_zero = '1' then
       op2_o<=X"00000000";
     else
       op2_o<=sp_rdata2_i;

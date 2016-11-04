@@ -93,6 +93,9 @@ port(
       interrupt_o : out STD_LOGIC; -- Trap is interrupt
       
       epc_o :  out std_logic_vector(31 downto 2);
+      
+      epc_i : in std_logic_vector(31 downto 2);
+      tvec_i : in std_logic_vector(31 downto 2);
 
       jump_type_o: out std_logic_vector(3 downto 0);
 
@@ -180,6 +183,7 @@ variable branch_target : std_logic_vector(31 downto 0);
 variable U_immed : xsigned;
 variable displacement : t_displacement;
 variable t_valid : std_logic;
+variable trap : std_logic;
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -393,24 +397,30 @@ begin
                        cmd_jump_o<='1';
                        jump_type_o<="0000";
                        interrupt_o <= '0';
+                       rd1_select<=Imm;
+                       epc_o <= next_ip_i;
+                       trap:='0';
                        case word_i(21 downto 20) is
                          when  "01" =>  -- EBREAK
                            trap_cause_o <= X"3"; 
-                           cmd_trap_o <= '1';                           
-                           epc_o <= next_ip_i;
+                           trap:='1';
                            t_valid:='1';
                          when "00" =>  -- ECALL
-                           trap_cause_o <= X"B"; 
-                           cmd_trap_o <= '1';                           
-                           epc_o <= next_ip_i;
+                           trap_cause_o <= X"B";                            
+                           trap:='1'; 
                            t_valid:='1';
                          when "10" => -- XRET  
-                           cmd_tret_o <= '1';
+                           cmd_tret_o <= '1';                           
                            t_valid:='1';
                          when others =>
                            -- nothing...                         
                        end case;
-                       
+                       if trap='1' then
+                         rd1_direct<=tvec_i&"00";
+                       else
+                         rd1_direct<=epc_i&"00";  
+                       end if;                         
+                       cmd_trap_o <= trap;
                      else
                         cmd_csr_o<='1';
                         csr_op_o<=funct3(1 downto 0);

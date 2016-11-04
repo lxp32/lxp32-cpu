@@ -52,8 +52,12 @@ entity lxp32_execute is
       cmd_tret_i : in STD_LOGIC; -- TH: return from trap 
       trap_cause_i : in STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
       interrupt_i : in STD_LOGIC; -- Trap is interrupt 
-      epc_i : std_logic_vector(31 downto 2);
+      epc_i : in  std_logic_vector(31 downto 2); 
       
+      -- epc and tvec output to decode stage
+      
+      epc_o : out std_logic_vector(31 downto 2);
+      tvec_o : out std_logic_vector(31 downto 2);
       
       jump_type_i: in std_logic_vector(3 downto 0);
       
@@ -128,6 +132,7 @@ signal csr_busy : std_logic := '0';
 signal csr_result :  std_logic_vector(31 downto 0);
 
 signal mepc,mtvec :  std_logic_vector(31 downto 2);
+signal mtrap_strobe : std_logic;
 
 
 -- Target Address for load/store/jump
@@ -153,6 +158,9 @@ signal dst_reg: std_logic_vector(7 downto 0);
 signal interrupt_return: std_logic:='0';
 
 begin
+
+tvec_o <= mtvec;
+epc_o  <= mepc;
 
 -- Pipeline control
 
@@ -273,18 +281,18 @@ begin
 end process;
 
 -- Jump Destination determination
-process(target_address,mtvec,mepc,cmd_tret_i,cmd_trap_i)
-begin
-   if cmd_tret_i = '1' then
-     jump_dst<=mepc;
-   elsif cmd_trap_i = '1' then
-     jump_dst<=mtvec;
-   else              
-     jump_dst<=target_address(31 downto 2);
-   end if; 
-end process;
+--process(target_address,mtvec,mepc,cmd_tret_i,cmd_trap_i)
+--begin
+--   if cmd_tret_i = '1' then
+--     jump_dst<=mepc;
+--   elsif cmd_trap_i = '1' then
+--     jump_dst<=mtvec;
+--   else              
+--     jump_dst<=target_address(31 downto 2);
+--   end if; 
+--end process;
 
-
+jump_dst <= target_address(31 downto 2);
 
 process (clk_i) is
 begin
@@ -354,6 +362,7 @@ dbus_inst: entity work.lxp32_dbus(rtl)
 riscv_cu: if USE_RISCV  generate
 
    csr_ce <= cmd_csr_i and can_execute;
+   mtrap_strobe <= cmd_trap_i and can_execute;
    
    
    csr_inst: entity work.riscv_control_unit PORT MAP(
@@ -374,7 +383,7 @@ riscv_cu: if USE_RISCV  generate
       
       mcause_i => trap_cause_i,
       mepc_i => epc_i,
-      mtrap_strobe_i => cmd_trap_i
+      mtrap_strobe_i => mtrap_strobe
 	);
 
 end generate;

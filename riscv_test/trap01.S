@@ -10,14 +10,19 @@ csrw mtvec,a1
 
 
 loop:
-li gp,0x200  // test result area
-mv t4,a2
+la gp,result_area  // test result area
+mv t4,a2 // Start pattern
 jal store
+csrr t4,mimpid
+jal store
+
 ecall 
 mv t4,a2
 jal store
 ebreak
 mv t4,a2
+jal store
+mulh t4,x0,x0 // not implemented should trap
 jal store
 
 j loop
@@ -32,7 +37,17 @@ ret
 
 trap_handler:
 csrr t4,mcause
+mv t5,t4
 jal store
 csrr t4,mepc
 jal store
+addi t5,t5,-2 // check if mcause =2 (illegal opcode
+bnez t5,return
+addi t4,t4,4 // if yes increment mepc
+csrw mepc,t4
+return:
 sret
+
+.align 8
+result_area:
+

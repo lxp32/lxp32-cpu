@@ -14,7 +14,8 @@ use ieee.numeric_std.all;
 
 entity lxp32_fetch is
 	generic(
-		START_ADDR: std_logic_vector(29 downto 0)
+		START_ADDR: std_logic_vector(29 downto 0);
+      USE_RISCV : boolean := false
 	);
 	port(
 		clk_i: in std_logic;
@@ -73,6 +74,8 @@ begin
 -- needed. However, the initialization is still performed as usual when
 -- external reset signal is asserted.
 
+lpc_init: if not USE_RISCV generate
+
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
@@ -89,6 +92,8 @@ begin
 		end if;
 	end if;
 end process;
+
+end generate;
 
 -- FETCH state machine
 

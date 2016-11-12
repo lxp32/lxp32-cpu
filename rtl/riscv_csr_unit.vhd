@@ -91,7 +91,8 @@ with csr_offset select
    csr_in <= mtvec&"00" when tvec,
              mscratch   when scratch,
              X"0000000"&mcause when cause,
-             mepc&"00" when epc,             
+             mepc&"00" when epc,    
+             impvers when impid,             
              (others=>'X') when others;
    
 
@@ -147,9 +148,9 @@ begin
                     mcause <= csr_out(3 downto 0);                 
                  when others=> 
                    l_exception:='1';            
-               end case;         
-             else 
-               l_exception:='1'; 
+               end case;   
+             elsif csr_adr(11 downto 8) /= m_roprefix then
+               l_exception:='1';              
              end if;
              if l_exception = '0'  then -- and csr_x0_i='0'
                wdata_o <= csr_in;

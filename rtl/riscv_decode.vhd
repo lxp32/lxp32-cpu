@@ -184,6 +184,7 @@ variable U_immed : xsigned;
 variable displacement : t_displacement;
 variable t_valid : std_logic;
 variable trap : std_logic;
+variable not_implemented : std_logic;
 begin
    if rising_edge(clk_i) then
       if rst_i='1' then
@@ -243,7 +244,7 @@ begin
                cmd_mul_o<='0';
                cmd_div_o<='0';
                cmd_div_mod_o<='0';
-               cmd_mul_high_o<='0';
+              
                cmd_cmp_o<='0';
                cmd_jump_o<='0';
                cmd_and_o<='0';
@@ -258,6 +259,7 @@ begin
                dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
                t_valid := '0';
+               not_implemented:='0';
 
                if valid_i='1' then
                   if opcode=OP_IMM or opcode=OP_OP then
@@ -271,13 +273,17 @@ begin
                     end if;
 
                     if funct7=MULEXT and opcode=OP_OP then
-                       -- M extension
-                       if funct3(2)='0' then
-                         cmd_mul_o <= '1';
-                         if funct3(1 downto 0) /= "00" then
-                           cmd_mul_high_o<='1';
-                         end if;
-                         --TODO: Implement the signed mul High variants
+                       -- M extension                        
+                       if funct3(2)='0' then                                    
+                         case funct3(1 downto 0) is
+                           when "00" => -- mul
+                             cmd_mul_o <= '1'; 
+                             cmd_mul_high_o<='0';
+                           when "11" => -- mulhu
+                             cmd_mul_o <= '1';  
+                             cmd_mul_high_o<='1';
+                           when others => not_implemented:='1';
+                         end case;
                        else
                          cmd_div_o <= '1';
                          cmd_div_mod_o <= funct3(1);
@@ -397,7 +403,6 @@ begin
                        cmd_jump_o<='1';
                        jump_type_o<="0000";
                        interrupt_o <= '0';
-                       rd1_select<=Imm;
                        epc_o <= next_ip_i;
                        trap:='0';
                        case word_i(21 downto 20) is
@@ -415,11 +420,6 @@ begin
                          when others =>
                            -- nothing...                         
                        end case;
-                       if trap='1' then
-                         rd1_direct<=tvec_i&"00";
-                       else
-                         rd1_direct<=epc_i&"00";  
-                       end if;                         
                        cmd_trap_o <= trap;
                      else
                         cmd_csr_o<='1';
@@ -440,9 +440,19 @@ begin
                         t_valid:='1';
                      end if;
                     
-                   end if;
-                   --TODO: CHeck t_valid=0 which means unkown opcode
-                   valid_out<=t_valid;
+                   end if;                 
+                   if t_valid='0' or not_implemented='1' then
+                     -- illegal opcode
+                     cmd_jump_o<='1';
+                     jump_type_o<="0000";
+                     interrupt_o <= '0';
+                     epc_o <= std_logic_vector(current_ip);
+                     trap_cause_o<=X"2";
+                     cmd_trap_o <= '1';
+                     valid_out<='1';
+                   else  
+                     valid_out<=t_valid;
+                   end if;  
                end if; -- if valid_i='1'
             when ContinueCjmp =>
                rd1_select<=Imm;

@@ -103,8 +103,8 @@ signal interrupt_ready: std_logic;
 signal interrupt_return: std_logic;
 
  
-signal decode_trap_cause :  STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
-signal decode_interrupt : STD_LOGIC; -- Trap is interrupt 
+signal decode_trap_cause : STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
+signal decode_interrupt :  STD_LOGIC; -- Trap is interrupt 
 signal decode_epc,ex_epc,ex_tvec : std_logic_vector(31 downto 2);
 
 
@@ -112,7 +112,8 @@ begin
 
 fetch_inst: entity work.lxp32_fetch(rtl)
     generic map(
-        START_ADDR=>START_ADDR
+        START_ADDR=>START_ADDR,
+        USE_RISCV=>USE_RISCV
     )
     port map(
         clk_i=>clk_i,

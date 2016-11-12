@@ -222,7 +222,7 @@ end generate;
 
 riscvjump: if USE_RISCV generate
  
-  process(cmd_cmp_i,jump_type_i,alu_cmp_eq,alu_cmp_ug,alu_cmp_sg) 
+  process(cond_reg,cmd_cmp_i,jump_type_i,alu_cmp_eq,alu_cmp_ug,alu_cmp_sg) 
   variable c: std_logic;
   
   begin
@@ -281,18 +281,18 @@ begin
 end process;
 
 -- Jump Destination determination
---process(target_address,mtvec,mepc,cmd_tret_i,cmd_trap_i)
---begin
---   if cmd_tret_i = '1' then
---     jump_dst<=mepc;
---   elsif cmd_trap_i = '1' then
---     jump_dst<=mtvec;
---   else              
---     jump_dst<=target_address(31 downto 2);
---   end if; 
---end process;
+process(target_address,mtvec,mepc,cmd_tret_i,cmd_trap_i)
+begin
+   if cmd_tret_i = '1' then
+     jump_dst<=mepc;
+   elsif cmd_trap_i = '1' then
+     jump_dst<=mtvec;
+   else              
+     jump_dst<=target_address(31 downto 2);
+   end if; 
+end process;
 
-jump_dst <= target_address(31 downto 2);
+--jump_dst <=   target_address(31 downto 2);
 
 process (clk_i) is
 begin

@@ -91,9 +91,9 @@ port(
       cmd_tret_o :  out STD_LOGIC; -- TH: Execute trap returen
       trap_cause_o : out STD_LOGIC_VECTOR(3 downto 0); -- TH: Trap/Interrupt cause
       interrupt_o : out STD_LOGIC; -- Trap is interrupt
-      
+
       epc_o :  out std_logic_vector(31 downto 2);
-      
+
       epc_i : in std_logic_vector(31 downto 2);
       tvec_i : in std_logic_vector(31 downto 2);
 
@@ -244,7 +244,7 @@ begin
                cmd_mul_o<='0';
                cmd_div_o<='0';
                cmd_div_mod_o<='0';
-              
+
                cmd_cmp_o<='0';
                cmd_jump_o<='0';
                cmd_and_o<='0';
@@ -260,6 +260,7 @@ begin
                displacement:= (others=>'0');
                t_valid := '0';
                not_implemented:='0';
+               trap:='0';
 
                if valid_i='1' then
                   if opcode=OP_IMM or opcode=OP_OP then
@@ -273,14 +274,14 @@ begin
                     end if;
 
                     if funct7=MULEXT and opcode=OP_OP then
-                       -- M extension                        
-                       if funct3(2)='0' then                                    
+                       -- M extension
+                       if funct3(2)='0' then
                          case funct3(1 downto 0) is
                            when "00" => -- mul
-                             cmd_mul_o <= '1'; 
+                             cmd_mul_o <= '1';
                              cmd_mul_high_o<='0';
                            when "11" => -- mulhu
-                             cmd_mul_o <= '1';  
+                             cmd_mul_o <= '1';
                              cmd_mul_high_o<='1';
                            when others => not_implemented:='1';
                          end case;
@@ -398,27 +399,27 @@ begin
                      t_valid:='1';
                    end if;
                    if opcode=SYSTEM then
-                     if funct3="000" then                     
+                     if funct3="000" then
                        -- ECALL EBREAK
                        cmd_jump_o<='1';
                        jump_type_o<="0000";
                        interrupt_o <= '0';
-                       epc_o <= next_ip_i;
-                       trap:='0';
+                       --epc_o <= next_ip_i;
+
                        case word_i(21 downto 20) is
                          when  "01" =>  -- EBREAK
-                           trap_cause_o <= X"3"; 
+                           trap_cause_o <= X"3";
                            trap:='1';
                            t_valid:='1';
                          when "00" =>  -- ECALL
-                           trap_cause_o <= X"B";                            
-                           trap:='1'; 
+                           trap_cause_o <= X"B";
+                           trap:='1';
                            t_valid:='1';
-                         when "10" => -- XRET  
-                           cmd_tret_o <= '1';                           
+                         when "10" => -- XRET
+                           cmd_tret_o <= '1';
                            t_valid:='1';
                          when others =>
-                           -- nothing...                         
+                           -- nothing...
                        end case;
                        cmd_trap_o <= trap;
                      else
@@ -439,20 +440,29 @@ begin
                         dst_out<="000"&rd;
                         t_valid:='1';
                      end if;
-                    
-                   end if;                 
+
+                   end if;
                    if t_valid='0' or not_implemented='1' then
                      -- illegal opcode
                      cmd_jump_o<='1';
                      jump_type_o<="0000";
                      interrupt_o <= '0';
-                     epc_o <= std_logic_vector(current_ip);
+                     --epc_o <= std_logic_vector(current_ip);
                      trap_cause_o<=X"2";
                      cmd_trap_o <= '1';
                      valid_out<='1';
-                   else  
+                   else
                      valid_out<=t_valid;
-                   end if;  
+                   end if;
+                   -- the epc_o register is always set, normally with the IP of the current instruction
+                   -- only in case of active trap instructions (see above) it is set to the next instruction
+                   -- In case of an exception downstream the pipeline this register can be copied
+                   -- to the CSR register.
+                   if trap='1' then
+                     epc_o <= next_ip_i;
+                   else
+                     epc_o <= std_logic_vector(current_ip);
+                   end if;
                end if; -- if valid_i='1'
             when ContinueCjmp =>
                rd1_select<=Imm;
@@ -486,13 +496,13 @@ begin
            rd1_zero<='1';
          else
            rd1_zero<='0';
-         end if;           
+         end if;
          rd2_reg<=rd2;
           if rd2(4 downto 0)="00000" then
            rd2_zero<='1';
          else
            rd2_zero<='0';
-         end if; 
+         end if;
       end if;
    end if;
 end process;

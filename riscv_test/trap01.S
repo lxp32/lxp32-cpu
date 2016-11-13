@@ -23,6 +23,25 @@ ebreak
 mv t4,a2
 jal store
 mulh t4,x0,x0 // not implemented should trap
+mv t4,a2
+jal store
+lw t4,1(gp) // misalignment trap
+mv t4,a2    // write test pattern
+jal store
+lhu t4,3(gp) // misalign again
+mv t4,a2
+jal store
+lhu t4,-2(gp) // should not trap
+jal store
+
+csrw 0x380,a2 // should trap
+csrr a2,0x380 // trap again
+mv t4,a2
+jal store
+// Test double invalid opcode
+mulh t4,x0,x0 // not implemented should trap
+mulh t4,x0,x0 // not implemented should trap
+addi t4,a2,1 // end marker
 jal store
 
 j loop
@@ -37,15 +56,20 @@ ret
 
 trap_handler:
 csrr t4,mcause
-mv t5,t4
+mv t5,t4 // save mcause
 jal store
 csrr t4,mepc
 jal store
-addi t5,t5,-2 // check if mcause =2 (illegal opcode
-bnez t5,return
-addi t4,t4,4 // if yes increment mepc
-csrw mepc,t4
-return:
+addi t1,t5,-2 // check if mcause =2 (illegal opcode)
+beqz t1,adjust
+addi t1,t5,-4 // check if mcause =4 (misalign)
+beqz t1,adjust
+addi t1,t5,-1 // check if mcause =1 (misalign)
+beqz t1,adjust
+sret
+adjust:
+addi t1,t4,4 // increment mepc in case of exceptions
+csrw mepc,t1
 sret
 
 .align 8

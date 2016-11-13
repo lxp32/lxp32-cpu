@@ -13,7 +13,7 @@ li gp,0x0100 // memory pointer
 li a1, 5000000  // unsgined maxint 
 mul t4,a1,a1 // c41e9000
 jal store 
-mulh t4,a1,a1 // 16bc
+mulhu t4,a1,a1 // 16bc
 jal store 
 
 // First test div operation

@@ -13,25 +13,25 @@ subtype t_csr_adr is std_logic_vector(7 downto 0);
 
 -- Standard registers
 constant status : t_csr_adr:= x"00"; --  Machine status register.
-constant edeleg : t_csr_adr:= x"02"; 
-constant ideleg : t_csr_adr:= x"03"; 
-constant ie     : t_csr_adr:= x"04"; 
-constant tvec : t_csr_adr:=   x"05"; 
+constant edeleg : t_csr_adr:= x"02";
+constant ideleg : t_csr_adr:= x"03";
+constant ie     : t_csr_adr:= x"04";
+constant tvec : t_csr_adr:=   x"05";
 constant impid : t_csr_adr:=  X"13";
-constant scratch : t_csr_adr:=   x"40"; 
-constant epc: t_csr_adr:=        x"41"; 
-constant cause : t_csr_adr:=     x"42"; 
-constant ip : t_csr_adr:=        x"44"; 
+constant scratch : t_csr_adr:=   x"40";
+constant epc: t_csr_adr:=        x"41";
+constant cause : t_csr_adr:=     x"42";
+constant ip : t_csr_adr:=        x"44";
 
--- non standard registers 
+-- non standard registers
 constant icontrol : t_csr_adr:=x"C0"; -- full address is 0x7C0
 
-constant impvers : std_logic_vector(31 downto 0) := X"00010001";
+constant impvers : std_logic_vector(31 downto 0) := X"00010002";
 
 
 end csr_def;
 
 package body csr_def is
 
- 
+
 end csr_def;

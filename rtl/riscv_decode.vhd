@@ -456,9 +456,6 @@ begin
                    -- the epc_o register is always set
                    -- In case of an exception downstream the pipeline this register can be copied
                    -- to the CSR register.
---                   if trap='1' then
---                     epc_o <= next_ip_i;
---                   else
                    epc_o <= std_logic_vector(current_ip);                   
                end if; -- if valid_i='1'
             when ContinueCjmp =>

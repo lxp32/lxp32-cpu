@@ -446,23 +446,20 @@ begin
                      -- illegal opcode
                      cmd_jump_o<='1';
                      jump_type_o<="0000";
-                     interrupt_o <= '0';
-                     --epc_o <= std_logic_vector(current_ip);
+                     interrupt_o <= '0';                    
                      trap_cause_o<=X"2";
                      cmd_trap_o <= '1';
                      valid_out<='1';
                    else
                      valid_out<=t_valid;
                    end if;
-                   -- the epc_o register is always set, normally with the IP of the current instruction
-                   -- only in case of active trap instructions (see above) it is set to the next instruction
+                   -- the epc_o register is always set
                    -- In case of an exception downstream the pipeline this register can be copied
                    -- to the CSR register.
-                   if trap='1' then
-                     epc_o <= next_ip_i;
-                   else
-                     epc_o <= std_logic_vector(current_ip);
-                   end if;
+--                   if trap='1' then
+--                     epc_o <= next_ip_i;
+--                   else
+                   epc_o <= std_logic_vector(current_ip);                   
                end if; -- if valid_i='1'
             when ContinueCjmp =>
                rd1_select<=Imm;

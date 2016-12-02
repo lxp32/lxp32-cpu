@@ -19,6 +19,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity lxp32_mul_dsp is
+   generic (
+     pipelined : boolean := true
+   );  
 	port(
 		clk_i: in std_logic;
 		rst_i: in std_logic;
@@ -45,10 +48,12 @@ signal product,product_h: unsigned(31 downto 0);
 
 
 signal ceo: std_logic:='0';
+signal ce1 : std_logic :='0'; -- for Pipelined version
 
 begin
 
 mul00_inst: entity work.lxp32_mul16x16
+   generic map ( pipelined => pipelined)
 	port map(
 		clk_i=>clk_i,
 		a_i=>op1_i(15 downto 0),
@@ -57,6 +62,7 @@ mul00_inst: entity work.lxp32_mul16x16
 	);
 
 mul01_inst: entity work.lxp32_mul16x16
+   generic map ( pipelined => pipelined)
 	port map(
 		clk_i=>clk_i,
 		a_i=>op1_i(15 downto 0),
@@ -65,6 +71,7 @@ mul01_inst: entity work.lxp32_mul16x16
 	);
 
 mul10_inst: entity work.lxp32_mul16x16
+   generic map ( pipelined => pipelined)
 	port map(
 		clk_i=>clk_i,
 		a_i=>op1_i(31 downto 16),
@@ -73,6 +80,7 @@ mul10_inst: entity work.lxp32_mul16x16
 	);
 	
 mul11_inst: entity work.lxp32_mul16x16
+   generic map ( pipelined => pipelined)
 	port map(
 		clk_i=>clk_i,
 		a_i=>op1_i(31 downto 16),
@@ -111,8 +119,17 @@ begin
 	if rising_edge(clk_i) then
 		if rst_i='1' then
 			ceo<='0';
+         if pipelined then
+           ce1 <= '0';
+         end if;  
 		else
-			ceo<=ce_i;
+         if pipelined then
+           -- add two cycles of latency when pipelined is true         
+           ce1 <= ce_i;
+           ceo <= ce1; 
+         else 
+			  ceo<=ce_i;
+         end if;  
 		end if;
 	end if;
 end process;

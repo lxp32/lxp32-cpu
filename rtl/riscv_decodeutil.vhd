@@ -7,21 +7,23 @@ use ieee.numeric_std.all;
 
 package riscv_decodeutil is
 
-subtype t_opcode is std_logic_vector(6 downto 0);
+subtype t_opcode is std_logic_vector(6 downto 2);
 subtype t_funct3 is std_logic_vector(2 downto 0);
 subtype t_funct7 is std_logic_vector(6 downto 0);
 
 -- Opcodes
-constant OP_IMM : t_opcode := "0010011";
-constant OP_OP :  t_opcode := "0110011";
-constant OP_JAL    : t_opcode := "1101111";
-constant OP_JALR   : t_opcode := "1100111";
-constant OP_LOAD   : t_opcode := "0000011";
-constant OP_STORE  : t_opcode := "0100011";
-constant OP_BRANCH : t_opcode := "1100011";
-constant OP_LUI    : t_opcode := "0110111";
-constant OP_AUIPC  : t_opcode := "0010111";
-constant SYSTEM    : t_opcode := "1110011";
+constant OP_IMM : t_opcode := "00100";
+constant OP_OP :  t_opcode := "01100";
+constant OP_JAL    : t_opcode := "11011";
+constant OP_JALR   : t_opcode := "11001";
+constant OP_LOAD   : t_opcode := "00000";
+constant OP_STORE  : t_opcode := "01000";
+constant OP_BRANCH : t_opcode := "11000";
+constant OP_LUI    : t_opcode := "01101";
+constant OP_AUIPC  : t_opcode := "00101";
+constant OP_SYSTEM : t_opcode := "11100";
+
+type t_riscv_op is (rv_imm,rv_op,rv_jal,rv_jalr,rv_load,rv_store,rv_branch,rv_lui,rv_auipc,rv_system,rv_invalid);
  
 constant ADD :  t_funct3  :="000";
 constant SLT :  t_funct3  :="010";
@@ -60,6 +62,7 @@ function get_SB_immediate(signal instr: in xword) return xsigned;
 
 function get_UJ_immediate(signal instr: in xword) return xsigned;
 
+function decode_op(signal opcode : in t_opcode) return t_riscv_op;
 
 end riscv_decodeutil;
 
@@ -136,6 +139,24 @@ begin
 
 end;
 
+function decode_op(signal opcode : in t_opcode) return t_riscv_op is
+begin
+  case opcode is 
+    when OP_IMM => return rv_imm;
+    when OP_OP => return rv_op;
+    when OP_JAL => return rv_jal;
+    when OP_JALR => return rv_jalr;
+    when OP_LOAD => return rv_load;
+    when OP_STORE => return rv_store;
+    when OP_BRANCH => return rv_branch;
+    when OP_LUI => return rv_lui;
+    when OP_AUIPC => return rv_auipc;
+    when OP_SYSTEM => return rv_system;
+    when others => return rv_invalid;
+       
+  end case;
+
+end;
 
  
 end riscv_decodeutil;

@@ -88,7 +88,7 @@ signal busy: std_logic:='0';
 
 begin
 
-assert MUL_ARCH="dsp" or MUL_ARCH="seq" or MUL_ARCH="opt"
+assert MUL_ARCH="dsp" or MUL_ARCH="seq" or MUL_ARCH="opt" or MUL_ARCH="spartandsp"
 	report "Invalid MUL_ARCH generic value: dsp, opt or seq expected"
 	severity failure;
 
@@ -149,6 +149,21 @@ mul_reg: process(clk_i)  begin
     end if;
   end if;
 end process;  
+
+
+gen_mul_spartandsp: if MUL_ARCH="spartandsp" generate
+	mul_inst: entity work.lxp32_mulsp6(rtl)
+		port map(
+			clk_i=>clk_i,
+			rst_i=>rst_i,
+			ce_i=>mul_ce,
+			op1_i=>op1_i,
+			op2_i=>op2_i,
+			ce_o=>mul_we,
+			result_o=>mul_result_low,
+         result_high_o=>mul_result_high
+		);
+end generate;
 
 
 gen_mul_dsp: if MUL_ARCH="dsp" generate

@@ -26,7 +26,7 @@ constant ip : t_csr_adr:=        x"44";
 -- non standard registers
 constant icontrol : t_csr_adr:=x"C0"; -- full address is 0x7C0
 
-constant impvers : std_logic_vector(31 downto 0) := X"00010002";
+constant impvers : std_logic_vector(31 downto 0) := X"00010004";
 
 
 end csr_def;

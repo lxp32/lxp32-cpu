@@ -155,7 +155,7 @@ begin
              elsif csr_adr(11 downto 8) /= m_roprefix then
                l_exception:='1';
              end if;
-             if l_exception = '0'  then -- and csr_x0_i='0'
+             if l_exception = '0'  then 
                wdata_o <= csr_in;
                we <= '1'; -- Pipeline control, latency one cycle
              else

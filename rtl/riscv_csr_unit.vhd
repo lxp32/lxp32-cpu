@@ -129,41 +129,39 @@ begin
         if we='1' then
           we <= '0';
         end if;
-        -- mtrap_strobe_i has precedence over ce_i.
-        -- When both signals are asserted in the same clock cycle, the CSR processing
-        -- will be delayed by one cycle
-        -- execution control must ensure that no data hazzards are created.
+      
         if mtrap_strobe_i='1' then
           mcause <= mcause_i;
           mepc <= mepc_i;
-        else
-           if ce_i='1' then
-             l_exception:='0';
-             if csr_adr(11 downto 8)=m_stdprefix then
-               case csr_adr(7 downto 0) is
-                 when tvec =>
-                    mtvec<=csr_out(31 downto 2);
-                 when scratch =>
-                    mscratch<=csr_out;
-                 when epc =>
-                    mepc <= csr_out(31 downto 2);
-                 when cause =>
-                    mcause <= csr_out(3 downto 0);
-                 when others=>
-                   l_exception:='1';
-               end case;
-             elsif csr_adr(11 downto 8) /= m_roprefix then
-               l_exception:='1';
-             end if;
-             if l_exception = '0'  then 
-               wdata_o <= csr_in;
-               we <= '1'; -- Pipeline control, latency one cycle
-             else
-               wdata_o <= (others => '0');
-             end if;
-             exception<=l_exception;
-           end if;
+        end if;  
+       
+        if ce_i='1' then
+          l_exception:='0';
+          if csr_adr(11 downto 8)=m_stdprefix then
+            case csr_adr(7 downto 0) is
+              when tvec =>
+                 mtvec<=csr_out(31 downto 2);
+              when scratch =>
+                 mscratch<=csr_out;
+              when epc =>
+                 mepc <= csr_out(31 downto 2);
+              when cause =>
+                 mcause <= csr_out(3 downto 0);
+              when others=>
+                l_exception:='1';
+            end case;
+          elsif csr_adr(11 downto 8) /= m_roprefix then
+            l_exception:='1';
+          end if;
+          if l_exception = '0'  then 
+            wdata_o <= csr_in;
+            we <= '1'; -- Pipeline control, latency one cycle
+          else
+            wdata_o <= (others => '0');
+          end if;
+          exception<=l_exception;
         end if;
+       
       end if;
    end if;
 end process;

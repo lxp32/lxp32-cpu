@@ -89,7 +89,7 @@ signal busy: std_logic:='0';
 begin
 
 assert MUL_ARCH="dsp" or MUL_ARCH="seq" or MUL_ARCH="opt" or MUL_ARCH="spartandsp"
-	report "Invalid MUL_ARCH generic value: dsp, opt or seq expected"
+	report "Invalid MUL_ARCH generic value: dsp, opt, spartandsp or seq expected"
 	severity failure;
 
 -- Add/subtract

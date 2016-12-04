@@ -15,7 +15,8 @@ entity lxp32_cpu is
         DIVIDER_EN: boolean;
         MUL_ARCH: string;
         START_ADDR: std_logic_vector(29 downto 0);
-        USE_RISCV : boolean := false
+        USE_RISCV : boolean := false;
+        REG_RAM_STYLE : string := "block"
     );
     port(
         clk_i: in std_logic;
@@ -336,6 +337,7 @@ execute_inst: entity work.lxp32_execute(rtl)
         interrupt_return_o=>interrupt_return
     );
 
+lxp_regs: if not USE_RISCV  generate
 scratchpad_inst: entity work.lxp32_scratchpad(rtl)
     port map(
         clk_i=>clk_i,
@@ -349,6 +351,28 @@ scratchpad_inst: entity work.lxp32_scratchpad(rtl)
         we_i=>sp_we,
         wdata_i=>sp_wdata
     );
+    
+end generate;    
+
+
+riscv_regs: if  USE_RISCV  generate
+scratchpad_inst: entity work.riscv_regfile(rtl)
+    generic map( REG_RAM_STYLE=>REG_RAM_STYLE)
+    port map(
+        clk_i=>clk_i,
+        
+        raddr1_i=>sp_raddr1,
+        rdata1_o=>sp_rdata1,
+        raddr2_i=>sp_raddr2,
+        rdata2_o=>sp_rdata2,
+        
+        waddr_i=>sp_waddr,
+        we_i=>sp_we,
+        wdata_i=>sp_wdata
+    );
+    
+end generate;    
+
 
 interrupt_mux_inst: entity work.lxp32_interrupt_mux(rtl)
     port map(

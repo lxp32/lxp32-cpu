@@ -53,6 +53,9 @@ entity lxp32_mulsp6 is
 		result_o: out std_logic_vector(31 downto 0);
 		result_high_o : out std_logic_vector(31 downto 0)
 	);
+   
+   attribute mult_style: string;
+   attribute mult_style of lxp32_mulsp6: entity is "pipe_block";
 
 end entity;
 

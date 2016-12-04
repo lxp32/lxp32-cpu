@@ -28,7 +28,8 @@ entity lxp32u_top is
 		DIVIDER_EN: boolean:=true;
 		MUL_ARCH: string:="dsp";
 		START_ADDR: std_logic_vector(29 downto 0):=(others=>'0');
-		USE_RISCV : boolean := false
+		USE_RISCV : boolean := false;
+      REG_RAM_STYLE : string := "block"
 	);
 	port(
 		clk_i: in std_logic;
@@ -62,7 +63,8 @@ cpu_inst: entity work.lxp32_cpu(rtl)
 		DIVIDER_EN=>DIVIDER_EN,
 		MUL_ARCH=>MUL_ARCH,
 		START_ADDR=>START_ADDR,
-		USE_RISCV=>USE_RISCV
+		USE_RISCV=>USE_RISCV,
+      REG_RAM_STYLE=>REG_RAM_STYLE
 	)
 	port map(
 		clk_i=>clk_i,

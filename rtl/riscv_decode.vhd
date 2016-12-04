@@ -256,6 +256,7 @@ begin
                cmd_csr_o <= '0';
                cmd_trap_o <= '0';
                cmd_tret_o <= '0';
+               jump_type_o<="0000";
 
                dst_out<=(others=>'0'); -- defaults to register 0, which is never read
                displacement:= (others=>'0');
@@ -337,8 +338,7 @@ begin
                            cmd_jump_o<='1';
                            cmd_loadop3_o<='1';
                            op3_o<=next_ip_i&"00";
-                           dst_out<="000"&rd;
-                           jump_type_o<="0000";
+                           dst_out<="000"&rd;                          
                            t_valid:='1';
                   
                        when rv_jalr =>
@@ -349,7 +349,6 @@ begin
                            op3_o<=next_ip_i&"00";
                            dst_out<="000"&rd;
                            displacement:=get_I_displacement(word_i);
-                           jump_type_o<="0000";
                            t_valid:='1';
                  
                        when rv_branch =>
@@ -411,11 +410,9 @@ begin
                       
                            if funct3="000" then
                              -- ECALL EBREAK
-                             cmd_jump_o<='1';
-                             jump_type_o<="0000";
+                             cmd_jump_o<='1';                            
                              interrupt_o <= '0';
-                             --epc_o <= next_ip_i;
-
+ 
                              case word_i(21 downto 20) is
                                when  "01" =>  -- EBREAK
                                  trap_cause_o <= X"3";
@@ -461,7 +458,6 @@ begin
                    if t_valid='0' or not_implemented='1' then
                      -- illegal opcode
                      cmd_jump_o<='1';
-                     jump_type_o<="0000";
                      interrupt_o <= '0';                    
                      trap_cause_o<=X"2";
                      cmd_trap_o <= '1';

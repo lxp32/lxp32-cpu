@@ -8,6 +8,7 @@ li a2,0x0FA55AA55
 
 loop:
 li gp,0x200  // test result area
+li t4,0
 
 csrw mscratch,a2 // write a2 with mscratch
 jal store // t4 should be 0 ...

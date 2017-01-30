@@ -68,7 +68,11 @@ signal lli_adr: std_logic_vector(29 downto 0);
 signal lli_dat: std_logic_vector(31 downto 0);
 signal lli_busy: std_logic;
 
+signal dbus_cyc : std_logic; -- TH
+
 begin
+
+dbus_cyc_o <= dbus_cyc; -- TH
 
 cpu_inst: entity work.lxp32_cpu(rtl)
 	generic map(
@@ -88,7 +92,7 @@ cpu_inst: entity work.lxp32_cpu(rtl)
 		lli_dat_i=>lli_dat,
 		lli_busy_i=>lli_busy,
 		
-		dbus_cyc_o=>dbus_cyc_o,
+		dbus_cyc_o=>dbus_cyc,
 		dbus_stb_o=>dbus_stb_o,
 		dbus_we_o=>dbus_we_o,
 		dbus_sel_o=>dbus_sel_o,
@@ -100,11 +104,11 @@ cpu_inst: entity work.lxp32_cpu(rtl)
 		irq_i=>irq_i
 	);
 
-icache_inst: entity work.lxp32_icache(rtl)
-	generic map(
-		BURST_SIZE=>IBUS_BURST_SIZE,
-		PREFETCH_SIZE=>IBUS_PREFETCH_SIZE
-	)
+icache_inst:  entity work.bonfire_dm_icache -- entity work.lxp32_icache(rtl)
+--	generic map(
+--		BURST_SIZE=>IBUS_BURST_SIZE,
+--		PREFETCH_SIZE=>IBUS_PREFETCH_SIZE
+--	)
 	port map(
 		clk_i=>clk_i,
 		rst_i=>rst_i,
@@ -120,7 +124,9 @@ icache_inst: entity work.lxp32_icache(rtl)
 		wbm_bte_o=>ibus_bte_o,
 		wbm_ack_i=>ibus_ack_i,
 		wbm_adr_o=>ibus_adr_o,
-		wbm_dat_i=>ibus_dat_i
+		wbm_dat_i=>ibus_dat_i,
+      
+      dbus_cyc_snoop_i=>dbus_cyc -- TH
 	);
 
 end architecture;

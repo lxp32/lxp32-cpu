@@ -70,7 +70,7 @@ constant TAG_RAM_SIZE : natural := log2.power2(LINE_SELECT_ADR_BITS); -- the Tag
 constant TAG_RAM_BITS: natural := ADDRESS_BITS-CACHE_ADR_BITS; -- the Tag RAM needs to compare all remaining address bits
 constant TAG_RAM_WIDTH : natural := TAG_RAM_BITS+1;  -- The Tag RAM will also contain a valid bit in is upper position
 
-constant LINE_MAX : std_logic_vector(CL_BITS downto 0) := (others=>'1');
+constant LINE_MAX : std_logic_vector(CL_BITS-1 downto 0) := (others=>'1');
 
 subtype t_tag_value is unsigned(TAG_RAM_BITS-1 downto 0);
 
@@ -87,49 +87,51 @@ signal tag_index : unsigned(LINE_SELECT_ADR_BITS-1 downto 0); -- Offset into TAG
 signal tag_ram : t_tag_ram := (others => (others=> '0')) ;
 signal cache_ram : t_cache_ram;
 
-signal adr :  std_logic_vector(29 downto 0);
+signal adr,adr_reg :  std_logic_vector(29 downto 0);
 
 signal tag_buffer : t_tag_data; -- last buffered tag value
 signal buffer_index : unsigned(LINE_SELECT_ADR_BITS-1 downto 0); -- index of last buffered tag value
 
 signal hit,miss : std_logic;
 
-signal read_address : std_logic_vector(29 downto 0);
+signal wb_enable, re_reg : std_logic;
 
-signal wb_enable : std_logic;
+signal read_offset_counter : unsigned(CL_BITS-1 downto 0);
+signal read_address : std_logic_vector(wbm_adr_o'high downto 0);
+signal read_cache_address_reg : std_logic_vector(CACHE_ADR_BITS-1 downto 0);
 
-signal burst_counter : unsigned(CL_BITS-1 downto 0);
-
-type t_wb_state is (wb_idle,wb_burst,wb_finish);
+type t_wb_state is (wb_idle,wb_burst,wb_finish,wb_retire);
 
 signal wb_state : t_wb_state;
 
 
 begin
-  lli_busy_o<= not hit;
+  lli_busy_o<= not hit and (lli_re_i or re_reg);
 
-  wbm_adr_o<=read_address;
   wbm_cyc_o<=wb_enable;
   wbm_stb_o<=wb_enable;
   wbm_bte_o<="00";
-  wbm_adr_o<=adr(adr'high downto CL_BITS) & std_logic_vector(burst_counter);
+  read_address<=adr(adr'high downto CL_BITS) & std_logic_vector(read_offset_counter);
+  wbm_adr_o<=read_address;
   
-  adr <= lli_adr_i;  
-  
+  adr <=  adr_reg when re_reg='1' 
+          else  lli_adr_i;  
  
   tag_value <= unsigned(adr(adr'high downto adr'high-TAG_RAM_BITS+1));
 --  tag_index <= unsigned(adr(adr'high-TAG_RAM_BITS-1 downto adr'high-TAG_RAM_BITS-1-LINE_SELECT_ADR_BITS)); 
   tag_index <= unsigned(adr(LINE_SELECT_ADR_BITS+CL_BITS-1 downto CL_BITS));
   
   
-  check_hitmiss : process(adr,tag_value,tag_buffer) 
+ 
+  check_hitmiss : process(tag_value,tag_buffer,buffer_index,tag_index,lli_re_i,re_reg) 
   variable index_match,tag_match : boolean;
-  
+  variable re : boolean;
   begin
-    index_match:=buffer_index = tag_index;
+    index_match:= buffer_index = tag_index;
     tag_match:=tag_buffer.valid='1' and tag_buffer.address=tag_value;
+    re:= lli_re_i='1' or re_reg='1';
     
-    if  index_match and tag_match then 
+    if  index_match and tag_match and re then 
       hit<='1';
     else
       hit<='0';
@@ -137,13 +139,25 @@ begin
     
     -- A miss only occurs when the tag buffer contains data for the right index but
     -- the tag itself does not match
-    if index_match and not tag_match then
+    if re and index_match and not tag_match then
       miss<='1';
     else
       miss<='0';
     end if;      
   end process;
   
+  
+  process(clk_i) begin
+     if rising_edge(clk_i) then
+        if lli_re_i='1' and hit='0' then
+          re_reg<='1';
+          adr_reg<=lli_adr_i;
+        elsif hit='1' then
+          re_reg<='0';
+        end if;           
+     end if;
+  end process;
+
   
   proc_tag_ram:process(clk_i) 
   
@@ -153,21 +167,26 @@ begin
       if rst_i='1' then
        tag_buffer<= ('0',others=>to_unsigned(0,t_tag_value'length));
       else  
-         -- read tag RAM into buffer
-         if hit='0' and lli_re_i='1' then 
-           
-           rd:=tag_ram(to_integer(tag_index));
-           
-           tag_buffer.valid<=rd(rd'high);           
-           tag_buffer.address<= unsigned(rd(TAG_RAM_BITS-1 downto 0));
-           buffer_index<=tag_index;
-         end if;  
-         
+      
          if wb_state=wb_finish then 
            wd(wd'high):='1';
            wd(TAG_RAM_BITS-1 downto 0):=std_logic_vector(tag_value);
            tag_ram(to_integer(tag_index))<=wd;
-         end if;  
+           --bypass 
+--           tag_buffer.valid<='1';
+--           tag_buffer.address<=tag_value;
+--           buffer_index<=tag_index;
+         
+         end if;         
+         if hit='0' then 
+             -- read tag RAM into buffer
+           rd:=tag_ram(to_integer(tag_index));
+           tag_buffer.valid<=rd(rd'high);           
+           tag_buffer.address<= unsigned(rd(TAG_RAM_BITS-1 downto 0));
+           buffer_index<=tag_index;
+        end if;   
+         
+         
       end if;
     end if;
   
@@ -191,31 +210,41 @@ begin
   
   
   proc_wb_read: process(clk_i) 
-  variable n : unsigned(burst_counter'high downto 0);
+  variable n : unsigned(read_offset_counter'high downto 0);
   begin  
      if rising_edge(clk_i) then
        if rst_i='1' then 
          wb_enable<='0';
          wb_state<=wb_idle;
-         burst_counter<=to_unsigned(0,burst_counter'length);
+         read_offset_counter<=to_unsigned(0,read_offset_counter'length);
        else
+         --read_cache_address_reg<=read_address(CACHE_ADR_BITS-1 downto 0);
          case wb_state is
            when wb_idle =>
-             if miss='1' then
+             if miss='1' and hit='0' then
                wb_enable<='1';
                wbm_cti_o<="010";
-               burst_counter<=to_unsigned(0,burst_counter'length);
+               read_offset_counter<=to_unsigned(0,read_offset_counter'length);
                wb_state<=wb_burst;
              end if;
            when wb_burst =>
-             n:=burst_counter+1;
-             if std_logic_vector(n)=LINE_MAX then 
-               wbm_cti_o<="111";
-               wb_state<=wb_finish;
-             end if;
-             burst_counter<=n;             
+             if  wbm_ack_i='1' then 
+                n:=read_offset_counter+1;
+                if std_logic_vector(n)=LINE_MAX then 
+                  wbm_cti_o<="111";
+                  wb_state<=wb_finish;
+                end if;
+                read_offset_counter<=n;   
+             end if;                
            when wb_finish=>
-              wb_state<= wb_idle;
+              if  wbm_ack_i='1' then
+                wb_state<= wb_idle;
+                wb_enable<='0';
+                wb_state<=wb_retire;
+              end if;  
+           when wb_retire=>
+              wb_state<=wb_idle;
+                              
          end case;               
        end if;  
      end if;

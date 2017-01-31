@@ -1,20 +1,20 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    14:42:05 01/30/2017 
--- Design Name: 
--- Module Name:    bonfire_dm_icache - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
+-- Company:
+-- Engineer:
 --
--- Dependencies: 
+-- Create Date:    14:42:05 01/30/2017
+-- Design Name:
+-- Module Name:    bonfire_dm_icache - Behavioral
+-- Project Name:
+-- Target Devices:
+-- Tool versions:
+-- Description:
 --
--- Revision: 
+-- Dependencies:
+--
+-- Revision:
 -- Revision 0.01 - File Created
--- Additional Comments: 
+-- Additional Comments:
 --
 ----------------------------------------------------------------------------------
 library IEEE;
@@ -39,24 +39,24 @@ generic (
   ADDRESS_BITS : natural := 30  -- Number of bits of chacheable address range
 );
 port(
-		clk_i: in std_logic;
-		rst_i: in std_logic;
-		
-		lli_re_i: in std_logic;
-		lli_adr_i: in std_logic_vector(29 downto 0);
-		lli_dat_o: out std_logic_vector(31 downto 0);
-		lli_busy_o: out std_logic;
-		
-		wbm_cyc_o: out std_logic;
-		wbm_stb_o: out std_logic;
-		wbm_cti_o: out std_logic_vector(2 downto 0);
-		wbm_bte_o: out std_logic_vector(1 downto 0);
-		wbm_ack_i: in std_logic;
-		wbm_adr_o: out std_logic_vector(29 downto 0);
-		wbm_dat_i: in std_logic_vector(31 downto 0);
-      
+        clk_i: in std_logic;
+        rst_i: in std_logic;
+
+        lli_re_i: in std_logic;
+        lli_adr_i: in std_logic_vector(29 downto 0);
+        lli_dat_o: out std_logic_vector(31 downto 0);
+        lli_busy_o: out std_logic;
+
+        wbm_cyc_o: out std_logic;
+        wbm_stb_o: out std_logic;
+        wbm_cti_o: out std_logic_vector(2 downto 0);
+        wbm_bte_o: out std_logic_vector(1 downto 0);
+        wbm_ack_i: in std_logic;
+        wbm_adr_o: out std_logic_vector(29 downto 0);
+        wbm_dat_i: in std_logic_vector(31 downto 0);
+
       dbus_cyc_snoop_i : std_logic -- TH
-	);
+    );
 
 
 end bonfire_dm_icache;
@@ -104,6 +104,7 @@ type t_wb_state is (wb_idle,wb_burst,wb_finish,wb_retire);
 
 signal wb_state : t_wb_state;
 
+signal tag_we : std_logic :='0'; -- tag RAM Write enable
 
 begin
   lli_busy_o<= not hit and (lli_re_i or re_reg);
@@ -113,40 +114,38 @@ begin
   wbm_bte_o<="00";
   read_address<=adr(adr'high downto CL_BITS) & std_logic_vector(read_offset_counter);
   wbm_adr_o<=read_address;
-  
-  adr <=  adr_reg when re_reg='1' 
-          else  lli_adr_i;  
- 
+
+  adr <=  adr_reg when re_reg='1'
+          else  lli_adr_i;
+
   tag_value <= unsigned(adr(adr'high downto adr'high-TAG_RAM_BITS+1));
---  tag_index <= unsigned(adr(adr'high-TAG_RAM_BITS-1 downto adr'high-TAG_RAM_BITS-1-LINE_SELECT_ADR_BITS)); 
   tag_index <= unsigned(adr(LINE_SELECT_ADR_BITS+CL_BITS-1 downto CL_BITS));
-  
-  
- 
-  check_hitmiss : process(tag_value,tag_buffer,buffer_index,tag_index,lli_re_i,re_reg) 
+
+
+  check_hitmiss : process(tag_value,tag_buffer,buffer_index,tag_index,lli_re_i,re_reg)
   variable index_match,tag_match : boolean;
   variable re : boolean;
   begin
     index_match:= buffer_index = tag_index;
     tag_match:=tag_buffer.valid='1' and tag_buffer.address=tag_value;
     re:= lli_re_i='1' or re_reg='1';
-    
-    if  index_match and tag_match and re then 
+
+    if  index_match and tag_match and re then
       hit<='1';
     else
       hit<='0';
     end if;
-    
+
     -- A miss only occurs when the tag buffer contains data for the right index but
     -- the tag itself does not match
     if re and index_match and not tag_match then
       miss<='1';
     else
       miss<='0';
-    end if;      
+    end if;
   end process;
-  
-  
+
+
   process(clk_i) begin
      if rising_edge(clk_i) then
         if lli_re_i='1' and hit='0' then
@@ -154,69 +153,62 @@ begin
           adr_reg<=lli_adr_i;
         elsif hit='1' then
           re_reg<='0';
-        end if;           
+        end if;
      end if;
   end process;
 
-  
-  proc_tag_ram:process(clk_i) 
-  
+
+  proc_tag_ram:process(clk_i)
+
   variable rd,wd : std_logic_vector(TAG_RAM_WIDTH-1 downto 0);
   begin
     if rising_edge(clk_i) then
       if rst_i='1' then
-       tag_buffer<= ('0',others=>to_unsigned(0,t_tag_value'length));
-      else  
-      
-         if wb_state=wb_finish then 
-           wd(wd'high):='1';
-           wd(TAG_RAM_BITS-1 downto 0):=std_logic_vector(tag_value);
+         tag_buffer<= ('0',others=>to_unsigned(0,t_tag_value'length));
+      else
+
+         if tag_we='1' then
+            wd(wd'high):='1';
+            wd(TAG_RAM_BITS-1 downto 0):=std_logic_vector(tag_value);
            tag_ram(to_integer(tag_index))<=wd;
-           --bypass 
---           tag_buffer.valid<='1';
---           tag_buffer.address<=tag_value;
---           buffer_index<=tag_index;
-         
-         end if;         
-         if hit='0' then 
-             -- read tag RAM into buffer
-           rd:=tag_ram(to_integer(tag_index));
-           tag_buffer.valid<=rd(rd'high);           
-           tag_buffer.address<= unsigned(rd(TAG_RAM_BITS-1 downto 0));
-           buffer_index<=tag_index;
-        end if;   
-         
-         
+         end if;
+
+        rd:=tag_ram(to_integer(tag_index));
+        tag_buffer.valid<=rd(rd'high);
+        tag_buffer.address<= unsigned(rd(TAG_RAM_BITS-1 downto 0));
+        buffer_index<=tag_index;
+
       end if;
     end if;
-  
+
   end process;
-  
-  
-  
+
+
+
   proc_cache_ram: process(clk_i) begin
-  
+
     if rising_edge(clk_i) then
       -- in case of hit read cache
       if hit='1' and lli_re_i='1' then
         lli_dat_o <= cache_ram(to_integer(unsigned(adr(CACHE_ADR_BITS-1 downto 0))));
-      end if;  
-      -- read data from Wisbone bus into Cache RAM on ACK 
+      end if;
+      -- read data from Wisbone bus into Cache RAM on ACK
       if wbm_ack_i='1' and wb_enable='1' then
         cache_ram(to_integer(unsigned(read_address(CACHE_ADR_BITS-1 downto 0))))<=wbm_dat_i;
-      end if;    
+      end if;
     end if;
   end process;
-  
-  
-  proc_wb_read: process(clk_i) 
+
+
+  proc_wb_read: process(clk_i)
   variable n : unsigned(read_offset_counter'high downto 0);
-  begin  
+  begin
      if rising_edge(clk_i) then
-       if rst_i='1' then 
+       if rst_i='1' then
          wb_enable<='0';
          wb_state<=wb_idle;
          read_offset_counter<=to_unsigned(0,read_offset_counter'length);
+         tag_we<='0';
        else
          --read_cache_address_reg<=read_address(CACHE_ADR_BITS-1 downto 0);
          case wb_state is
@@ -228,27 +220,27 @@ begin
                wb_state<=wb_burst;
              end if;
            when wb_burst =>
-             if  wbm_ack_i='1' then 
+             if  wbm_ack_i='1' then
                 n:=read_offset_counter+1;
-                if std_logic_vector(n)=LINE_MAX then 
+                if std_logic_vector(n)=LINE_MAX then
                   wbm_cti_o<="111";
                   wb_state<=wb_finish;
+                  tag_we<='1';
                 end if;
-                read_offset_counter<=n;   
-             end if;                
+                read_offset_counter<=n;
+             end if;
            when wb_finish=>
               if  wbm_ack_i='1' then
-                wb_state<= wb_idle;
                 wb_enable<='0';
                 wb_state<=wb_retire;
-              end if;  
+                tag_we<='0';
+              end if;
            when wb_retire=>
               wb_state<=wb_idle;
-                              
-         end case;               
-       end if;  
+         end case;
+       end if;
      end if;
   end process;
-  
+
 end Behavioral;
 

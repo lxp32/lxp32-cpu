@@ -87,7 +87,7 @@ signal tag_index : unsigned(LINE_SELECT_ADR_BITS-1 downto 0); -- Offset into TAG
 signal tag_ram : t_tag_ram := (others => (others=> '0')) ;
 signal cache_ram : t_cache_ram;
 
-signal adr,adr_reg :  std_logic_vector(29 downto 0);
+signal adr :  std_logic_vector(29 downto 0);
 
 signal tag_buffer : t_tag_data; -- last buffered tag value
 signal buffer_index : unsigned(LINE_SELECT_ADR_BITS-1 downto 0); -- index of last buffered tag value
@@ -114,9 +114,8 @@ begin
   wbm_bte_o<="00";
   read_address<=adr(adr'high downto CL_BITS) & std_logic_vector(read_offset_counter);
   wbm_adr_o<=read_address;
-
-  adr <=  adr_reg when re_reg='1'
-          else  lli_adr_i;
+          
+  adr <=  lli_adr_i;       
 
   tag_value <= unsigned(adr(adr'high downto adr'high-TAG_RAM_BITS+1));
   tag_index <= unsigned(adr(LINE_SELECT_ADR_BITS+CL_BITS-1 downto CL_BITS));
@@ -150,13 +149,12 @@ begin
      if rising_edge(clk_i) then
         if lli_re_i='1' and hit='0' then
           re_reg<='1';
-          adr_reg<=lli_adr_i;
         elsif hit='1' then
           re_reg<='0';
         end if;
      end if;
   end process;
-
+ 
 
   proc_tag_ram:process(clk_i)
 

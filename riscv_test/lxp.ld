@@ -14,3 +14,5 @@ SECTIONS
   .data : { *(.data) } > RAM
   .bss : { *(.bss) }   > RAM
 }
+
+monitor = 0x10000000;

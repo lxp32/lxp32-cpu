@@ -1,9 +1,11 @@
 .section .text
 .global _start
+.extern monitor
 _start:
 
 
 li gp,0x0100 // memory pointer
+la s0, monitor
 
 // High Multiplication
 
@@ -57,13 +59,20 @@ blt a1,a3,loop // end loop when t1 is 11
 li a1,1
 add a2,a2,1 
 blt a2,a3,loop 
+
+li t0,1  
+sw t0,0(s0) // write 1 to monitor result register 
+
+// restart from beginning 
 li a2,2
 mv gp,s1 // restore pointer 
+
 j loop
 
 store: // store t4 to mem and increment
 sw t4,0(gp) // save result
 add gp,gp,4 // increment pointer
+sw t4, 4(s0) // Write also to bus monitor
 ret
 
 

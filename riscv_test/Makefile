@@ -5,11 +5,11 @@ TARGET_CC := $(TARGET_PREFIX)-gcc
 TARGET_LD := $(TARGET_PREFIX)-gcc
 TARGET_SIZE := $(TARGET_PREFIX)-size
 TARGET_OBJCOPY := $(TARGET_PREFIX)-objcopy
-ARCH= RV32IM
+ARCH= rv32im
 HEXDUMP ?= hexdump
 
 %.elf : %.S
-	$(TARGET_CC) -march=$(ARCH) -m32  -nostartfiles -Tlxp.ld -o $@ $<
+	$(TARGET_CC) -march=$(ARCH)  -nostartfiles -Tlxp.ld -o $@ $<
 
 
 %.hex : %.elf

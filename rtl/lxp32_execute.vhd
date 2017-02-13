@@ -121,13 +121,15 @@ signal jump_dst, jump_dst_r: std_logic_vector(jump_dst_o'range);
 signal cond_reg : std_logic_vector (2 downto 0);
 
 -- SLT
-signal slt_we,slt_ce : std_logic;
+signal slt_we : std_logic:='0';
+signal slt_ce : std_logic;
 signal slt_result : std_logic_vector(31 downto 0) := (others=>'0');
 signal slt_busy : std_logic :='0';
 
 -- Control unit
 signal csr_we : std_logic := '0';
-signal csr_ce,csr_exception : std_logic;
+signal csr_ce : std_logic := '0';
+signal csr_exception  : std_logic :='0';
 signal csr_busy : std_logic := '0';
 signal csr_result :  std_logic_vector(31 downto 0);
 
@@ -379,7 +381,7 @@ riscv_cu: if USE_RISCV  generate
    mtrap_strobe <= (cmd_trap_i and can_execute) or ex_exception;
 
    trap_cause <= X"4" when dbus_misalign='1' else
-                 X"1" when csr_exception='1'
+                 X"2" when csr_exception='1'
                  else  trap_cause_i;
 
    process(clk_i) begin
@@ -393,7 +395,13 @@ riscv_cu: if USE_RISCV  generate
 
    epc_mux <= epc_reg when ex_exception='1' else epc_i;
 
-   csr_inst: entity work.riscv_control_unit PORT MAP(
+   csr_inst: entity work.riscv_control_unit 
+   GENERIC MAP (
+   
+      DIVIDER_EN=>DIVIDER_EN,
+      MUL_ARCH => MUL_ARCH   
+   )
+   PORT MAP(
         op1_i => op1_i,
         wdata_o => csr_result,
         we_o => csr_we ,
@@ -411,7 +419,8 @@ riscv_cu: if USE_RISCV  generate
 
       mcause_i => trap_cause,
       mepc_i => epc_mux,
-      mtrap_strobe_i => mtrap_strobe
+      mtrap_strobe_i => mtrap_strobe,
+      cmd_tret_i => cmd_tret_i and can_execute
     );
 
 end generate;

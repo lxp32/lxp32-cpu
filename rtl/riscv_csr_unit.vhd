@@ -9,7 +9,11 @@
 -- Target Devices:
 -- Tool versions:
 -- Description:
---
+--   Bonfire CPU 
+--   (c) 2016,2017 Thomas Hornschuh
+--   See license.md for License 
+--   Control unit, implements the RISC-V CSR instruction and associated state registers
+--   riscv instruction set decoder
 -- Dependencies:
 --
 -- Revision:
@@ -33,6 +37,11 @@ use work.csr_def.all;
 
 
 entity riscv_control_unit is
+    generic
+    (
+       DIVIDER_EN: boolean;
+       MUL_ARCH: string
+    );
     Port ( op1_i : in  STD_LOGIC_VECTOR (31 downto 0);
            wdata_o : out  STD_LOGIC_VECTOR (31 downto 0);
 
@@ -51,6 +60,7 @@ entity riscv_control_unit is
            mcause_i : in STD_LOGIC_VECTOR (3 downto 0);
            mepc_i : in std_logic_vector(31 downto 2);
            mtrap_strobe_i : in STD_LOGIC; -- indicates that mcause_i and mepc_i should be registered
+           cmd_tret_i : in STD_LOGIC; -- return command
 
            clk_i : in  STD_LOGIC;
            rst_i : in  STD_LOGIC);
@@ -75,6 +85,10 @@ signal mscratch : std_logic_vector(31 downto 0) := (others=>'0');
 signal mepc : std_logic_vector(31 downto 2) := (others=>'0');
 signal mcause : std_logic_vector(3 downto 0) := (others=>'0');
 
+signal mie : std_logic := '0';  -- Interrupt Enable
+signal mpie : std_logic :='0';  -- Previous Interrupt enable
+
+
 begin
 
 -- output wiring
@@ -88,11 +102,14 @@ csr_offset <= csr_adr(7 downto 0);
 
 --csr select mux
 with csr_offset select
-   csr_in <= mtvec&"00" when tvec,
+   csr_in <= get_mstatus(mpie,mie) when status,
+             get_misa(DIVIDER_EN,MUL_ARCH) when isa,
+             mtvec&"00" when tvec,
              mscratch   when scratch,
              X"0000000"&mcause when cause,
-             mepc&"00" when epc,
+             mepc&"00" when epc,        
              impvers when impid,
+             
              (others=>'0') when others;
 
 
@@ -133,12 +150,22 @@ begin
         if mtrap_strobe_i='1' then
           mcause <= mcause_i;
           mepc <= mepc_i;
+          -- save IE and disable
+          mpie <= mie;
+          mie <= '0'; 
+        elsif cmd_tret_i='1' then
+          mie<=mpie;
         end if;  
        
         if ce_i='1' then
-          l_exception:='0';
+         
           if csr_adr(11 downto 8)=m_stdprefix then
+            l_exception:='0';
             case csr_adr(7 downto 0) is
+              when status =>
+                mie <= csr_out(3);
+              when isa =>
+                -- no register to write here...
               when tvec =>
                  mtvec<=csr_out(31 downto 2);
               when scratch =>
@@ -148,10 +175,15 @@ begin
               when cause =>
                  mcause <= csr_out(3 downto 0);
               when others=>
-                l_exception:='1';
+                 l_exception:='1';
             end case;
           elsif csr_adr(11 downto 8) /= m_roprefix then
             l_exception:='1';
+          else
+            case csr_adr(7 downto 0) is
+              when vendorid|marchid|impid|hartid => l_exception:='0';
+              when others => l_exception:='1';  
+            end case;              
           end if;
           if l_exception = '0'  then 
             wdata_o <= csr_in;

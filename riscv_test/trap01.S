@@ -60,14 +60,7 @@ mv t5,t4 // save mcause
 jal store
 csrr t4,mepc
 jal store
-//addi t1,t5,-2 // check if mcause =2 (illegal opcode)
-//beqz t1,adjust
-//addi t1,t5,-4 // check if mcause =4 (misalign)
-//beqz t1,adjust
-//addi t1,t5,-1 // check if mcause =1 (misalign)
-//beqz t1,adjust
-//sret
-//adjust:
+
 addi t1,t4,4 // increment mepc in case of exceptions
 csrw mepc,t1
 sret

@@ -1,23 +1,17 @@
 ----------------------------------------------------------------------------------
--- Company:
--- Engineer:
---
+
 -- Create Date:    18:56:47 09/18/2016
 -- Design Name:
 -- Module Name:    riscv_decode - Behavioral
--- Project Name:
--- Target Devices:
--- Tool versions:
--- Description:
---   riscv instruction set decoder for lxp32 processor
---   (c) 2016 Thomas Hornschuh
---   Second stage of lxp32 pipeline. Designed as "plug-in" replacement for the lxp32 orginal deocoder
 
--- Dependencies:
---
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
+
+--   Bonfire CPU 
+--   (c) 2016,2017 Thomas Hornschuh
+--   See license.md for License 
+--   Second stage of lxp32 pipeline. Designed as "plug-in" replacement for the lxp32 orginal deocoder
+--   riscv instruction set decoder
+
+
 --
 ----------------------------------------------------------------------------------
 library IEEE;
@@ -447,6 +441,20 @@ begin
                               dst_out<="000"&rd;
                               t_valid:='1';
                             end if;
+                      when rv_miscmem => 
+                        case funct3 is 
+                          when "000" => -- FENCE: currently like a NOP
+                            t_valid:='1';
+                          when "001" => -- FENCE.I
+                            -- we just jump to next_ip, this will effectivly flush the pipeline and the prefetch buffer
+                            rd1_select<=Imm;
+                            rd1_direct<=std_logic_vector(signed(next_ip_i&"00"));
+                            cmd_jump_o<='1';
+                            t_valid:='1';                            
+                          when others =>
+                            not_implemented:='1';
+                         end case;   
+                          
                       when rv_invalid =>
                         not_implemented:='1';
                     end case;  

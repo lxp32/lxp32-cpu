@@ -168,6 +168,9 @@ end generate;
 
 gen_mul_dsp: if MUL_ARCH="dsp" generate
 	mul_inst: entity work.lxp32_mul_dsp(rtl)
+      generic map (
+        pipelined=>false
+      )
 		port map(
 			clk_i=>clk_i,
 			rst_i=>rst_i,

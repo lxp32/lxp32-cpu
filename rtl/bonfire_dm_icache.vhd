@@ -9,6 +9,11 @@
 -- Target Devices:
 -- Tool versions:
 -- Description:
+--   Bonfire CPU 
+--   (c) 2016,2017 Thomas Hornschuh
+--   See license.md for License 
+--   Implements a direct-mapped Instruction Cache with variable size and line size
+--   Designed as Plug-In Replacement for the orginal "ring-buffer" cache of lxp32
 --
 -- Dependencies:
 --

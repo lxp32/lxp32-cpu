@@ -2,22 +2,67 @@
 .global _start
 _start:
 
-li a1,0x100 // store area
-li a2,0x0FA55AA55
 
 
-loop:
-li gp,0x200  // test result area
-li t4,0
+la s0, monitor
 
-csrw mscratch,a2 // write a2 with mscratch
-jal store // t4 should be 0 ...
-csrr t4,mscratch// read mscratch
-jal store // should be FA55AA55
+la t1, trap
+csrw mtvec,t1 
 
-j loop
+li a0, -1 // preset a0 with failure code
 
-store: // store t4 to mem and increment
-sw t4,0(gp) // save result
-add gp,gp,4 // increment pointer
-ret
+csrr t1,mvendorid
+bnez t1,finish
+csrr t1,marchid
+bnez t1,finish
+csrr t1,mhartid
+bnez t1,finish
+csrr t1,mimpid
+beqz t1, finish
+sw t1,4(s0) // write impid to monitor
+csrr t1,misa
+sw t1,8(s0) // write misa to monitor
+beqz t1,finish
+
+// Test mstatus register
+csrr t1,mstatus
+sw t1,20(s0) // write to monitor
+li t2,0x8 // set MIE bit
+csrs mstatus,t2
+csrr t1,mstatus
+sw t1,20(s0) // write to monitor
+
+la t1,trap_mstatus
+csrw mtvec,t1
+ecall
+csrr t1,mstatus
+sw t1,20(s0) // write to monitor
+andi t1,t1,0x08  // mask MIE
+beqz t1, finish // failure when MIE is not set 
+
+li a0,1 // success
+j finish
+
+trap:
+csrr t1,mepc
+sw t1,12(s0)
+csrr t1,mcause
+sw t1,16(s0)
+
+
+finish:
+sw a0,0(s0) // write  to monitor result register 
+f0:
+j f0
+
+trap_mstatus:
+csrr t1, mstatus
+sw t1,20(s0)
+andi t1,t1, 0x088 // mask MPIE and MIE
+addi t1,t1,-0x80   // result should be 80
+bnez t1,finish  // failure.. if not 80 
+csrr t1,mepc
+addi t1,t1,4
+csrw mepc,t1
+mret
+

@@ -9,6 +9,11 @@
 -- Target Devices: 
 -- Tool versions: 
 -- Description: 
+
+--   Bonfire CPU 
+--   (c) 2016,2017 Thomas Hornschuh
+--   See license.md for License 
+
 -- Regfile for RISC V.
 -- For compatiblity reasons the interface still uses 8 Bit addresses like the lxp implementation
 -- Internally only 5 Bits are used
@@ -41,17 +46,17 @@ generic (
   REG_RAM_STYLE : string := "block"
 );
 port(
-		clk_i: in std_logic;
-		
-		raddr1_i: in std_logic_vector(7 downto 0);
-		rdata1_o: out std_logic_vector(31 downto 0);
-		raddr2_i: in std_logic_vector(7 downto 0);
-		rdata2_o: out std_logic_vector(31 downto 0);
-		
-		waddr_i: in std_logic_vector(7 downto 0);
-		we_i: in std_logic;
-		wdata_i: in std_logic_vector(31 downto 0)
-	);
+      clk_i: in std_logic;
+      
+      raddr1_i: in std_logic_vector(7 downto 0);
+      rdata1_o: out std_logic_vector(31 downto 0);
+      raddr2_i: in std_logic_vector(7 downto 0);
+      rdata2_o: out std_logic_vector(31 downto 0);
+      
+      waddr_i: in std_logic_vector(7 downto 0);
+      we_i: in std_logic;
+      wdata_i: in std_logic_vector(31 downto 0)
+   );
 end riscv_regfile;
 
 architecture rtl of riscv_regfile is
@@ -70,22 +75,58 @@ signal ram2_rdata: std_logic_vector(31 downto 0);
 signal ram1_collision: std_logic;
 signal ram2_collision: std_logic;
 
+-- returns TRUE when v contains any meta value
+function check_meta(v:std_logic_vector(4 downto 0)) return boolean is
+begin
+  for i in 0 to 4 loop
+    if not( v(i) ='0' or v(i) ='1' ) then
+      return true;
+    end if;
+  end loop;
+  return false;  
+end;
+
 begin
 
 assert REG_RAM_STYLE="block" or REG_RAM_STYLE="distributed" 
-	report "Invalid REG_RAM_STYLE generic value: block or distributed are expected"
-	severity failure;
+   report "Invalid REG_RAM_STYLE generic value: block or distributed are expected"
+   severity failure;
 
 
   -- RAM access
   -- The code defines a tripple-port RAM
   -- let Xilinx inference solve this...  
   process(clk_i) 
+ 
   begin
     if rising_edge(clk_i) then
+        -- synthesis translate_off
+                 
+            if check_meta(raddr1_i(4 downto 0)) then
+               report "Metavalue in raddr1_i"
+               severity warning;
+             end if;
+             
+             if check_meta(raddr2_i(4 downto 0)) then
+               report "Metavalue in raddr2_i"
+               severity warning;   
+             end if; 
+             assert we_i='1' or we_i='0'
+               report "Metavalue for we_i"
+               severity error;
+                     
+        -- synthesis translate_on
+    
+    
       ram1_rdata <= regfile(to_integer(unsigned(raddr1_i(4 downto 0))));
       ram2_rdata <= regfile(to_integer(unsigned(raddr2_i(4 downto 0))));
       if we_i='1' then
+         -- synthesis translate_off
+         if check_meta(waddr_i(4 downto 0)) then
+            report "Metavalue in waddr_i with we_i='1'"
+            severity error;  
+          end if;           
+         -- synthesis translate_on                     
         regfile(to_integer(unsigned(waddr_i(4 downto 0)))) <= wdata_i;
       end if;  
     end if;

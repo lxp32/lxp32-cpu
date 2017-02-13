@@ -34,7 +34,9 @@ entity lxp32c_top is
       MUL_ARCH: string:="dsp";
       START_ADDR: std_logic_vector(29 downto 0):=(others=>'0');
       USE_RISCV : boolean := false;
-      REG_RAM_STYLE : string := "block"
+      REG_RAM_STYLE : string := "block";
+      ENABLE_ICACHE : boolean := false; -- Enable "true" instruction Cache
+      CACHE_SIZE_WORDS : natural := 2048
    );
    port(
       clk_i: in std_logic;
@@ -104,12 +106,41 @@ cpu_inst: entity work.lxp32_cpu(rtl)
       irq_i=>irq_i
    );
 
-icache_inst:  entity work.bonfire_dm_icache -- entity work.lxp32_icache(rtl)
+en_cache: if ENABLE_ICACHE generate
+
+   icache_inst:  entity work.bonfire_dm_icache -- entity work.lxp32_icache(rtl)
+   generic map(
+         LINE_SIZE=>IBUS_BURST_SIZE,
+         CACHE_SIZE=>4096
+      )
+      port map(
+         clk_i=>clk_i,
+         rst_i=>rst_i,
+         
+         lli_re_i=>lli_re,
+         lli_adr_i=>lli_adr,
+         lli_dat_o=>lli_dat,
+         lli_busy_o=>lli_busy,
+         
+         wbm_cyc_o=>ibus_cyc_o,
+         wbm_stb_o=>ibus_stb_o,
+         wbm_cti_o=>ibus_cti_o,
+         wbm_bte_o=>ibus_bte_o,
+         wbm_ack_i=>ibus_ack_i,
+         wbm_adr_o=>ibus_adr_o,
+         wbm_dat_i=>ibus_dat_i,
+         
+         dbus_cyc_snoop_i=>dbus_cyc -- TH
+      );
+
+end generate;
+
+NO_CACHE: if not ENABLE_ICACHE generate
+
+icache_inst:  entity work.lxp32_icache(rtl)
 generic map(
-      LINE_SIZE=>IBUS_BURST_SIZE,
-      CACHE_SIZE=>4096
-      
-      --PREFETCH_SIZE=>IBUS_PREFETCH_SIZE
+      BURST_SIZE=>IBUS_BURST_SIZE,
+      PREFETCH_SIZE=>IBUS_PREFETCH_SIZE
    )
    port map(
       clk_i=>clk_i,
@@ -130,5 +161,8 @@ generic map(
       
       dbus_cyc_snoop_i=>dbus_cyc -- TH
    );
+
+end generate;
+
 
 end architecture;

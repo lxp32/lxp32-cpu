@@ -22,8 +22,9 @@ constant OP_BRANCH : t_opcode := "11000";
 constant OP_LUI    : t_opcode := "01101";
 constant OP_AUIPC  : t_opcode := "00101";
 constant OP_SYSTEM : t_opcode := "11100";
+constant OP_MISCMEM :t_opcode := "00011";
 
-type t_riscv_op is (rv_imm,rv_op,rv_jal,rv_jalr,rv_load,rv_store,rv_branch,rv_lui,rv_auipc,rv_system,rv_invalid);
+type t_riscv_op is (rv_imm,rv_op,rv_jal,rv_jalr,rv_load,rv_store,rv_branch,rv_lui,rv_auipc,rv_system,rv_miscmem,rv_invalid);
  
 constant ADD :  t_funct3  :="000";
 constant SLT :  t_funct3  :="010";
@@ -152,6 +153,7 @@ begin
     when OP_LUI => return rv_lui;
     when OP_AUIPC => return rv_auipc;
     when OP_SYSTEM => return rv_system;
+    when OP_MISCMEM => return rv_miscmem;
     when others => return rv_invalid;
        
   end case;

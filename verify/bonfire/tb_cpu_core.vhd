@@ -70,7 +70,7 @@ ARCHITECTURE behavior OF tb_cpu_core IS
         );
     END COMPONENT;
     
-    
+    constant TestFile : string :=  "../../lxp32-cpu/riscv_test/csr.hex";
     
 
    --Inputs
@@ -128,7 +128,7 @@ BEGIN
    uut: lxp32u_top 
    generic map (
      USE_RISCV=>true,
-     MUL_ARCH=>"spartandsp"
+     MUL_ARCH=>"dsp"
    )
    PORT MAP (
           clk_i => clk_i,
@@ -185,7 +185,7 @@ BEGIN
     generic map (
         ram_size => ram_size,
         ram_adr_width =>ram_adr_width,
-        RamFileName => "../../lxp32-cpu/riscv_test/mult.hex",
+        RamFileName =>TestFile,
         mode=>"H",
         wbs_adr_high => mem_adr'high
     )
@@ -229,26 +229,29 @@ BEGIN
    -- Clock process definitions
    clk_i_process :process
    begin
-		clk_i <= '0';
-		wait for clk_i_period/2;
-		clk_i <= '1';
-		wait for clk_i_period/2;
+  
+      clk_i <= '0';
+      wait for clk_i_period/2;
+      clk_i <= '1';
+      wait for clk_i_period/2;
+      if finished='1' then 
+        wait; 
+      end if;
+   
+     
    end process;
  
 
    -- Stimulus process
    stim_proc: process
    begin		
-      -- hold reset state for 100 ns.
-      --wait for 100 ns;	
-
-      --wait for clk_i_period*10;
-
-      -- insert stimulus here 
+   
 
       wait until finished='1';
-      report "Test finished with result "& hex_string(result)
-		severity warning;
+      report "Test finished with result "& hex_string(result);
+		
+      wait;
+      
    end process;
 
 END;

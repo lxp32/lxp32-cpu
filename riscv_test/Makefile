@@ -27,6 +27,7 @@ slt.hex : slt.S
 loadsave.hex : loadsave.S
 csr.hex : csr.S
 trap01.hex : trap01.S
+fence.hex : fence.S
 
-all: test02.hex test01.hex test03.hex branch.hex mult.hex slt.hex loadsave.hex csr.hex trap01.hex
+all: test02.hex test01.hex test03.hex branch.hex mult.hex slt.hex loadsave.hex csr.hex trap01.hex fence.hex
 

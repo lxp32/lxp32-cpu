@@ -59,7 +59,8 @@ entity riscv_control_unit is
            -- trap info import
            mcause_i : in STD_LOGIC_VECTOR (3 downto 0);
            mepc_i : in std_logic_vector(31 downto 2);
-           mtrap_strobe_i : in STD_LOGIC; -- indicates that mcause_i and mepc_i should be registered
+           adr_i  : in std_logic_vector(31 downto 0);
+           mtrap_strobe_i : in STD_LOGIC; -- indicates that mcause_i, mepc_i and adr_i  should be registered
            cmd_tret_i : in STD_LOGIC; -- return command
 
            clk_i : in  STD_LOGIC;
@@ -84,6 +85,7 @@ signal mscratch : std_logic_vector(31 downto 0) := (others=>'0');
 -- trap info
 signal mepc : std_logic_vector(31 downto 2) := (others=>'0');
 signal mcause : std_logic_vector(3 downto 0) := (others=>'0');
+signal mbadaddr : std_logic_vector(31 downto 0) := (others=>'0');
 
 signal mie : std_logic := '0';  -- Interrupt Enable
 signal mpie : std_logic :='0';  -- Previous Interrupt enable
@@ -107,6 +109,7 @@ with csr_offset select
              mtvec&"00" when tvec,
              mscratch   when scratch,
              X"0000000"&mcause when cause,
+             mbadaddr when badaddr,
              mepc&"00" when epc,        
              impvers when impid,
              
@@ -137,6 +140,9 @@ begin
          mepc <= (others=>'0');
          mcause <= (others=>'0');
          we <= '0';
+         mie <= '0';
+         mpie <= '0';
+         
          --busy <= '0';
      else
         -- always deassert exception after one cycle
@@ -153,6 +159,14 @@ begin
           -- save IE and disable
           mpie <= mie;
           mie <= '0'; 
+          case mcause_i is 
+            when X"4"|X"6"|X"0" =>
+              mbadaddr <= adr_i;
+            when X"2"|X"3" =>
+              mbadaddr <= mepc_i & "00";
+            when others =>  
+          end case;
+          
         elsif cmd_tret_i='1' then
           mie<=mpie;
         end if;  
@@ -174,6 +188,10 @@ begin
                  mepc <= csr_out(31 downto 2);
               when cause =>
                  mcause <= csr_out(3 downto 0);
+              when badaddr =>
+                 mbadaddr <= csr_out;    
+              when edeleg|ideleg=>
+                -- currently read only              
               when others=>
                  l_exception:='1';
             end case;
@@ -197,7 +215,6 @@ begin
       end if;
    end if;
 end process;
-
 
 
 end Behavioral;

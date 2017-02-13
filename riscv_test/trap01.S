@@ -2,6 +2,7 @@
 .global _start
 _start:
 
+la s0, monitor
 
 li a2,0x0FA55AA55
 
@@ -11,10 +12,6 @@ csrw mtvec,a1
 
 loop:
 la gp,result_area  // test result area
-mv t4,a2 // Start pattern
-jal store
-csrr t4,mimpid
-jal store
 
 ecall 
 mv t4,a2
@@ -25,7 +22,10 @@ jal store
 mulh t4,x0,x0 // not implemented should trap
 mv t4,a2
 jal store
-lw t4,1(gp) // misalignment trap
+lw t4,1(gp) // misalignment load trap
+mv t4,a2    // write test pattern
+jal store
+sw t4,1(gp) // misalignment store trap
 mv t4,a2    // write test pattern
 jal store
 lhu t4,3(gp) // misalign again
@@ -44,7 +44,11 @@ mulh t4,x0,x0 // not implemented should trap
 addi t4,a2,1 // end marker
 jal store
 
-j loop
+finish:
+li a0,1
+sw a0,0(s0) // write to monitor result register 
+f0:
+j f0
 
 
 
@@ -56,8 +60,11 @@ ret
 
 trap_handler:
 csrr t4,mcause
-mv t5,t4 // save mcause
 jal store
+
+csrrw t4,mbadaddr,x0 // read and clear...
+jal store
+
 csrr t4,mepc
 jal store
 

@@ -26,15 +26,17 @@ constant marchid :  t_csr_adr:=  X"12";
 constant impid   :  t_csr_adr:=  X"13";
 constant hartid  :  t_csr_adr:=  X"14";
 
+--Trap Handling
 constant scratch : t_csr_adr:=   x"40";
 constant epc: t_csr_adr:=        x"41";
 constant cause : t_csr_adr:=     x"42";
+constant badaddr : t_csr_adr:=   x"43";
 constant ip : t_csr_adr:=        x"44";
 
 -- non standard registers
 constant icontrol : t_csr_adr:=x"C0"; -- full address is 0x7C0
 
-constant impvers : std_logic_vector(31 downto 0) := X"0001000C";
+constant impvers : std_logic_vector(31 downto 0) := X"0001000D";
 
 function get_misa(divider_en:boolean;mul_arch:string) return t_csr_word;
 function get_mstatus(pie : std_logic; ie : std_logic) return t_csr_word;

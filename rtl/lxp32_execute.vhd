@@ -89,6 +89,7 @@ entity lxp32_execute is
       jump_ready_i: in std_logic;
 
       interrupt_return_o: out std_logic
+      
    );
 end entity;
 
@@ -136,6 +137,10 @@ signal csr_result :  std_logic_vector(31 downto 0);
 signal mepc,mtvec :  std_logic_vector(31 downto 2);
 signal mtrap_strobe : std_logic;
 signal trap_cause :  STD_LOGIC_VECTOR(3 downto 0);
+
+-- Registers for storing data address and direction, needed for recording misalignment traps 
+signal adr_reg : std_logic_vector(31 downto 0);
+signal store_reg : std_logic;
 
 -- exception in execute stage
 signal ex_exception : std_logic;
@@ -380,7 +385,8 @@ riscv_cu: if USE_RISCV  generate
    csr_ce <= cmd_csr_i and can_execute;
    mtrap_strobe <= (cmd_trap_i and can_execute) or ex_exception;
 
-   trap_cause <= X"4" when dbus_misalign='1' else
+   trap_cause <= X"4" when dbus_misalign='1' and store_reg='0' else
+                 X"6" when dbus_misalign='1' and store_reg='1' else
                  X"2" when csr_exception='1'
                  else  trap_cause_i;
 
@@ -389,6 +395,8 @@ riscv_cu: if USE_RISCV  generate
      if rising_edge(clk_i) then
         if can_execute='1' then
            epc_reg <= epc_i;
+           adr_reg <= target_address;
+           store_reg <= cmd_dbus_store_i;
          end if;
      end if;
    end process;
@@ -420,6 +428,7 @@ riscv_cu: if USE_RISCV  generate
       mcause_i => trap_cause,
       mepc_i => epc_mux,
       mtrap_strobe_i => mtrap_strobe,
+      adr_i => adr_reg,
       cmd_tret_i => cmd_tret_i and can_execute
     );
 

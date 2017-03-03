@@ -13,21 +13,21 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 entity lxp32_ubuf is
-	generic(
-		DATA_WIDTH: integer
-	);
-	port(
-		clk_i: in std_logic;
-		rst_i: in std_logic;
-		
-		we_i: in std_logic;
-		d_i: in std_logic_vector(DATA_WIDTH-1 downto 0);
-		re_i: in std_logic;
-		d_o: out std_logic_vector(DATA_WIDTH-1 downto 0);
-		
-		empty_o: out std_logic;
-		full_o: out std_logic
-	);
+   generic(
+      DATA_WIDTH: integer
+   );
+   port(
+      clk_i: in std_logic;
+      rst_i: in std_logic;
+      
+      we_i: in std_logic;
+      d_i: in std_logic_vector(DATA_WIDTH-1 downto 0);
+      re_i: in std_logic;
+      d_o: out std_logic_vector(DATA_WIDTH-1 downto 0);
+      
+      empty_o: out std_logic;
+      full_o: out std_logic
+   );
 end entity;
 
 architecture rtl of lxp32_ubuf is
@@ -49,29 +49,31 @@ re<=re_i and not empty;
 
 process (clk_i) is
 begin
-	if rising_edge(clk_i) then
-		if rst_i='1' then
-			empty<='1';
-			full<='0';
-			regs<=(others=>(others=>'-'));
-		else
-			if re='0' then
-				regs(0)<=regs_mux(0);
-			else
-				regs(0)<=regs_mux(1);
-			end if;
-			
-			regs(1)<=regs_mux(1);
-			
-			if we='1' and re='0' then
-				empty<='0';
-				full<=not empty;
-			elsif we='0' and re='1' then
-				empty<=not full;
-				full<='0';
-			end if;
-		end if;
-	end if;
+   if rising_edge(clk_i) then
+      if rst_i='1' then
+         empty<='1';
+         full<='0';
+         --TH: When the line below is uncommented it is easy to see buffer flushes in the simulation wave window
+         --The downside is that it creates a lot of metavalue warnings...
+--       regs<=(others=>(others=>'-'));
+      else
+         if re='0' then
+            regs(0)<=regs_mux(0);
+         else
+            regs(0)<=regs_mux(1);
+         end if;
+         
+         regs(1)<=regs_mux(1);
+         
+         if we='1' and re='0' then
+            empty<='0';
+            full<=not empty;
+         elsif we='0' and re='1' then
+            empty<=not full;
+            full<='0';
+         end if;
+      end if;
+   end if;
 end process;
 
 regs_mux(0)<=regs(0) when we='0' or empty='0' else d_i;

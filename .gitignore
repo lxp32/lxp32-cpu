@@ -1,0 +1,6 @@
+*.ram
+*.lst
+*.bin
+*.hex
+*.elf
+*.o

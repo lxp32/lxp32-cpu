@@ -1,0 +1,13 @@
+
+test01.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00100093          	li	ra,1
+   4:	0080e093          	ori	ra,ra,8
+
+00000008 <loop>:
+   8:	00108093          	addi	ra,ra,1
+   c:	ffdff06f          	j	8 <loop>

@@ -34,7 +34,9 @@ entity lxp32_icache is
 		wbm_bte_o: out std_logic_vector(1 downto 0);
 		wbm_ack_i: in std_logic;
 		wbm_adr_o: out std_logic_vector(29 downto 0);
-		wbm_dat_i: in std_logic_vector(31 downto 0)
+		wbm_dat_i: in std_logic_vector(31 downto 0);
+      
+      dbus_cyc_snoop_i : std_logic -- TH
 	);
 end entity;
 
@@ -254,7 +256,10 @@ begin
 						burst_cnt<=burst_cnt+1;
 						wb_cti<="010";
 					else
-						if miss='1' and near_miss='0' then
+                  if wb_cti="111" and dbus_cyc_snoop_i='1' then -- TH: Release bus at burst end if there is a pending data access
+                     burst_cnt<=0;
+							wb_stb<='0';
+						elsif miss='1' and near_miss='0' then
 							wb_stb<='1';
 							wb_cti<="010";
 							current_offset<=read_offset;

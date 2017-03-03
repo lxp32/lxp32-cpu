@@ -138,6 +138,8 @@ signal mepc,mtvec :  std_logic_vector(31 downto 2);
 signal mtrap_strobe : std_logic;
 signal trap_cause :  STD_LOGIC_VECTOR(3 downto 0);
 
+signal csr_tret_exec : std_logic;
+
 -- Registers for storing data address and direction, needed for recording misalignment traps 
 signal adr_reg : std_logic_vector(31 downto 0);
 signal store_reg : std_logic;
@@ -402,6 +404,8 @@ riscv_cu: if USE_RISCV  generate
    end process;
 
    epc_mux <= epc_reg when ex_exception='1' else epc_i;
+   
+   csr_tret_exec <= cmd_tret_i and can_execute;
 
    csr_inst: entity work.riscv_control_unit 
    GENERIC MAP (
@@ -429,7 +433,7 @@ riscv_cu: if USE_RISCV  generate
       mepc_i => epc_mux,
       mtrap_strobe_i => mtrap_strobe,
       adr_i => adr_reg,
-      cmd_tret_i => cmd_tret_i and can_execute
+      cmd_tret_i => csr_tret_exec
     );
 
 end generate;

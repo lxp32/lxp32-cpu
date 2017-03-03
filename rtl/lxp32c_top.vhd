@@ -108,10 +108,10 @@ cpu_inst: entity work.lxp32_cpu(rtl)
 
 en_cache: if ENABLE_ICACHE generate
 
-   icache_inst:  entity work.bonfire_dm_icache -- entity work.lxp32_icache(rtl)
+   icache_inst:  entity work.bonfire_dm_icache 
    generic map(
          LINE_SIZE=>IBUS_BURST_SIZE,
-         CACHE_SIZE=>4096
+         CACHE_SIZE=>CACHE_SIZE_WORDS
       )
       port map(
          clk_i=>clk_i,

@@ -69,7 +69,8 @@ FIRMWARE=test001.ram\
 	test013.ram\
 	test014.ram\
 	test015.ram\
-	test016.ram
+	test016.ram\
+	test017.ram
 
 # LXP32 assembler executable
 

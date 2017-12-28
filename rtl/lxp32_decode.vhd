@@ -198,6 +198,11 @@ begin
 							cmd_loadop3_o<='1';
 						end if;
 						
+						if opcode="000011" then
+							cmd_loadop3_o<='1';
+							op3_o<=std_logic_vector(resize(signed(word_i(15 downto 0)),op3_o'length));
+						end if;
+						
 						cmd_signed_o<=opcode(0);
 						
 						if opcode(5 downto 3)="001" then

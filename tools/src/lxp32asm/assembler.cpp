@@ -129,7 +129,7 @@ Assembler::TokenList Assembler::tokenize(const std::string &str) {
 			else throw std::runtime_error(std::string("Unexpected character: \"")+ch+"\"");
 			break;
 		case Word:
-			if(std::isalnum(ch)||ch=='_'||ch=='@') word+=ch;
+			if(std::isalnum(ch)||ch=='_'||ch=='@'||ch=='+'||ch=='-') word+=ch;
 			else {
 				i--;
 				_state=Initial;
@@ -353,6 +353,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="jmp") encodeJmp(list);
 	else if(list[0]=="iret") encodeIret(list);
 	else if(list[0]=="lc") encodeLc(list);
+	else if(list[0]=="lc16") encodeLc16(list);
 	else if(list[0]=="lsb") encodeLsb(list);
 	else if(list[0]=="lub") encodeLub(list);
 	else if(list[0]=="lw") encodeLw(list);
@@ -648,11 +649,42 @@ void Assembler::encodeLc(const TokenList &list) {
 	_obj.addWord(w);
 	
 	if(args[1].type==Operand::Identifier) {
-		auto symRva=_obj.addWord(static_cast<LinkableObject::Word>(args[1].i));
-		_obj.addReference(args[1].str,currentFileName(),line(),symRva);
+		LinkableObject::Reference ref;
+		ref.source=currentFileName();
+		ref.line=line();
+		ref.rva=_obj.addWord(0);
+		ref.offset=args[1].i;
+		ref.type=LinkableObject::Regular;
+		_obj.addReference(args[1].str,ref);
 	}
 	else if(args[1].type==Operand::NumericLiteral) {
 		_obj.addWord(static_cast<LinkableObject::Word>(args[1].i));
+	}
+	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
+}
+
+void Assembler::encodeLc16(const TokenList &list) {
+	auto args=getOperands(list);
+	if(args.size()!=2) throw std::runtime_error("lc16 instruction requires 2 operands");
+	
+	LinkableObject::Word w=0x0C000000;
+	encodeDstOperand(w,args[0]);
+	
+	if(args[1].type==Operand::NumericLiteral) {
+		if((args[1].i<-32768||args[1].i>32767)&&(args[1].i<0xFFFF8000||args[1].i>0xFFFFFFFF))
+			throw std::runtime_error("\""+args[1].str+"\": out of range");
+		auto hw=static_cast<LinkableObject::Word>(args[1].i)&0xFFFF;
+		w|=hw;
+		_obj.addWord(w);
+	}
+	else if(args[1].type==Operand::Identifier) {
+		LinkableObject::Reference ref;
+		ref.source=currentFileName();
+		ref.line=line();
+		ref.rva=_obj.addWord(w);
+		ref.offset=args[1].i;
+		ref.type=LinkableObject::Short;
+		_obj.addReference(args[1].str,ref);
 	}
 	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
 }

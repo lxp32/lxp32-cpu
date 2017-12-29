@@ -109,9 +109,9 @@ void LinkableObject::addExternalSymbol(const std::string &name) {
 	data.type=External;
 }
 
-void LinkableObject::addReference(const std::string &symbolName,const std::string &source,int line,Word rva) {
+void LinkableObject::addReference(const std::string &symbolName,const Reference &ref) {
 	auto &data=symbol(symbolName);
-	data.refs.push_back({source,line,rva});
+	data.refs.push_back(ref);
 }
 
 LinkableObject::SymbolData &LinkableObject::symbol(const std::string &name) {
@@ -154,7 +154,13 @@ void LinkableObject::serialize(const std::string &filename) const {
 		if(sym.second.type==Local) out<<"\tRVA 0x"<<Utils::hex(sym.second.rva)<<std::endl;
 		else out<<"\tExternal"<<std::endl;
 		for(auto const &ref: sym.second.refs) {
-			out<<"\tRef "<<Utils::urlEncode(ref.source)<<" "<<ref.line<<" 0x"<<Utils::hex(ref.rva)<<std::endl;
+			out<<"\tRef ";
+			out<<Utils::urlEncode(ref.source)<<" ";
+			out<<ref.line<<" ";
+			out<<"0x"<<Utils::hex(ref.rva)<<" ";
+			out<<ref.offset<<" ";
+			if(ref.type==Regular) out<<"Regular"<<std::endl;
+			else if(ref.type==Short) out<<"Short"<<std::endl;
 		}
 		out<<"End Symbol"<<std::endl;
 	}
@@ -243,6 +249,10 @@ void LinkableObject::deserializeSymbol(std::istream &in) {
 			ref.source=Utils::urlDecode(tokens[1]);
 			ref.line=std::strtoul(tokens[2].c_str(),NULL,0);
 			ref.rva=std::strtoul(tokens[3].c_str(),NULL,0);
+			ref.offset=std::strtoll(tokens[4].c_str(),NULL,0);
+			if(tokens[5]=="Regular") ref.type=Regular;
+			else if(tokens[5]=="Short") ref.type=Short;
+			else throw std::runtime_error("Invalid reference type: \""+tokens[5]+"\"");
 			data.refs.push_back(std::move(ref));
 		}
 	}

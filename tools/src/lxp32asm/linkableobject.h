@@ -20,18 +20,24 @@ class LinkableObject {
 public:
 	typedef unsigned char Byte;
 	typedef std::uint32_t Word;
+	typedef std::int_least64_t Integer;
 	
 	enum SymbolType {Unknown,Local,External};
+	enum RefType {Regular,Short};
+	
 	struct Reference {
 		std::string source;
 		int line;
 		Word rva;
+		Integer offset;
+		RefType type;
 	};
 	struct SymbolData {
 		SymbolType type=Unknown;
 		Word rva;
 		std::vector<Reference> refs;
 	};
+	
 	typedef std::map<std::string,SymbolData> SymbolTable;
 	
 private:
@@ -63,7 +69,7 @@ public:
 	
 	void addLocalSymbol(const std::string &name,Word rva);
 	void addExternalSymbol(const std::string &name);
-	void addReference(const std::string &symbolName,const std::string &source,int line,Word rva);
+	void addReference(const std::string &symbolName,const Reference &ref);
 	
 	SymbolData &symbol(const std::string &name);
 	const SymbolData &symbol(const std::string &name) const;

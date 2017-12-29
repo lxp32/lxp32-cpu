@@ -91,6 +91,9 @@ void Disassembler::dump() {
 		case 0x01:
 			instruction=decodeLc(word,lcValid,lcOperand);
 			break;
+		case 0x03:
+			instruction=decodeLc16(word);
+			break;
 		case 0x0B:
 			instruction=decodeLsb(word);
 			break;
@@ -322,6 +325,18 @@ std::string Disassembler::decodeLc(Word w,bool &valid,Word &operand) {
 	
 	valid=true;
 	return "lc "+dst.str()+", 0x"+hex(operand);
+}
+
+std::string Disassembler::decodeLc16(Word w) {
+	auto dst=decodeDstOperand(w);
+	auto rd1=decodeRd1Operand(w);
+	auto rd2=decodeRd2Operand(w);
+	
+	if(rd1.type()!=Operand::Direct) return decodeWord(w);
+	if(rd2.type()!=Operand::Direct) return decodeWord(w);
+	
+	auto operand=w&0xFFFF;
+	return "lc16 "+dst.str()+", 0x"+hex(operand);
 }
 
 std::string Disassembler::decodeLsb(Word w) {

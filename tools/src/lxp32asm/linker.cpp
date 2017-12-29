@@ -132,8 +132,24 @@ void Linker::relocateObject(LinkableObject *obj) {
 		assert(it->second.obj);
 		auto addr=it->second.obj->virtualAddress()+it->second.rva;
 		for(auto const &ref: sym.second.refs) {
-			auto offset=obj->getWord(ref.rva);
-			obj->replaceWord(ref.rva,addr+offset);
+			if(ref.type==LinkableObject::Regular) obj->replaceWord(ref.rva,addr+ref.offset);
+			else {
+				auto target=addr+ref.offset;
+				if((target<-32768||target>32767)&&(target<0xFFFF8000||target>0xFFFFFFFF)) {
+					std::ostringstream msg;
+					msg<<"Value \""<<target<<"\" is out of range for a 16-bit constant";
+					msg<<" (referenced from "<<ref.source<<":"<<ref.line<<")";
+					throw std::runtime_error(msg.str());
+				}
+				auto hw=static_cast<LinkableObject::Word>(target)&0xFFFF;
+				auto halfWordOffset=ref.rva%sizeof(LinkableObject::Word);
+				assert(halfWordOffset==0||halfWordOffset==2);
+				auto wordAddr=ref.rva-halfWordOffset;
+				auto w=obj->getWord(wordAddr);
+				if(halfWordOffset==0) w=(w&0xFFFF0000)|hw;
+				else w=(w&0xFFFF)|(hw<<16);
+				obj->replaceWord(wordAddr,w);
+			}
 		}
 	}
 }

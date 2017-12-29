@@ -72,6 +72,7 @@ private:
 	std::string decodeHlt(Word w);
 	std::string decodeJmp(Word w);
 	std::string decodeLc(Word w,bool &valid,Word &operand);
+	std::string decodeLc16(Word w);
 	std::string decodeLsb(Word w);
 	std::string decodeLub(Word w);
 	std::string decodeLw(Word w);

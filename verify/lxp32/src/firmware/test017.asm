@@ -1,15 +1,15 @@
 /*
- * Test the new "lc16" instruction
+ * Test the new "lc18" instruction
  */
 
 	lc r100, 0x10000000 // test result output pointer
-	lc16 r101, halt
-	lc16 r102, failure
+	lc18 r101, halt
+	lc18 r102, failure
 
-	lc r0, 25000
-	lc r1, -20000
-	lc16 r10, 25000
-	lc16 r11, -20000
+	lc r0, 100000
+	lc r1, -111111
+	lc18 r10, 100000
+	lc18 r11, -111111
 	
 	cjmpne r102, r0, r10 // failure
 	cjmpne r102, r1, r11 // failure

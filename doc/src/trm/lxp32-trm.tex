@@ -19,7 +19,7 @@
 	\item described in portable VHDL-93, not tied to any particular vendor;
 	\item 3-stage pipeline;
 	\item 256 registers implemented as a RAM block;
-	\item simple instruction set with less than 30 distinct opcodes;
+	\item simple instruction set with only 30 distinct opcodes;
 	\item separate instruction and data buses, optional instruction cache;
 	\item WISHBONE compatible;
 	\item 8 interrupts with hardwired priorities;
@@ -506,6 +506,8 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 	\item Ensure that the instruction bus has adequate throughput. For \lxp{}C, check that the slave supports the WISHBONE registered feedback signals [CTI\_I()] and [BTE\_I()].
 	
 	\item Multiplexing instruction and data buses, or connecting them to the same interconnect that allows only one master at a time to be active (i.e. \emph{shared bus} interconnect topology) is not recommended. If you absolutely must do so, assign a higher priority level to the data bus, otherwise instruction prefetches will massively slow down data transactions.
+	
+	\item For small programs, consider mapping code and data memory to the beginning or end of the address space (i.e. \code{0x00000000}--\code{0x0001FFFF} or \code{0xFFFE0000}--\code{0xFFFFFFFF}) to be able to load pointers with the \instr{lc18} instruction which saves both memory and CPU cycles as compared to \instr{lc}.
 \end{enumerate}
 
 \subsection{Optimizing for timing}
@@ -1102,7 +1104,7 @@ Example: \code{\instr{lc18} r1, -100000} $\rightarrow$ \code{0x0E017960}
 
 \subsubsection{Operation}
 
-\code{DST := VAL}
+\code{DST := (\emph{signed}) VAL}
 
 \subsection{\instr{lsb} -- Load Signed Byte}
 \label{subsec:instr:lsb}
@@ -1440,7 +1442,7 @@ Example: \code{\instr{xor} r2, r1, 0x3F} $\rightarrow$ \code{0x6A02013F}
 
 \chapter{Instruction cycle counts}
 
-Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These values can change in future hardware revisions.
+Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
 
 \begin{table}[htbp]
 	\centering
@@ -1448,7 +1450,7 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 	\label{tab:cycles}
 	\begin{tabularx}{0.8\textwidth}{LLLL}
 		\toprule
-		Instruction & Cycle count & Instruction & Cycle count \\
+		Instruction & Cycles & Instruction & Cycles \\
 		\midrule
 		\instr{add} & 1 & \instr{modu} & 37 \\
 		\instr{and} & 1 & \instr{mov} & 1 \\
@@ -1468,8 +1470,6 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 		\bottomrule
 	\end{tabularx}
 \end{table}
-
-The CPU pipeline can be stalled by instruction and data buses. There are no internal pipeline stalls, that is, an instruction can use the result of the previous one without introducing additional wait cycles.
 
 \footnotetext[1]{Depends on the instruction bus latency. Includes pipeline flushing overhead.}
 \footnotetext[2]{Depends on the data bus latency.}
@@ -1532,7 +1532,7 @@ A symbol definition must be the first token in a source code line followed by a 
 
 A special \code{entry} symbol is used to inform the linker about program entry point if there are multiple input files. If defined, this symbol must precede the first instruction or data definition statement in the module.
 
-Symbols can be used as operands to the \instr{lc} and \instr{lc18} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lc18} instruction, the resulting address must still fit into the signed 18-bit value range, otherwise the linker will report an error.
+Symbols can be used as operands to the \instr{lc} and \instr{lc18} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lc18} instruction, the resulting address must still fit into the signed 18-bit value range (\code{0x00000000}--\code{0x0001FFFF} or \code{0xFFFE0000}--\code{0xFFFFFFFF}), otherwise the linker will report an error.
 
 To refer to symbols defined in other modules, they must first be declared external using the \instr{\#extern} directive.
 
@@ -1705,5 +1705,22 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 	Data transfer sequence & UNDEFINED \\
 	\bottomrule
 \end{ctabular}
+
+\chapter{List of changes}
+
+\section*{Version 1.1 (TBD)}
+
+This version introduces no breaking changes and is backwards compatible with the previous release.
+
+Notable changes include:
+
+\begin{itemize}
+	\item A new instruction, \instr{lc18}, was added, which loads a signed 18-bit constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
+	\item Optimizations in the divider unit. Division instructions (\instr{divs} and \instr{divu}) now take one less cycle to execute (modulo instructions are unaffected).
+\end{itemize}
+
+\section*{Version 1.0 (2016-02-20)}
+
+Initial public release.
 
 \end{document}

@@ -1442,7 +1442,7 @@ Example: \code{\instr{xor} r2, r1, 0x3F} $\rightarrow$ \code{0x6A02013F}
 
 \chapter{Instruction cycle counts}
 
-Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
+Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based on an assumption that no pipeline stalls are caused by the instruction bus latency or cache misses. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
 
 \begin{table}[htbp]
 	\centering
@@ -1454,13 +1454,13 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 		\midrule
 		\instr{add} & 1 & \instr{modu} & 37 \\
 		\instr{and} & 1 & \instr{mov} & 1 \\
-		\instr{call} & $\ge$ 4\footnotemark[1] & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
-		\instr{cjmp\emph{xxx}} & $\ge$ 5\footnotemark[1] & \instr{nop} & 1 \\
+		\instr{call} & 4 & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
+		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{nop} & 1 \\
 		\instr{divs} & 36 & \instr{not} & 1 \\
 		\instr{divu} & 36 & \instr{or} & 1 \\
-		\instr{hlt} & N/A & \instr{ret} & $\ge$ 4\footnotemark[1] \\
-		\instr{jmp} & $\ge$ 4\footnotemark[1] & \instr{sb} & $\ge$ 2\footnotemark[2] \\
-		\instr{iret} & $\ge$ 4\footnotemark[1] & \instr{sl} & 2 \\
+		\instr{hlt} & N/A & \instr{ret} & 4 \\
+		\instr{jmp} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
+		\instr{iret} & 4 & \instr{sl} & 2 \\
 		\instr{lc} & 2 & \instr{srs} & 2 \\
 		\instr{lc18} & 1 & \instr{sru} & 2  \\
 		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
@@ -1471,9 +1471,9 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 	\end{tabularx}
 \end{table}
 
-\footnotetext[1]{Depends on the instruction bus latency. Includes pipeline flushing overhead.}
+\footnotetext[1]{Depends on whether the jump is taken or not.}
 \footnotetext[2]{Depends on the data bus latency.}
-\footnotetext[3]{Depends on the multiplier architecture set with the \code{MUL\_ARCH} generic. See Section \ref{sec:generics}.}
+\footnotetext[3]{Depends on the multiplier architecture. See Section \ref{sec:generics}.}
 
 \chapter{LXP32 assembly language}
 \label{app:assemblylanguage}

@@ -194,12 +194,9 @@ begin
 						self_busy<='1';
 						state<=ContinueInterrupt;
 					else
-						if opcode="000001" then
+						if opcode(5 downto 3)="000" and opcode(0)='1' then -- lc or lc18
 							cmd_loadop3_o<='1';
-						end if;
-						
-						if opcode="000011" then
-							cmd_loadop3_o<='1';
+-- Setting op3_o here only affects the lc18 instruction
 							op3_o<=std_logic_vector(resize(signed(t1&t2&rd1&rd2),op3_o'length));
 						end if;
 						

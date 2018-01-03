@@ -227,10 +227,9 @@ begin
 						
 						if opcode(5 downto 4)="10" then -- jump or call
 							cmd_jump_o<='1';
-							if opcode(0)='1' then -- call
-								cmd_loadop3_o<='1';
-								op3_o<=next_ip_i&"00";
-							end if;
+							cmd_loadop3_o<=opcode(0);
+-- Setting op3_o here only affects the call instruction
+							op3_o<=next_ip_i&"00";
 						end if;
 						
 						-- Note: (a or b) = (a and b) or (a xor b)

@@ -36,12 +36,14 @@ private:
 	std::istream &_is;
 	std::ostream &_os;
 	Format _fmt;
+	bool _preferAliases;
 	int _lineNumber;
 	Word _pos;
 public:
 	Disassembler(std::istream &is,std::ostream &os);
 	void setFormat(Format fmt);
 	void setBase(Word base);
+	void setPreferAliases(bool b);
 	void dump();
 	
 	template <typename T> static std::string hex(const T &w) {

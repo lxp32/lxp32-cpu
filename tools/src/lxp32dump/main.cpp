@@ -30,6 +30,7 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    -b <addr>    Base address (for comments only)"<<std::endl;
 	os<<"    -f <fmt>     Input format (bin, textio, dec, hex), default: autodetect"<<std::endl;
 	os<<"    -h, --help   Display a short help message"<<std::endl;
+	os<<"    -na          Do not use aliases such as mov, ret, not"<<std::endl;
 	os<<"    -o <file>    Output file name, default: standard output"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
 }
@@ -70,6 +71,7 @@ int main(int argc,char *argv[]) try {
 	bool noMoreOptions=false;
 	bool formatSpecified=false;
 	Disassembler::Word base=0;
+	bool noAliases=false;
 	
 	if(argc<=1) {
 		displayUsage(std::cout,argv[0]);
@@ -110,6 +112,9 @@ int main(int argc,char *argv[]) try {
 		else if(!strcmp(argv[i],"-h")||!strcmp(argv[i],"--help")) {
 			displayUsage(std::cout,argv[0]);
 			return 0;
+		}
+		else if(!strcmp(argv[i],"-na")) {
+			noAliases=true;
 		}
 		else if(!strcmp(argv[i],"-o")) {
 			if(++i==argc) {
@@ -175,6 +180,7 @@ int main(int argc,char *argv[]) try {
 	Disassembler disasm(in,*os);
 	disasm.setFormat(fmt);
 	disasm.setBase(base);
+	disasm.setPreferAliases(!noAliases);
 	
 	try {
 		disasm.dump();

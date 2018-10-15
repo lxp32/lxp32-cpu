@@ -43,7 +43,7 @@ std::string Disassembler::Operand::str() const {
  */
 
 Disassembler::Disassembler(std::istream &is,std::ostream &os):
-	_is(is),_os(os),_fmt(Bin),_lineNumber(0),_pos(0) {}
+	_is(is),_os(os),_fmt(Bin),_preferAliases(true),_lineNumber(0),_pos(0) {}
 
 void Disassembler::setFormat(Format fmt) {
 	_fmt=fmt;
@@ -51,6 +51,10 @@ void Disassembler::setFormat(Format fmt) {
 
 void Disassembler::setBase(Word base) {
 	_pos=base;
+}
+
+void Disassembler::setPreferAliases(bool b) {
+	_preferAliases=b;
 }
 
 void Disassembler::dump() {
@@ -225,7 +229,7 @@ std::string Disassembler::decodeAdd(Word w) {
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
-	if(rd2.type()==Operand::Direct&&rd2.value()==0)
+	if(rd2.type()==Operand::Direct&&rd2.value()==0&&_preferAliases)
 		oss<<"mov "<<dst.str()<<", "<<rd1.str();
 	else
 		oss<<"add "<<dst.str()<<", "<<rd1.str()<<", "<<rd2.str();
@@ -305,8 +309,8 @@ std::string Disassembler::decodeJmp(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	if(rd1.value()==253) return "iret";
-	if(rd1.value()==254) return "ret";
+	if(rd1.value()==253&&_preferAliases) return "iret";
+	if(rd1.value()==254&&_preferAliases) return "ret";
 	return "jmp "+rd1.str();
 }
 
@@ -454,7 +458,7 @@ std::string Disassembler::decodeXor(Word w) {
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
-	if(rd2.type()==Operand::Direct&&rd2.value()==-1)
+	if(rd2.type()==Operand::Direct&&rd2.value()==-1&&_preferAliases)
 		oss<<"not "<<dst.str()<<", "<<rd1.str();
 	else
 		oss<<"xor "<<dst.str()<<", "<<rd1.str()<<", "<<rd2.str();

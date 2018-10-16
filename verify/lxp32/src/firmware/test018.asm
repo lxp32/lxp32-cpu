@@ -8,20 +8,20 @@
  */
 
 	lc r100, 0x10000000 // test result output pointer
-	lc18 r101, halt
-	lc18 r102, failure
+	lc21 r101, halt
+	lc21 r102, failure
 	lc r103, 0x20000000 // timer: number of pulses (0xFFFFFFFF - infinite)
 	lc r104, 0x20000004 // timer: delay between pulses (in cycles)
 	
 // Set up the interrupt handler
-	lc18 r200, 0 // initialize counter
+	lc21 r200, 0 // initialize counter
 	lc r201, 0x10000008 // output pointer
 	lc r202, 1103515245 // PRNG: multiplicative constant
-	lc18 r203, 12345 // PRNG: additive constant
-	lc18 r204, 32767 // PRNG: modulo
-	lc18 r205, 1 // PRNG: current seed value
+	lc21 r203, 12345 // PRNG: additive constant
+	lc21 r204, 32767 // PRNG: modulo
+	lc21 r205, 1 // PRNG: current seed value
 	
-	lc18 iv0, timer_handler
+	lc21 iv0, timer_handler
 	mov cr, 1 // enable interrupt 0
 	
 	sw r104, 100
@@ -31,12 +31,12 @@
 	lc r16, 0x10000004 // output pointer
 	lc r17, 0xFFFFFFFF // initial CRC value
 	lc r18, 0xEDB88320 // polynom
-	lc18 r19, data // input pointer
-	lc18 r20, 4096 // data block size in words
+	lc21 r19, data // input pointer
+	lc21 r20, 4096 // data block size in words
 	
-	lc18 r32, word_loop
-	lc18 r33, bit_loop
-	lc18 r34, dont_xor
+	lc21 r32, word_loop
+	lc21 r33, bit_loop
+	lc21 r34, dont_xor
 	
 	mov r64, 0 // word counter
 	

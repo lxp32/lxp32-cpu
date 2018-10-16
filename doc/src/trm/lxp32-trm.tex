@@ -507,7 +507,7 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 	
 	\item Multiplexing instruction and data buses, or connecting them to the same interconnect that allows only one master at a time to be active (i.e. \emph{shared bus} interconnect topology) is not recommended. If you absolutely must do so, assign a higher priority level to the data bus, otherwise instruction prefetches will massively slow down data transactions.
 	
-	\item For small programs, consider mapping code and data memory to the beginning or end of the address space (i.e. \code{0x00000000}--\code{0x0001FFFF} or \code{0xFFFE0000}--\code{0xFFFFFFFF}) to be able to load pointers with the \instr{lc18} instruction which saves both memory and CPU cycles as compared to \instr{lc}.
+	\item For small programs, consider mapping code and data memory to the beginning or end of the address space (i.e. \code{0x00000000}--\code{0x000FFFFF} or \code{0xFFF00000}--\code{0xFFFFFFFF}) to be able to load pointers with the \instr{lc21} instruction which saves both memory and CPU cycles as compared to \instr{lc}.
 \end{enumerate}
 
 \subsection{Optimizing for timing}
@@ -819,7 +819,7 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:mov]{\instr{mov}} & Move & alias for \code{\instr{add} dst, src, 0} \\
 	\hyperref[subsec:instr:lc]{\instr{lc}} & Load Constant & \code{000001} \\
-	\hyperref[subsec:instr:lc18]{\instr{lc18}} & Load Constant 18-bit & \code{000011} \\
+	\hyperref[subsec:instr:lc21]{\instr{lc21}} & Load Constant 21-bit & \code{101xxx} \\
 	\hyperref[subsec:instr:lw]{\instr{lw}} & Load Word & \code{001000} \\
 	\hyperref[subsec:instr:lub]{\instr{lub}} & Load Unsigned Byte & \code{001010} \\
 	\hyperref[subsec:instr:lsb]{\instr{lsb}} & Load Signed Byte & \code{001011} \\
@@ -1071,7 +1071,7 @@ Alias for \code{\instr{jmp} irp}.
 \subsection{\instr{lc} -- Load Constant}
 \label{subsec:instr:lc}
 
-Load a 32-bit word to the specified register. Note that values from the [-131072; 131071] range can be loaded more efficiently using the \instr{lc18} instruction. Values from the [-128; 127] range can be also loaded using the \instr{mov} instruction alias.
+Load a 32-bit word to the specified register. Note that values from the [-1048576; 1048575] range can be loaded more efficiently using the \instr{lc21} instruction. Values from the [-128; 127] range can be also loaded using the \instr{mov} instruction alias.
 
 \subsubsection{Syntax}
 
@@ -1089,20 +1089,20 @@ Example: \code{\instr{lc} r1, 0x12345678} $\rightarrow$ \code{0x04010000 0x12345
 
 \code{DST := WORD32}
 
-\subsection{\instr{lc18} -- Load Constant 18-bit}
-\label{subsec:instr:lc18}
+\subsection{\instr{lc21} -- Load Constant 21-bit}
+\label{subsec:instr:lc21}
 
-Load a signed 18-bit value to the specified register. Unlike the \instr{lc} instruction, this instruction is encoded as a single word.
+Load a signed 21-bit value (i.e. from the [-1048576; 1048575] range) to the specified register. Unlike the \instr{lc} instruction, this instruction is encoded as a single word.
 
 \subsubsection{Syntax}
 
-\code{\instr{lc18} DST, VAL}
+\code{\instr{lc21} DST, VAL}
 
 \subsubsection{Encoding}
 
-\code{000011 VAL[17:16] DST VAL[15:0]}
+\code{101 VAL[20:16] DST VAL[15:0]}
 
-Example: \code{\instr{lc18} r1, -100000} $\rightarrow$ \code{0x0E017960}
+Example: \code{\instr{lc21} r1, -1000000} $\rightarrow$ \code{0xB001BDC0}
 
 \subsubsection{Operation}
 
@@ -1464,7 +1464,7 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based
 		\instr{jmp} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
 		\instr{iret} & 4 & \instr{sl} & 2 \\
 		\instr{lc} & 2 & \instr{srs} & 2 \\
-		\instr{lc18} & 1 & \instr{sru} & 2  \\
+		\instr{lc21} & 1 & \instr{sru} & 2  \\
 		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
 		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
 		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{xor} & 1 \\
@@ -1534,7 +1534,7 @@ A symbol definition must be the first token in a source code line followed by a 
 
 A special \code{entry} symbol is used to inform the linker about program entry point if there are multiple input files. If defined, this symbol must precede the first instruction or data definition statement in the module.
 
-Symbols can be used as operands to the \instr{lc} and \instr{lc18} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lc18} instruction, the resulting address must still fit into the signed 18-bit value range (\code{0x00000000}--\code{0x0001FFFF} or \code{0xFFFE0000}--\code{0xFFFFFFFF}), otherwise the linker will report an error.
+Symbols can be used as operands to the \instr{lc} and \instr{lc21} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lc21} instruction, the resulting address must still fit into the signed 21-bit value range (\code{0x00000000}--\code{0x000FFFFF} or \code{0xFFF00000}--\code{0xFFFFFFFF}), otherwise the linker will report an error.
 
 To refer to symbols defined in other modules, they must first be declared external using the \instr{\#extern} directive.
 
@@ -1717,7 +1717,7 @@ This version introduces no breaking changes and is backwards compatible with the
 Notable changes include:
 
 \begin{itemize}
-	\item A new instruction, \instr{lc18}, was added, which loads a signed 18-bit constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
+	\item A new instruction, \instr{lc21}, was added, which loads a signed 21-bit constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
 	\item Optimizations in the divider unit. Division instructions (\instr{divs} and \instr{divu}) now take one less cycle to execute (modulo instructions are unaffected).
 \end{itemize}
 

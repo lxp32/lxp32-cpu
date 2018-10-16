@@ -194,10 +194,11 @@ begin
 						self_busy<='1';
 						state<=ContinueInterrupt;
 					else
-						if opcode(5 downto 3)="000" and opcode(0)='1' then -- lc or lc18
+						if opcode(5 downto 3)="101" or opcode="000001" then -- lc or lc21
 							cmd_loadop3_o<='1';
--- Setting op3_o here only affects the lc18 instruction
-							op3_o<=std_logic_vector(resize(signed(t1&t2&rd1&rd2),op3_o'length));
+-- Setting op3_o here only affects the lc21 instruction
+							op3_o<=std_logic_vector(resize(signed(opcode(2 downto 0)&
+								t1&t2&rd1&rd2),op3_o'length));
 						end if;
 						
 						cmd_signed_o<=opcode(0);
@@ -225,7 +226,7 @@ begin
 						
 						cmd_div_mod_o<=opcode(1);
 						
-						if opcode(5 downto 4)="10" then -- jump or call
+						if opcode(5 downto 3)="100" then -- jump or call
 							cmd_jump_o<='1';
 							cmd_loadop3_o<=opcode(0);
 -- Setting op3_o here only affects the call instruction

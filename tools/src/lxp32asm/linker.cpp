@@ -135,16 +135,16 @@ void Linker::relocateObject(LinkableObject *obj) {
 			if(ref.type==LinkableObject::Regular) obj->replaceWord(ref.rva,addr+ref.offset);
 			else {
 				auto target=static_cast<LinkableObject::Word>(addr+ref.offset);
-				if(target>0x3FFFF&&target<0xFFFE0000) {
+				if(target>0xFFFFF&&target<0xFFF00000) {
 					std::ostringstream msg;
-					msg<<"Value \""<<target<<"\" is out of the range for a signed 18-bit constant";
+					msg<<"Value \""<<target<<"\" is out of the range for a signed 21-bit constant";
 					msg<<" (referenced from "<<ref.source<<":"<<ref.line<<")";
 					throw std::runtime_error(msg.str());
 				}
-				target&=0x3FFFF;
+				target&=0x1FFFFF;
 				auto w=obj->getWord(ref.rva);
 				w|=(target&0xFFFF);
-				w|=((target<<8)&0x03000000);
+				w|=((target<<8)&0x1F000000);
 				obj->replaceWord(ref.rva,w);
 			}
 		}

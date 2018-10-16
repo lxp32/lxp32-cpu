@@ -95,9 +95,6 @@ void Disassembler::dump() {
 		case 0x01:
 			instruction=decodeLc(word,lcValid,lcOperand);
 			break;
-		case 0x03:
-			instruction=decodeLc18(word);
-			break;
 		case 0x0B:
 			instruction=decodeLsb(word);
 			break;
@@ -145,6 +142,7 @@ void Disassembler::dump() {
 			break;
 		default:
 			if((opcode>>4)==0x03) instruction=decodeCjmpxx(word);
+			else if((opcode>>3)==0x05) instruction=decodeLc21(word);
 			else instruction=decodeWord(word);
 		}
 		
@@ -331,12 +329,12 @@ std::string Disassembler::decodeLc(Word w,bool &valid,Word &operand) {
 	return "lc "+dst.str()+", 0x"+hex(operand);
 }
 
-std::string Disassembler::decodeLc18(Word w) {
+std::string Disassembler::decodeLc21(Word w) {
 	auto dst=decodeDstOperand(w);
 	auto operand=w&0xFFFF;
-	operand|=(w>>8)&0x00030000;
-	if(operand&0x00020000) operand|=0xFFFC0000;
-	return "lc18 "+dst.str()+", 0x"+hex(operand);
+	operand|=(w>>8)&0x001F0000;
+	if(operand&0x00100000) operand|=0xFFE00000;
+	return "lc21 "+dst.str()+", 0x"+hex(operand);
 }
 
 std::string Disassembler::decodeLsb(Word w) {

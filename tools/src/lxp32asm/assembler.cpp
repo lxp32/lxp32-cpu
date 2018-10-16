@@ -353,7 +353,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="jmp") encodeJmp(list);
 	else if(list[0]=="iret") encodeIret(list);
 	else if(list[0]=="lc") encodeLc(list);
-	else if(list[0]=="lc18") encodeLc18(list);
+	else if(list[0]=="lc21") encodeLc21(list);
 	else if(list[0]=="lsb") encodeLsb(list);
 	else if(list[0]=="lub") encodeLub(list);
 	else if(list[0]=="lw") encodeLw(list);
@@ -663,19 +663,19 @@ void Assembler::encodeLc(const TokenList &list) {
 	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
 }
 
-void Assembler::encodeLc18(const TokenList &list) {
+void Assembler::encodeLc21(const TokenList &list) {
 	auto args=getOperands(list);
-	if(args.size()!=2) throw std::runtime_error("lc18 instruction requires 2 operands");
+	if(args.size()!=2) throw std::runtime_error("lc21 instruction requires 2 operands");
 	
-	LinkableObject::Word w=0x0C000000;
+	LinkableObject::Word w=0xA0000000;
 	encodeDstOperand(w,args[0]);
 	
 	if(args[1].type==Operand::NumericLiteral) {
-		if((args[1].i<-131072||args[1].i>131071)&&(args[1].i<0xFFFE0000||args[1].i>0xFFFFFFFF))
+		if((args[1].i<-1048576||args[1].i>1048575)&&(args[1].i<0xFFF00000||args[1].i>0xFFFFFFFF))
 			throw std::runtime_error("\""+args[1].str+"\": out of range");
-		auto c=static_cast<LinkableObject::Word>(args[1].i)&0x3FFFF;
+		auto c=static_cast<LinkableObject::Word>(args[1].i)&0x1FFFFF;
 		w|=(c&0xFFFF);
-		w|=((c<<8)&0x03000000);
+		w|=((c<<8)&0x1F000000);
 		_obj.addWord(w);
 	}
 	else if(args[1].type==Operand::Identifier) {

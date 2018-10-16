@@ -353,7 +353,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="jmp") encodeJmp(list);
 	else if(list[0]=="iret") encodeIret(list);
 	else if(list[0]=="lc") encodeLc(list);
-	else if(list[0]=="lc21") encodeLc21(list);
+	else if(list[0]=="lcs") encodeLcs(list);
 	else if(list[0]=="lsb") encodeLsb(list);
 	else if(list[0]=="lub") encodeLub(list);
 	else if(list[0]=="lw") encodeLw(list);
@@ -663,9 +663,9 @@ void Assembler::encodeLc(const TokenList &list) {
 	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
 }
 
-void Assembler::encodeLc21(const TokenList &list) {
+void Assembler::encodeLcs(const TokenList &list) {
 	auto args=getOperands(list);
-	if(args.size()!=2) throw std::runtime_error("lc21 instruction requires 2 operands");
+	if(args.size()!=2) throw std::runtime_error("lcs instruction requires 2 operands");
 	
 	LinkableObject::Word w=0xA0000000;
 	encodeDstOperand(w,args[0]);

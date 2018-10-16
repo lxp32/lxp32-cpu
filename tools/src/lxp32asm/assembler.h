@@ -80,7 +80,7 @@ private:
 	void encodeJmp(const TokenList &list);
 	void encodeIret(const TokenList &list);
 	void encodeLc(const TokenList &list);
-	void encodeLc21(const TokenList &list);
+	void encodeLcs(const TokenList &list);
 	void encodeLsb(const TokenList &list);
 	void encodeLub(const TokenList &list);
 	void encodeLw(const TokenList &list);

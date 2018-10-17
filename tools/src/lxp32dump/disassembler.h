@@ -27,10 +27,8 @@ private:
 		int _value;
 	public:
 		Operand(Type t,int value);
-		
 		Type type() const;
 		int value() const;
-		std::string str() const;
 	};
 	
 	std::istream &_is;
@@ -60,11 +58,12 @@ public:
 	}
 private:
 	bool getWord(Word &w);
+	std::string str(const Operand &op);
 	static Operand decodeRd1Operand(Word w);
 	static Operand decodeRd2Operand(Word w);
 	static Operand decodeDstOperand(Word w);
-	static std::string decodeSimpleInstruction(const std::string &op,Word w);
 	
+	std::string decodeSimpleInstruction(const std::string &op,Word w);
 	std::string decodeAdd(Word w);
 	std::string decodeAnd(Word w);
 	std::string decodeCall(Word w);

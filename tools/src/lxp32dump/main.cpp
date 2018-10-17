@@ -30,7 +30,7 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    -b <addr>    Base address (for comments only)"<<std::endl;
 	os<<"    -f <fmt>     Input format (bin, textio, dec, hex), default: autodetect"<<std::endl;
 	os<<"    -h, --help   Display a short help message"<<std::endl;
-	os<<"    -na          Do not use aliases such as mov, ret, not"<<std::endl;
+	os<<"    -na          Do not use instruction and register aliases"<<std::endl;
 	os<<"    -o <file>    Output file name, default: standard output"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
 }

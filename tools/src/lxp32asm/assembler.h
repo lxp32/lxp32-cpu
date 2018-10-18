@@ -88,6 +88,7 @@ private:
 	void encodeModu(const TokenList &list);
 	void encodeMov(const TokenList &list);
 	void encodeMul(const TokenList &list);
+	void encodeNeg(const TokenList &list);
 	void encodeNop(const TokenList &list);
 	void encodeNot(const TokenList &list);
 	void encodeOr(const TokenList &list);

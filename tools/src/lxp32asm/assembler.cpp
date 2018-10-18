@@ -361,6 +361,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="modu") encodeModu(list);
 	else if(list[0]=="mov") encodeMov(list);
 	else if(list[0]=="mul") encodeMul(list);
+	else if(list[0]=="neg") encodeNeg(list);
 	else if(list[0]=="nop") encodeNop(list);
 	else if(list[0]=="not") encodeNot(list);
 	else if(list[0]=="or") encodeOr(list);
@@ -757,6 +758,16 @@ void Assembler::encodeMul(const TokenList &list) {
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);
 	encodeRd2Operand(w,args[2]);
+	_obj.addWord(w);
+}
+
+void Assembler::encodeNeg(const TokenList &list) {
+// Note: "neg" is not a real instruction, but an alias for "sub dst, 0, src"
+	auto args=getOperands(list);
+	if(args.size()!=2) throw std::runtime_error("neg instruction requires 2 operands");
+	LinkableObject::Word w=0x44000000;
+	encodeDstOperand(w,args[0]);
+	encodeRd2Operand(w,args[1]);
 	_obj.addWord(w);
 }
 

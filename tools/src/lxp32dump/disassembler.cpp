@@ -434,7 +434,18 @@ std::string Disassembler::decodeSru(Word w) {
 }
 
 std::string Disassembler::decodeSub(Word w) {
-	return decodeSimpleInstruction("sub",w);
+	std::ostringstream oss;
+	
+	auto dst=decodeDstOperand(w);
+	auto rd1=decodeRd1Operand(w);
+	auto rd2=decodeRd2Operand(w);
+	
+	if(rd1.type()==Operand::Direct&&rd1.value()==0&&_preferAliases)
+		oss<<"neg "<<str(dst)<<", "<<str(rd2);
+	else
+		oss<<"sub "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
+	
+	return oss.str();
 }
 
 std::string Disassembler::decodeSw(Word w) {

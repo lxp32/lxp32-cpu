@@ -830,6 +830,7 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:add]{\instr{add}} & Add & \code{010000} \\
 	\hyperref[subsec:instr:sub]{\instr{sub}} & Subtract & \code{010001} \\
+	\hyperref[subsec:instr:neg]{\instr{neg}} & Negate & alias for \code{\instr{sub} dst, 0, src} \\
 	\hyperref[subsec:instr:mul]{\instr{mul}} & Multiply & \code{010010} \\
 	\hyperref[subsec:instr:divu]{\instr{divu}} & Divide Unsigned & \code{010100} \\
 	\hyperref[subsec:instr:divs]{\instr{divs}} & Divide Signed & \code{010101} \\
@@ -1249,6 +1250,15 @@ Example: \code{\instr{mul} r2, r1, 3} $\rightarrow$ \code{0x4A020103}
 
 Since the product width is the same as the operand width, the result of a multiplication does not depend on operand signedness.
 
+\subsection{\instr{neg} -- Negate}
+\label{subsec:instr:neg}
+
+\subsubsection{Syntax}
+
+\code{\instr{neg} DST, RD2}
+
+Alias for \code{\instr{sub} DST, 0, RD2}
+
 \subsection{\instr{nop} -- No Operation}
 \label{subsec:instr:nop}
 
@@ -1457,18 +1467,18 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based
 		\instr{add} & 1 & \instr{modu} & 37 \\
 		\instr{and} & 1 & \instr{mov} & 1 \\
 		\instr{call} & 4 & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
-		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{nop} & 1 \\
-		\instr{divs} & 36 & \instr{not} & 1 \\
-		\instr{divu} & 36 & \instr{or} & 1 \\
-		\instr{hlt} & N/A & \instr{ret} & 4 \\
-		\instr{jmp} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
-		\instr{iret} & 4 & \instr{sl} & 2 \\
-		\instr{lc} & 2 & \instr{srs} & 2 \\
-		\instr{lcs} & 1 & \instr{sru} & 2  \\
-		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
-		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
-		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{xor} & 1 \\
-		\instr{mods} & 37 & & \\
+		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{neg} & 1 \\
+		\instr{divs} & 36 & \instr{nop} & 1 \\
+		\instr{divu} & 36 & \instr{not} & 1 \\
+		\instr{hlt} & N/A & \instr{or} & 1 \\
+		\instr{jmp} & 4 & \instr{ret} & 4 \\
+		\instr{iret} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
+		\instr{lc} & 2 & \instr{sl} & 2 \\
+		\instr{lcs} & 1 & \instr{srs} & 2 \\
+		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sru} & 2 \\
+		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
+		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
+		\instr{mods} & 37 & \instr{xor} & 1 \\
 		\bottomrule
 	\end{tabularx}
 \end{table}
@@ -1717,8 +1727,9 @@ This version introduces no breaking changes and is backwards compatible with the
 Notable changes include:
 
 \begin{itemize}
-	\item A new instruction, \instr{lcs}, was added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
+	\item A new instruction, \instr{lcs}, has been added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
 	\item Optimizations in the divider unit. Division instructions (\instr{divs} and \instr{divu}) now take one fewer cycle to execute (modulo instructions are unaffected).
+	\item LXP32 assembly language now supports a new instruction alias, \instr{neg}, which is equivalent to \code{\instr{sub} dst, 0, src}.
 \end{itemize}
 
 \section*{Version 1.0 (2016-02-20)}

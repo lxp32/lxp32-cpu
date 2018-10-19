@@ -278,6 +278,8 @@ int main(int argc,char *argv[]) try {
 		std::cerr<<"Linker error: "<<ex.what()<<std::endl;
 		return EXIT_FAILURE;
 	}
+	
+	std::cout<<writer->size()/4<<" words written"<<std::endl;
 }
 catch(std::exception &ex) {
 	std::cerr<<"Error: "<<ex.what()<<std::endl;

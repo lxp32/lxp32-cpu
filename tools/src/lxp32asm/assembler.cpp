@@ -460,7 +460,7 @@ std::vector<Assembler::Operand> Assembler::getOperands(const TokenList &list) {
 				arglist.push_back(std::move(a));
 			}
 			else if(list[i].size()==3&&list[i].substr(0,2)=="iv"&&
-				std::isdigit(list[i][2])) // interrupt vector
+				list[i][2]>='0'&&list[i][2]<='7') // interrupt vector
 			{
 				a.type=Operand::Register;
 				a.reg=240+(list[i][2]-'0');

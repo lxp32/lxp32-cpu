@@ -657,6 +657,8 @@ Options supported by \shellcmd{lxp32asm} are listed below:
 	
 	\item \shellcmd{-i \emph{dir}} -- add \emph{dir} to the list of directories used to search for included files. Multiple directories can be specified with multiple \shellcmd{-i} arguments.
 	
+	\item \shellcmd{-m \emph{file}} -- generate map file. Ignored in compile-only mode.
+	
 	\item \shellcmd{-o \emph{file}} -- output file name.
 	
 	\item \shellcmd{-s \emph{size}} -- size of the executable image. Must be a multiple of 4. If total code size is less than the specified value, the executable image is padded with zeros. By default, image is not padded. This option is ignored in compile-only mode.

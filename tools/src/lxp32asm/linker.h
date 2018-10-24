@@ -39,6 +39,7 @@ public:
 	void setBase(LinkableObject::Word base);
 	void setAlignment(std::size_t align);
 	void setImageSize(std::size_t size);
+	void generateMap(std::ostream &s);
 private:
 	void buildSymbolTable();
 	void placeObjects();

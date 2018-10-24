@@ -25,6 +25,7 @@ struct Options {
 	
 	bool compileOnly=false;
 	std::string outputFileName;
+	std::string mapFileName;
 	std::vector<std::string> includeSearchDirs;
 	LinkableObject::Word base=0;
 	std::size_t align=4;
@@ -45,6 +46,7 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    -h, --help   Display a short help message"<<std::endl;
 	os<<"    -i <dir>     Add directory to the list of directories used to search"<<std::endl;
 	os<<"                 for included files (multiple directories can be specified)"<<std::endl;
+	os<<"    -m <file>    Generate map file"<<std::endl;
 	os<<"    -o <file>    Output file name"<<std::endl;
 	os<<"    -s <size>    Output image size"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
@@ -115,7 +117,6 @@ int main(int argc,char *argv[]) try {
 			}
 			try {
 				options.base=std::stoul(argv[i],nullptr,0);
-				//if(options.base%4!=0) throw std::exception();
 				baseSpecified=true;
 			}
 			catch(std::exception &) {
@@ -147,6 +148,13 @@ int main(int argc,char *argv[]) try {
 				return EXIT_FAILURE;
 			}
 			options.includeSearchDirs.push_back(argv[i]);
+		}
+		else if(!strcmp(argv[i],"-m")) {
+			if(++i==argc) {
+				displayUsage(std::cerr,argv[0]);
+				return EXIT_FAILURE;
+			}
+			options.mapFileName=argv[i];
 		}
 		else if(!strcmp(argv[i],"-o")) {
 			if(++i==argc) {
@@ -280,6 +288,12 @@ int main(int argc,char *argv[]) try {
 	}
 	
 	std::cout<<writer->size()/4<<" words written"<<std::endl;
+	
+	if(!options.mapFileName.empty()) {
+		std::ofstream out(options.mapFileName);
+		if(!out) throw std::runtime_error("Cannot open file \""+options.mapFileName+"\" for writing");
+		linker.generateMap(out);
+	}
 }
 catch(std::exception &ex) {
 	std::cerr<<"Error: "<<ex.what()<<std::endl;

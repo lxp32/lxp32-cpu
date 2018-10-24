@@ -9,6 +9,7 @@
 #include "linker.h"
 
 #include "linkableobject.h"
+#include "utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -16,6 +17,7 @@
 #include <map>
 #include <stdexcept>
 #include <cassert>
+#include <algorithm>
 
 void Linker::addObject(LinkableObject &obj) {
 	_objects.push_back(&obj);
@@ -58,6 +60,33 @@ void Linker::setAlignment(std::size_t align) {
 
 void Linker::setImageSize(std::size_t size) {
 	_imageSize=size;
+}
+
+void Linker::generateMap(std::ostream &s) {
+// Calculate length of the first column
+	std::size_t len=0;
+	for(auto const &obj: _objects) len=std::max(len,obj->name().size());
+	for(auto const &sym: _globalSymbolTable) len=std::max(len,sym.first.size());
+	len+=3;
+	
+	s<<"Objects:"<<std::endl;
+	for(auto const &obj: _objects) {
+		s<<obj->name();
+		s<<std::string(len-obj->name().size(),' ');
+		s<<Utils::hex(obj->virtualAddress());
+		s<<std::endl;
+	}
+	
+	s<<std::endl;
+	
+	s<<"Symbols:"<<std::endl;
+	for(auto const &sym: _globalSymbolTable) {
+		assert(sym.second.obj);
+		s<<sym.first;
+		s<<std::string(len-sym.first.size(),' ');
+		s<<Utils::hex(sym.second.obj->virtualAddress()+sym.second.rva);
+		s<<std::endl;
+	}
 }
 
 /*

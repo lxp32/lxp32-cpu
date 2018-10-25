@@ -166,7 +166,7 @@ void Linker::relocateObject(LinkableObject *obj) {
 				auto target=static_cast<LinkableObject::Word>(addr+ref.offset);
 				if(target>0xFFFFF&&target<0xFFF00000) {
 					std::ostringstream msg;
-					msg<<"Value \""<<target<<"\" is out of the range for a signed 21-bit constant";
+					msg<<"Address 0x"<<Utils::hex(target)<<" is out of the range for a short reference";
 					msg<<" (referenced from "<<ref.source<<":"<<ref.line<<")";
 					throw std::runtime_error(msg.str());
 				}

@@ -191,6 +191,8 @@ int main(int argc,char *argv[]) try {
 			std::cerr<<"Warning: Output format is ignored in compile-only mode"<<std::endl;
 		if(options.imageSize>0)
 			std::cerr<<"Warning: Image size is ignored in compile-only mode"<<std::endl;
+		if(!options.mapFileName.empty())
+			std::cerr<<"Warning: Map file is not generated in compile-only mode"<<std::endl;
 	}
 	
 	if(inputFiles.empty())

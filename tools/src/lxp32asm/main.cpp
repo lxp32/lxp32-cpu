@@ -52,8 +52,9 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    -s <size>    Output image size"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
 	os<<std::endl;
-	os<<"Section alignment and image size must be multiples of 4."<<std::endl;
+	os<<"Section alignment must be a power of two and can't be less than 4."<<std::endl;
 	os<<"Base address must be a multiple of section alignment."<<std::endl;
+	os<<"Image size must be a multiple of 4."<<std::endl;
 	os<<std::endl;
 	
 	os<<"Output file formats:"<<std::endl;

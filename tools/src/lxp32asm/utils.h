@@ -52,6 +52,11 @@ namespace Utils {
 	
 	bool ishexdigit(char ch);
 	bool isoctdigit(char ch);
+	
+	template <typename T> bool isPowerOf2(const T &x) {
+		static_assert(std::is_integral<T>::value,"Argument must be of integral type");
+		return (x!=0)&&((x&(x-1))==0);
+	}
 }
 
 #endif

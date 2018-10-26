@@ -287,7 +287,8 @@ LinkableObject::Word Assembler::elaborateDataDefinition(TokenList &list) {
 		if(list.size()>2) throw std::runtime_error("Unexpected token: \""+list[2]+"\"");
 		std::size_t align=4;
 		if(list.size()>1) align=static_cast<std::size_t>(numericLiteral(list[1]));
-		if(align==0||align%4!=0) throw std::runtime_error("Alignment must be a multiple of 4");
+		if(!Utils::isPowerOf2(align)) throw std::runtime_error("Alignment must be a power of 2");
+		if(align<4) throw std::runtime_error("Alignment must be at least 4");
 		rva=_obj.addPadding(align);
 	}
 	else if(list[0]==".reserve") {

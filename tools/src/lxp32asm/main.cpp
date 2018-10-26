@@ -8,6 +8,7 @@
 
 #include "assembler.h"
 #include "linker.h"
+#include "utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -103,7 +104,8 @@ int main(int argc,char *argv[]) try {
 			}
 			try {
 				options.align=std::stoul(argv[i],nullptr,0);
-				if(options.align%4!=0||options.align==0) throw std::exception();
+				if(!Utils::isPowerOf2(options.align)) throw std::exception();
+				if(options.align<4) throw std::exception();
 				alignmentSpecified=true;
 			}
 			catch(std::exception &) {

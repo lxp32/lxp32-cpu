@@ -1545,11 +1545,11 @@ Symbol names must be valid identifiers. A valid identifier must start with an al
 
 A symbol definition must be the first token in a source code line followed by a colon. A symbol definition can occupy a separate line (in which case it refers to the following statement). Alternatively, a statement can follow the symbol definition on the same line.
 
-A special \code{entry} symbol is used to inform the linker about program entry point if there are multiple input files. If defined, this symbol must precede the first instruction or data definition statement in the module.
-
 Symbols can be used as operands to the \instr{lc} and \instr{lcs} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lcs} instruction, the resulting address must still fit into the sign extended 21-bit value range (\code{0x00000000}--\code{0x000FFFFF} or \code{0xFFF00000}--\code{0xFFFFFFFF}), otherwise the linker will report an error.
 
-To refer to symbols defined in other modules, they must first be declared external using the \instr{\#extern} directive.
+By default all symbols are local, that is, they can be only referenced from the module where they were defined. To make a symbol accessible from other modules, use the \instr{\#export} directive. To reference a symbol defined in another module use the \instr{\#import} directive.
+
+A special \code{entry} symbol is used to inform the linker about the program entry point if there are multiple input files. It does not have to be exported. If defined, this symbol must precede the first instruction or data definition statement in the module.
 
 \begin{codeparbreakable}
     \instr{lc} r10, jump\_label
@@ -1587,10 +1587,16 @@ The first token of a directive statement always starts with the \code{\#} charac
 Defines a macro that will be substituted with one or more tokens. The \code{\emph{identifier}} must satisfy the requirements listed in Section \ref{sec:symbols}. Tokens can be anything, including keywords, identifiers, literals and separators (i.e. comma and colon characters).
 
 \begin{codepar}
-\instr{\#extern} \emph{identifier}
+\instr{\#export} \emph{identifier}
 \end{codepar}
 
-Declares \code{\emph{identifier}} as an external symbol. Used to refer to symbols defined in other modules.
+Declares \code{\emph{identifier}} as an exported symbol. Exported symbols can be referenced by other modules.
+
+\begin{codepar}
+\instr{\#import} \emph{identifier}
+\end{codepar}
+
+Declares \code{\emph{identifier}} as an imported symbol. Used to refer to symbols exported by other modules.
 
 \begin{codepar}
 \instr{\#include} \emph{filename}

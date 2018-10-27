@@ -81,7 +81,7 @@ void Linker::generateMap(std::ostream &s) {
 	
 	s<<"Symbols:"<<std::endl;
 	for(auto const &sym: _globalSymbolTable) {
-		assert(sym.second.obj);
+		if(sym.second.obj==nullptr) continue;
 		s<<sym.first;
 		s<<std::string(len-sym.first.size(),' ');
 		s<<Utils::hex(sym.second.obj->virtualAddress()+sym.second.rva);
@@ -113,9 +113,8 @@ void Linker::buildSymbolTable() {
 				it->second.obj=obj;
 				it->second.rva=item.second.rva;
 			}
-
-// Merge reference tables
-			for(auto const &ref: item.second.refs) it->second.refs.emplace(obj,ref.rva);
+			
+			if(!item.second.refs.empty()) it->second.refs.insert(obj);
 		}
 	}
 	
@@ -125,7 +124,7 @@ void Linker::buildSymbolTable() {
 			std::ostringstream msg;
 			msg<<"Undefined symbol: \""<<item.first<<"\"";
 			auto const it=item.second.refs.begin();
-			msg<<" (referenced from "<<it->first->name()<<")";
+			msg<<" (referenced from "<<(*it)->name()<<")";
 			throw std::runtime_error(msg.str());
 		}
 	}
@@ -175,8 +174,10 @@ void Linker::relocateObject(LinkableObject *obj) {
 	for(auto const &sym: obj->symbols()) {
 		auto it=_globalSymbolTable.find(sym.first);
 		assert(it!=_globalSymbolTable.end());
-		if(it->second.refs.empty()) continue;
-		assert(it->second.obj);
+// If the symbol is not defined, then we can assume that there are
+// no references to it, otherwise buildSymbolTable() would have
+// thrown an exception
+		if(it->second.obj==nullptr) continue;
 		auto addr=it->second.obj->virtualAddress()+it->second.rva;
 		for(auto const &ref: sym.second.refs) {
 			if(ref.type==LinkableObject::Regular) obj->replaceWord(ref.rva,addr+ref.offset);
@@ -223,7 +224,7 @@ void Linker::markAsUsed(const LinkableObject *obj,std::set<const LinkableObject*
 	used.insert(obj);
 	for(auto const &sym: _globalSymbolTable) {
 		for(auto const &ref: sym.second.refs) {
-			if(ref.first==obj) markAsUsed(sym.second.obj,used);
+			if(ref==obj) markAsUsed(sym.second.obj,used);
 		}
 	}
 }

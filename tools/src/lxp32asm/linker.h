@@ -23,7 +23,7 @@ class Linker {
 	struct GlobalSymbolData {
 		LinkableObject *obj=nullptr;
 		LinkableObject::Word rva=0;
-		std::multimap<const LinkableObject*,LinkableObject::Word> refs;
+		std::set<const LinkableObject*> refs;
 	};
 	
 	std::vector<LinkableObject*> _objects;

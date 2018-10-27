@@ -17,6 +17,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <set>
 
 class Linker {
 	struct GlobalSymbolData {
@@ -45,6 +46,7 @@ private:
 	void placeObjects();
 	void relocateObject(LinkableObject *obj);
 	void writeObjects(OutputWriter &writer);
+	void markAsUsed(const LinkableObject *obj,std::set<const LinkableObject*> &used);
 };
 
 #endif

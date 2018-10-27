@@ -144,6 +144,20 @@ void Linker::placeObjects() {
 		}
 	}
 	
+// Remove unreferenced objects
+	if(_objects.size()>1) {
+		std::set<const LinkableObject*> used;
+		markAsUsed(_objects[0],used);
+		for(auto it=_objects.begin();it!=_objects.end();) {
+			if(used.find(*it)==used.end()) {
+				std::cerr<<"Linker warning: skipping an unreferenced object \"";
+				std::cerr<<(*it)->name()<<"\""<<std::endl;
+				it=_objects.erase(it);
+			}
+			else ++it;
+		}
+	}
+	
 // Set base addresses
 	for(auto it=_objects.begin();it!=_objects.end();++it) {
 		(*it)->setVirtualAddress(currentBase);
@@ -197,5 +211,15 @@ void Linker::writeObjects(OutputWriter &writer) {
 		if(currentSize>_imageSize)
 			throw std::runtime_error("Image size exceeds the specified value");
 		else if(currentSize<_imageSize) writer.pad(_imageSize-currentSize);
+	}
+}
+
+void Linker::markAsUsed(const LinkableObject *obj,std::set<const LinkableObject*> &used) {
+	if(used.find(obj)!=used.end()) return; // already processed
+	used.insert(obj);
+	for(auto const &sym: _globalSymbolTable) {
+		for(auto const &ref: sym.second.refs) {
+			if(ref.first==obj) markAsUsed(sym.second.obj,used);
+		}
 	}
 }

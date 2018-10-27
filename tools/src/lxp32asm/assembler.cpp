@@ -30,6 +30,7 @@ void Assembler::processFile(const std::string &filename) {
 	_state=Initial;
 	_currentFileName=filename;
 	processFileRecursive(filename);
+
 // Examine symbol table
 	for(auto const &sym: _obj.symbols()) {
 		if(sym.second.type==LinkableObject::Unknown&&!sym.second.refs.empty()) {
@@ -40,6 +41,8 @@ void Assembler::processFile(const std::string &filename) {
 			throw std::runtime_error(msg.str());
 		}
 	}
+	
+	for(auto const &sym: _exportedSymbols) _obj.exportSymbol(sym);
 }
 
 void Assembler::processFileRecursive(const std::string &filename) {
@@ -70,7 +73,7 @@ void Assembler::processFileRecursive(const std::string &filename) {
 	_currentFileName=savedFileName;
 	
 	for(auto const &label: _currentLabels) {
-		_obj.addLocalSymbol(label,
+		_obj.addSymbol(label,
 			static_cast<LinkableObject::Word>(_obj.codeSize()));
 	}
 	
@@ -235,7 +238,7 @@ void Assembler::elaborate(TokenList &list) {
 		else rva=elaborateInstruction(list);
 		
 		for(auto const &label: _currentLabels) {
-			_obj.addLocalSymbol(label,rva);
+			_obj.addSymbol(label,rva);
 		}
 		_currentLabels.clear();
 	}
@@ -249,10 +252,15 @@ void Assembler::elaborateDirective(TokenList &list) {
 		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
 		_macros.emplace(list[1],TokenList(list.begin()+2,list.end()));
 	}
-	else if(list[0]=="#extern") {
+	else if(list[0]=="#export") {
 		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
 		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
-		_obj.addExternalSymbol(list[1]);
+		_exportedSymbols.push_back(list[1]);
+	}
+	else if(list[0]=="#import") {
+		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
+		_obj.addImportedSymbol(list[1]);
 	}
 	else if(list[0]=="#include") {
 		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");

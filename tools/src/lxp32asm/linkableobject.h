@@ -22,7 +22,7 @@ public:
 	typedef std::uint32_t Word;
 	typedef std::int_least64_t Integer;
 	
-	enum SymbolType {Unknown,Local,External};
+	enum SymbolType {Unknown,Local,Exported,Imported};
 	enum RefType {Regular,Short};
 	
 	struct Reference {
@@ -67,8 +67,9 @@ public:
 	Word getWord(Word rva) const;
 	void replaceWord(Word rva,Word value);
 	
-	void addLocalSymbol(const std::string &name,Word rva);
-	void addExternalSymbol(const std::string &name);
+	void addSymbol(const std::string &name,Word rva);
+	void addImportedSymbol(const std::string &name);
+	void exportSymbol(const std::string &name);
 	void addReference(const std::string &symbolName,const Reference &ref);
 	
 	SymbolData &symbol(const std::string &name);

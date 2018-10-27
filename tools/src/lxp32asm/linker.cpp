@@ -31,14 +31,8 @@ void Linker::link(OutputWriter &writer) {
 	
 // Determine entry point
 	if(_objects.size()==1) _entryObject=_objects[0];
-	else {
-		auto const it=_globalSymbolTable.find("entry");
-		if(it==_globalSymbolTable.end())
-			throw std::runtime_error("Entry point not defined: cannot find \"entry\" symbol");
-		if(it->second.rva!=0)
-			throw std::runtime_error(it->second.obj->name()+": Entry point must refer to the start of the object");
-		_entryObject=it->second.obj;
-	}
+	else if(_entryObject==nullptr)
+		throw std::runtime_error("Entry point not defined: cannot find \"entry\" symbol");
 	
 // Assign virtual addresses
 	placeObjects();
@@ -65,26 +59,24 @@ void Linker::setImageSize(std::size_t size) {
 void Linker::generateMap(std::ostream &s) {
 // Calculate length of the first column
 	std::size_t len=0;
-	for(auto const &obj: _objects) len=std::max(len,obj->name().size());
-	for(auto const &sym: _globalSymbolTable) len=std::max(len,sym.first.size());
+	for(auto const &obj: _objects) {
+//		len=std::max(len,obj->name().size());
+		for(auto const &sym: obj->symbols()) len=std::max(len,sym.first.size());
+	}
 	len+=3;
 	
-	s<<"Objects:"<<std::endl;
 	for(auto const &obj: _objects) {
-		s<<obj->name();
-		s<<std::string(len-obj->name().size(),' ');
-		s<<Utils::hex(obj->virtualAddress());
+		s<<"Object \""<<obj->name()<<"\" at address "<<Utils::hex(obj->virtualAddress())<<std::endl;
 		s<<std::endl;
-	}
-	
-	s<<std::endl;
-	
-	s<<"Symbols:"<<std::endl;
-	for(auto const &sym: _globalSymbolTable) {
-		if(sym.second.obj==nullptr) continue;
-		s<<sym.first;
-		s<<std::string(len-sym.first.size(),' ');
-		s<<Utils::hex(sym.second.obj->virtualAddress()+sym.second.rva);
+		for(auto const &sym: obj->symbols()) {
+			if(sym.second.type==LinkableObject::Imported) continue;
+			s<<sym.first;
+			s<<std::string(len-sym.first.size(),' ');
+			s<<Utils::hex(obj->virtualAddress()+sym.second.rva);
+			if(sym.second.type==LinkableObject::Local) s<<" Local";
+			else s<<" Exported";
+			s<<std::endl;
+		}
 		s<<std::endl;
 	}
 }
@@ -96,14 +88,31 @@ void Linker::generateMap(std::ostream &s) {
 void Linker::buildSymbolTable() {
 	_globalSymbolTable.clear();
 	
+// Build a table of exported symbols from all modules
 	for(auto const &obj: _objects) {
 		auto const &table=obj->symbols();
 		for(auto const &item: table) {
+			if(item.first=="entry"&&item.second.type!=LinkableObject::Imported) {
+				if(_entryObject) {
+					std::ostringstream msg;
+					msg<<obj->name()<<": Duplicate definition of the entry symbol ";
+					msg<<"(previously defined in "<<_entryObject->name()<<")";
+					throw std::runtime_error(msg.str());
+				}
+				if(item.second.rva!=0) {
+					std::ostringstream msg;
+					msg<<obj->name()<<": ";
+					msg<<"Entry point must refer to the start of the object";
+					throw std::runtime_error(msg.str());
+				}
+				_entryObject=obj;
+			}
+			if(item.second.type==LinkableObject::Local) continue;
 // Insert item to the global symbol table if it doesn't exist yet
 			auto it=_globalSymbolTable.emplace(item.first,GlobalSymbolData()).first;
 
-// If the symbol is local, check that it has not been already defined in another object
-			if(item.second.type==LinkableObject::Local) {
+// Check that the symbol has not been already defined in another object
+			if(item.second.type==LinkableObject::Exported) {
 				if(it->second.obj) {
 					std::ostringstream msg;
 					msg<<obj->name()<<": Duplicate definition of \""<<item.first;
@@ -115,6 +124,23 @@ void Linker::buildSymbolTable() {
 			}
 			
 			if(!item.second.refs.empty()) it->second.refs.insert(obj);
+		}
+	}
+	
+// Check that local symbols don't shadow the public ones
+	for(auto const &obj: _objects) {
+		auto const &table=obj->symbols();
+		for(auto const &item: table) {
+			if(item.second.type!=LinkableObject::Local) continue;
+			auto it=_globalSymbolTable.find(item.first);
+			if(it==_globalSymbolTable.end()) continue;
+			if(!it->second.obj) continue;
+			if(item.first==it->first) {
+				std::ostringstream msg;
+				msg<<obj->name()<<": Local symbol \""<<item.first<<"\" shadows the public one ";
+				msg<<"(defined in "<<it->second.obj->name()<<")";
+				throw std::runtime_error(msg.str());
+			}
 		}
 	}
 	
@@ -172,13 +198,17 @@ void Linker::placeObjects() {
 
 void Linker::relocateObject(LinkableObject *obj) {
 	for(auto const &sym: obj->symbols()) {
-		auto it=_globalSymbolTable.find(sym.first);
-		assert(it!=_globalSymbolTable.end());
-// If the symbol is not defined, then we can assume that there are
-// no references to it, otherwise buildSymbolTable() would have
-// thrown an exception
-		if(it->second.obj==nullptr) continue;
-		auto addr=it->second.obj->virtualAddress()+it->second.rva;
+		LinkableObject::Word addr;
+		if(sym.second.refs.empty()) continue;
+		
+		if(sym.second.type==LinkableObject::Local) addr=obj->virtualAddress()+sym.second.rva;
+		else {
+			auto it=_globalSymbolTable.find(sym.first);
+			assert(it!=_globalSymbolTable.end());
+			assert(it->second.obj);
+			addr=it->second.obj->virtualAddress()+it->second.rva;
+		}
+		
 		for(auto const &ref: sym.second.refs) {
 			if(ref.type==LinkableObject::Regular) obj->replaceWord(ref.rva,addr+ref.offset);
 			else {

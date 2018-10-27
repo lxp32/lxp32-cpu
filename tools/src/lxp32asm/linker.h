@@ -27,7 +27,7 @@ class Linker {
 	};
 	
 	std::vector<LinkableObject*> _objects;
-	LinkableObject *_entryObject;
+	LinkableObject *_entryObject=nullptr;
 	std::map<std::string,GlobalSymbolData> _globalSymbolTable;
 	
 // Various output options

@@ -41,6 +41,7 @@ class Assembler {
 	std::vector<std::string> _currentLabels;
 	std::string _currentFileName;
 	std::vector<std::string> _includeSearchDirs;
+	std::vector<std::string> _exportedSymbols;
 public:
 	void processFile(const std::string &filename);
 	

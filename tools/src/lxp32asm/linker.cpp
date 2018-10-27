@@ -68,12 +68,14 @@ void Linker::generateMap(std::ostream &s) {
 	for(auto const &obj: _objects) {
 		s<<"Object \""<<obj->name()<<"\" at address "<<Utils::hex(obj->virtualAddress())<<std::endl;
 		s<<std::endl;
-		for(auto const &sym: obj->symbols()) {
-			if(sym.second.type==LinkableObject::Imported) continue;
-			s<<sym.first;
-			s<<std::string(len-sym.first.size(),' ');
-			s<<Utils::hex(obj->virtualAddress()+sym.second.rva);
-			if(sym.second.type==LinkableObject::Local) s<<" Local";
+		std::map<LinkableObject::Word,std::pair<std::string,LinkableObject::SymbolData> > sorted;
+		for(auto const &sym: obj->symbols()) sorted.emplace(sym.second.rva,sym);
+		for(auto const &sym: sorted) {
+			if(sym.second.second.type==LinkableObject::Imported) continue;
+			s<<sym.second.first;
+			s<<std::string(len-sym.second.first.size(),' ');
+			s<<Utils::hex(obj->virtualAddress()+sym.second.second.rva);
+			if(sym.second.second.type==LinkableObject::Local) s<<" Local";
 			else s<<" Exported";
 			s<<std::endl;
 		}

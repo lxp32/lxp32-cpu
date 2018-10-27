@@ -13,7 +13,7 @@ all: batch
 
 .PHONY: all compile batch gui clean
 
-.PRECIOUS: $(WAVE_OUT)
+.PRECIOUS: $(WAVE_OUT) $(WAVE_VCD)
 
 compile: compile.stamp $(FIRMWARE)
 

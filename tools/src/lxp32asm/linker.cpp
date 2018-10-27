@@ -152,6 +152,10 @@ void Linker::placeObjects() {
 			if(used.find(*it)==used.end()) {
 				std::cerr<<"Linker warning: skipping an unreferenced object \"";
 				std::cerr<<(*it)->name()<<"\""<<std::endl;
+				for(auto sym=_globalSymbolTable.begin();sym!=_globalSymbolTable.end();) {
+					if(sym->second.obj==*it) sym=_globalSymbolTable.erase(sym);
+					else ++sym;
+				}
 				it=_objects.erase(it);
 			}
 			else ++it;

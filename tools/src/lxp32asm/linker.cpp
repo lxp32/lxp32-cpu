@@ -60,7 +60,6 @@ void Linker::generateMap(std::ostream &s) {
 // Calculate length of the first column
 	std::size_t len=0;
 	for(auto const &obj: _objects) {
-//		len=std::max(len,obj->name().size());
 		for(auto const &sym: obj->symbols()) len=std::max(len,sym.first.size());
 	}
 	len+=3;
@@ -68,7 +67,7 @@ void Linker::generateMap(std::ostream &s) {
 	for(auto const &obj: _objects) {
 		s<<"Object \""<<obj->name()<<"\" at address "<<Utils::hex(obj->virtualAddress())<<std::endl;
 		s<<std::endl;
-		std::map<LinkableObject::Word,std::pair<std::string,LinkableObject::SymbolData> > sorted;
+		std::multimap<LinkableObject::Word,std::pair<std::string,LinkableObject::SymbolData> > sorted;
 		for(auto const &sym: obj->symbols()) sorted.emplace(sym.second.rva,sym);
 		for(auto const &sym: sorted) {
 			if(sym.second.second.type==LinkableObject::Imported) continue;

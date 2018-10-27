@@ -406,7 +406,7 @@ For older FPGA families that don't provide dedicated multipliers the \code{"opt"
 
 \subsection{START\_ADDR}
 
-Address of the first instruction to be executed after CPU reset. Default value is \code{0}. Note that it is a 30-bit value as it is used to address 32-bit words, not bytes.
+Address of the first instruction to be executed after CPU reset. Default value is \code{0}. The two least significant bits are ignored as instructions are always word-aligned.
 
 \section{Clock and reset}
 \label{sec:clockreset}
@@ -1733,9 +1733,13 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 
 \section*{Version 1.1 (TBD)}
 
-This version introduces no breaking changes and is backwards compatible with the previous release.
+This release introduces a minor but potentially breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
 
-Notable changes include:
+The other breaking change affects the assembly language syntax. Previously all symbols used to be public, and multiple modules could not define symbols with the same name. As of now only symbols explicitly exported using the \instr{\#export} directive are public. \instr{\#extern} directive has been replaced by \instr{\#import}.
+
+The instruction set architecture (ISA) is backwards compatible with the previous release, so code compiled for the previous version will still work.
+
+Other notable changes include:
 
 \begin{itemize}
 	\item A new instruction, \instr{lcs}, has been added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.

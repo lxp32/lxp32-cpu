@@ -32,7 +32,7 @@ entity lxp32c_top is
 		IBUS_BURST_SIZE: integer:=16;
 		IBUS_PREFETCH_SIZE: integer:=32;
 		MUL_ARCH: string:="dsp";
-		START_ADDR: std_logic_vector(29 downto 0):=(others=>'0')
+		START_ADDR: std_logic_vector(31 downto 0):=(others=>'0')
 	);
 	port(
 		clk_i: in std_logic;

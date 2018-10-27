@@ -27,7 +27,7 @@ entity lxp32u_top is
 		DBUS_RMW: boolean:=false;
 		DIVIDER_EN: boolean:=true;
 		MUL_ARCH: string:="dsp";
-		START_ADDR: std_logic_vector(29 downto 0):=(others=>'0')
+		START_ADDR: std_logic_vector(31 downto 0):=(others=>'0')
 	);
 	port(
 		clk_i: in std_logic;

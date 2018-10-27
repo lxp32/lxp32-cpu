@@ -14,7 +14,7 @@ entity lxp32_cpu is
 		DBUS_RMW: boolean;
 		DIVIDER_EN: boolean;
 		MUL_ARCH: string;
-		START_ADDR: std_logic_vector(29 downto 0)
+		START_ADDR: std_logic_vector(31 downto 0)
 	);
 	port(
 		clk_i: in std_logic;

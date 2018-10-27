@@ -14,7 +14,7 @@ use ieee.numeric_std.all;
 
 entity lxp32_fetch is
 	generic(
-		START_ADDR: std_logic_vector(29 downto 0)
+		START_ADDR: std_logic_vector(31 downto 0)
 	);
 	port(
 		clk_i: in std_logic;
@@ -41,7 +41,7 @@ architecture rtl of lxp32_fetch is
 signal init: std_logic:='1';
 signal init_cnt: unsigned(7 downto 0):=(others=>'0');
 
-signal fetch_addr: std_logic_vector(29 downto 0):=START_ADDR;
+signal fetch_addr: std_logic_vector(29 downto 0):=START_ADDR(31 downto 2);
 
 signal next_word: std_logic;
 signal suppress_re: std_logic:='0';
@@ -96,7 +96,7 @@ process (clk_i) is
 begin
 	if rising_edge(clk_i) then
 		if rst_i='1' then
-			fetch_addr<=START_ADDR;
+			fetch_addr<=START_ADDR(31 downto 2);
 			requested<='0';
 			jr<='0';
 			suppress_re<='0';

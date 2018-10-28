@@ -164,10 +164,11 @@ void Linker::placeObjects() {
 	if(_objects.size()>1) {
 		for(auto it=_objects.begin();it!=_objects.end();++it) {
 			if(*it==_entryObject) {
-				std::swap(*it,_objects[0]);
+				_objects.erase(it);
 				break;
 			}
 		}
+		_objects.insert(_objects.begin(),_entryObject);
 	}
 	
 // Remove unreferenced objects

@@ -60,7 +60,10 @@ void Linker::generateMap(std::ostream &s) {
 // Calculate length of the first column
 	std::size_t len=0;
 	for(auto const &obj: _objects) {
-		for(auto const &sym: obj->symbols()) len=std::max(len,sym.first.size());
+		for(auto const &sym: obj->symbols()) {
+			if(sym.second.type!=LinkableObject::Imported)
+				len=std::max(len,sym.first.size());
+		}
 	}
 	len+=3;
 	

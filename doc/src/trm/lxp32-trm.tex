@@ -269,20 +269,23 @@ Like other registers, \code{cr} is zero-initialized during the CPU reset, meanin
 
 Interrupt handlers are invoked by the CPU similarly to procedures (Section \ref{sec:callingprocedures}), the difference being that in this case return address is stored in the \code{irp} register (as opposed to \code{rp}), and the least significant bit of the register (\code{IRF} -- \emph{Interrupt Return Flag}) is set.
 
-An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. This behavior can be exploited to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
+An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that the \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. It is also possible to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
 
-Another technique can be useful when waiting for a single event, such as a coprocessor finishing its job: the interrupt handler can be set up to return to a designated address instead of the address stored in the \code{irp} register. This designated address must have the \code{IRF} flag set, otherwise all further interrupt processing will be disabled:
+\subsection{Non-returnable interrupts}
 
-\begin{codepar}
-    \instr{lc} r0, continue@1 \emph{// IRF flag}
-    \instr{lc} iv0, handler
-    ... \emph{// issue coprocessor command}
-    \instr{hlt} \emph{// wait for an interrupt}
-continue:
-    ... \emph{// the execution will continue here}
-handler:
-    \instr{jmp} r0
-\end{codepar}
+If an interrupt vector has the least significant bit (\code{IRF}) set, the CPU will resume interrupt processing immediately. One should not try to invoke \instr{iret} from such a handler since the \code{irp} register could have been overwritten by another interrupt. This technique can be useful when the CPU's only task is to process external events:
+
+\begin{codeparbreakable}
+\emph{// Set the IRF to mark the interrupt as non-returnable}
+    \instr{lc} iv0, main\_loop@1
+    \instr{mov} cr, 1 \emph{// enable the interrupt}
+    \instr{hlt} \emph{// wait for an interrupt request}
+main\_loop:
+\emph{// Process the event...}
+    \instr{hlt} \emph{// wait for the next interrupt request}
+\end{codeparbreakable}
+
+Note that \instr{iret} is never called in this example.
 
 \chapter{Integration}
 \label{ch:integration}

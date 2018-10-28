@@ -71,6 +71,8 @@ static bool isLinkableObject(const std::string &filename) {
 	
 	std::ifstream in(filename,std::ios_base::in);
 	if(!in) return false;
+	if(in.tellg()==static_cast<std::ifstream::pos_type>(-1))
+		return false; // the stream is not seekable
 	
 	std::vector<char> buf(idSize);
 	in.read(buf.data(),idSize);

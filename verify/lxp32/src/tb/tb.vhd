@@ -133,6 +133,7 @@ begin
 		run_test("test016.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test017.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test018.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
+		run_test("test019.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 	else
 		run_test(TEST_CASE,clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 	end if;

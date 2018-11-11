@@ -161,24 +161,26 @@ begin
 				op3_o<=(others=>'-');
 				rd1_direct<=std_logic_vector(resize(signed(rd1),rd1_direct'length));
 				rd2_direct<=std_logic_vector(resize(signed(rd2),rd2_direct'length));
+				
+				cmd_signed_o<=opcode(0);
+				cmd_div_mod_o<=opcode(1);
+				cmd_shift_right_o<=opcode(1);
+				cmd_dbus_byte_o<=opcode(1);
+				cmd_dbus_store_o<=opcode(2);
+				
 				case state is
 				when Regular =>
 					cmd_loadop3_o<='0';
-					cmd_signed_o<='0';
 					cmd_dbus_o<='0';
-					cmd_dbus_store_o<='0';
-					cmd_dbus_byte_o<='0';
 					cmd_addsub_o<='0';
 					cmd_negate_op2_o<='0';
 					cmd_mul_o<='0';
 					cmd_div_o<='0';
-					cmd_div_mod_o<='0';
 					cmd_cmp_o<='0';
 					cmd_jump_o<='0';
 					cmd_and_o<='0';
 					cmd_xor_o<='0';
 					cmd_shift_o<='0';
-					cmd_shift_right_o<='0';
 					
 					jump_type_o<=opcode(3 downto 0);
 					
@@ -201,14 +203,9 @@ begin
 								t1&t2&rd1&rd2),op3_o'length));
 						end if;
 						
-						cmd_signed_o<=opcode(0);
-						
 						if opcode(5 downto 3)="001" then
 							cmd_dbus_o<='1';
 						end if;
-						
-						cmd_dbus_store_o<=opcode(2);
-						cmd_dbus_byte_o<=opcode(1);
 						
 						if opcode(5 downto 1)="01000" then
 							cmd_addsub_o<='1';
@@ -223,8 +220,6 @@ begin
 						if opcode(5 downto 2)="0101" then
 							cmd_div_o<='1';
 						end if;
-						
-						cmd_div_mod_o<=opcode(1);
 						
 						if opcode(5 downto 3)="100" then -- jump or call
 							cmd_jump_o<='1';
@@ -246,8 +241,6 @@ begin
 						if opcode(5 downto 2)="0111" then
 							cmd_shift_o<='1';
 						end if;
-						
-						cmd_shift_right_o<=opcode(1);
 						
 						if opcode(5 downto 4)="11" then
 							cmd_cmp_o<='1';

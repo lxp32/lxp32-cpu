@@ -50,13 +50,15 @@ signal requested: std_logic:='0';
 
 signal fifo_rst: std_logic;
 signal fifo_we: std_logic;
-signal fifo_din: std_logic_vector(61 downto 0);
+signal fifo_din: std_logic_vector(31 downto 0);
 signal fifo_re: std_logic;
-signal fifo_dout: std_logic_vector(61 downto 0);
+signal fifo_dout: std_logic_vector(31 downto 0);
 signal fifo_empty: std_logic;
 signal fifo_full: std_logic;
 
 signal jr: std_logic:='0';
+
+signal next_ip: std_logic_vector(fetch_addr'range);
 
 begin
 
@@ -100,6 +102,7 @@ begin
 			requested<='0';
 			jr<='0';
 			suppress_re<='0';
+			next_ip<=(others=>'-');
 		else
 			jr<='0';
 -- Suppress LLI request if jump signal is active but will not be processed
@@ -112,6 +115,12 @@ begin
 				requested<=re and not (jump_valid_i and not jr);
 			end if;
 			if next_word='1' then
+-- It's not immediately obvious why, but next_ip will contain the address
+-- of the next instruction to be fetched by the time the instruction is
+-- passed to the decode stage. Basically, this is because when either the
+-- decoder or the IBUS stalls, the fetch_addr counter will also stop
+-- incrementing.
+				next_ip<=fetch_addr;
 				if jump_valid_i='1' and jr='0' then
 					fetch_addr<=jump_dst_i;
 					jr<='1';
@@ -134,12 +143,12 @@ jump_ready_o<=jr;
 
 fifo_rst<=rst_i or (jump_valid_i and not jr);
 fifo_we<=requested and not lli_busy_i;
-fifo_din<=fetch_addr&lli_dat_i;
+fifo_din<=lli_dat_i;
 fifo_re<=ready_i and not fifo_empty;
 
 ubuf_inst: entity work.lxp32_ubuf(rtl)
 	generic map(
-		DATA_WIDTH=>62
+		DATA_WIDTH=>32
 	)
 	port map(
 		clk_i=>clk_i,
@@ -154,9 +163,8 @@ ubuf_inst: entity work.lxp32_ubuf(rtl)
 		full_o=>fifo_full
 	);
 
-next_ip_o<=fifo_dout(61 downto 32);
-
-word_o<=fifo_dout(31 downto 0) when init='1' else X"40"&std_logic_vector(init_cnt)&X"0000";
+next_ip_o<=next_ip;
+word_o<=fifo_dout when init='1' else X"40"&std_logic_vector(init_cnt)&X"0000";
 valid_o<=not fifo_empty or not init;
 
 end architecture;

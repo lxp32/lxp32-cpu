@@ -34,6 +34,7 @@ class Linker {
 	LinkableObject::Word _base=0;
 	std::size_t _align=4;
 	std::size_t _imageSize=0;
+	std::size_t _bytesWritten=0;
 public:
 	void addObject(LinkableObject &obj);
 	void link(OutputWriter &writer);

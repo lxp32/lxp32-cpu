@@ -40,7 +40,7 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    "<<program<<" [ option(s) | input file(s) ]"<<std::endl<<std::endl;
 	
 	os<<"Options:"<<std::endl;
-	os<<"    -a <align>   Section alignment (default: 4)"<<std::endl;
+	os<<"    -a <align>   Object alignment (default: 4)"<<std::endl;
 	os<<"    -b <addr>    Base address (default: 0)"<<std::endl;
 	os<<"    -c           Compile only (don't link)"<<std::endl;
 	os<<"    -f <fmt>     Output file format (see below)"<<std::endl;
@@ -52,8 +52,8 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    -s <size>    Output image size"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
 	os<<std::endl;
-	os<<"Section alignment must be a power of two and can't be less than 4."<<std::endl;
-	os<<"Base address must be a multiple of section alignment."<<std::endl;
+	os<<"Object alignment must be a power of two and can't be less than 4."<<std::endl;
+	os<<"Base address must be a multiple of object alignment."<<std::endl;
 	os<<"Image size must be a multiple of 4."<<std::endl;
 	os<<std::endl;
 	
@@ -112,7 +112,7 @@ int main(int argc,char *argv[]) try {
 				alignmentSpecified=true;
 			}
 			catch(std::exception &) {
-				throw std::runtime_error("Invalid section alignment");
+				throw std::runtime_error("Invalid object alignment");
 			}
 		}
 		else if(!strcmp(argv[i],"-b")) {
@@ -185,11 +185,11 @@ int main(int argc,char *argv[]) try {
 	}
 	
 	if(options.base%options.align!=0)
-		throw std::runtime_error("Base address must be a multiple of section alignment");
+		throw std::runtime_error("Base address must be a multiple of object alignment");
 	
 	if(options.compileOnly) {
 		if(alignmentSpecified)
-			std::cerr<<"Warning: Section alignment is ignored in compile-only mode"<<std::endl;
+			std::cerr<<"Warning: Object alignment is ignored in compile-only mode"<<std::endl;
 		if(baseSpecified)
 			std::cerr<<"Warning: Base address is ignored in compile-only mode"<<std::endl;
 		if(formatSpecified)

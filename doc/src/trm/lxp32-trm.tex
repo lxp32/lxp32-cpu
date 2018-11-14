@@ -646,36 +646,44 @@ In the simplest case there is only one input source file which doesn't contain e
     lxp32asm [ \emph{options} | \emph{input files} ]
 \end{codepar}
 
-Options supported by \shellcmd{lxp32asm} are listed below:
+\subsubsection{General options}
 
 \begin{itemize}
-	\item \shellcmd{-a \emph{align}} -- section alignment. Must be a power of 2 and can't be less than 4. Default value is 4. Ignored in compile-only mode.
-	
-	\item \shellcmd{-b \emph{addr}} -- Base address, that is, address in memory where the executable image will be located. Must be a multiple of section alignment. Default value is 0. Ignored in compile-only mode.
-	
 	\item \shellcmd{-c} -- compile only (skip the Link stage).
-	
-	\item \shellcmd{-f \emph{fmt}} -- select executable image format (see below for the list of supported formats). Ignored in compile-only mode.
 	
 	\item \shellcmd{-h}, \shellcmd{--help} -- display a short help message and exit.
 	
-	\item \shellcmd{-i \emph{dir}} -- add \emph{dir} to the list of directories used to search for included files. Multiple directories can be specified with multiple \shellcmd{-i} arguments.
-	
-	\item \shellcmd{-m \emph{file}} -- generate map file. Ignored in compile-only mode.
-	
 	\item \shellcmd{-o \emph{file}} -- output file name.
 	
-	\item \shellcmd{-s \emph{size}} -- size of the executable image. Must be a multiple of 4. If total code size is less than the specified value, the executable image is padded with zeros. By default, image is not padded. This option is ignored in compile-only mode.
+	\item \shellcmd{--} -- do not interpret the subsequent command line arguments as options. Can be used if there are input file names starting with a dash.
+\end{itemize}
+
+\subsubsection{Compiler options}
+
+\begin{itemize}
+	\item \shellcmd{-i \emph{dir}} -- add \emph{dir} to the list of directories used to search for included files. Multiple directories can be specified with multiple \shellcmd{-i} arguments.
+\end{itemize}
+
+\subsubsection{Linker options (ignored in compile-only mode)}
+
+\begin{itemize}
+	\item \shellcmd{-a \emph{align}} -- object alignment. Must be a power of 2 and can't be less than 4. Default value is 4.
 	
-	\item \shellcmd{--} -- do not interpret subsequent command line arguments as options. Can be used if there are input file names starting with dash.
+	\item \shellcmd{-b \emph{addr}} -- base address, that is, the address in memory where the executable image will be located. Must be a multiple of object alignment. Default value is 0.
+	
+	\item \shellcmd{-f \emph{fmt}} -- executable image format. See below for the list of supported formats.
+	
+	\item \shellcmd{-m \emph{file}} -- generate a map file. A map file is a human-readable list of all object and symbol addresses in the executable image.
+	
+	\item \shellcmd{-s \emph{size}} -- size of the executable image. Must be a multiple of 4. If total code size is less than the specified value, the executable image is padded with zeros. By default, the image is not padded.
 \end{itemize}
 
 \subsection{Output formats}
 
-The following output formats are supported by \shellcmd{lxp32asm}:
+Output formats that can be specified with the \shellcmd{-f} command line option are listed below.
 
 \begin{itemize}
-	\item \shellcmd{bin} -- raw binary image. This is the default format.
+	\item \shellcmd{bin} -- raw binary image (little-endian). This is the default format.
 	\item \shellcmd{textio} -- text format representing binary data as a sequence of zeros and ones. This format can be directly read from VHDL (using the \code{std.textio} package) or Verilog\textregistered{} (using the \code{\$readmemb} function).
 	\item \shellcmd{dec} -- text format representing each word as a decimal number.
 	\item \shellcmd{hex} -- text format representing each word as a hexadecimal number.

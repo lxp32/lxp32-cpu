@@ -42,6 +42,7 @@ void Linker::link(OutputWriter &writer) {
 	
 // Write binary data
 	writeObjects(writer);
+	_bytesWritten=writer.size();
 }
 
 void Linker::setBase(LinkableObject::Word base) {
@@ -57,7 +58,7 @@ void Linker::setImageSize(std::size_t size) {
 }
 
 void Linker::generateMap(std::ostream &s) {
-// Calculate length of the first column
+// Calculate the maximum length of a symbol name
 	std::size_t len=0;
 	for(auto const &obj: _objects) {
 		for(auto const &sym: obj->symbols()) {
@@ -65,7 +66,13 @@ void Linker::generateMap(std::ostream &s) {
 				len=std::max(len,sym.first.size());
 		}
 	}
-	len+=3;
+	len=std::max(len+3,std::size_t(8)); // width of the first column
+	
+	s<<"Image base address: "<<Utils::hex(_base)<<std::endl;
+	s<<"Object alignment: "<<_align<<std::endl;
+	s<<"Image size: "<<(_bytesWritten/4)<<" words"<<std::endl;
+	s<<"Number of objects: "<<_objects.size()<<std::endl;
+	s<<std::endl;
 	
 	for(auto const &obj: _objects) {
 		s<<"Object \""<<obj->name()<<"\" at address "<<Utils::hex(obj->virtualAddress())<<std::endl;

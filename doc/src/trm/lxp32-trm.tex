@@ -17,7 +17,7 @@
 
 \begin{itemize}
 	\item described in portable VHDL-93, not tied to any particular vendor;
-	\item 3-stage pipeline;
+	\item 3-stage hazard-free pipeline;
 	\item 256 registers implemented as a RAM block;
 	\item simple instruction set with only 30 distinct opcodes;
 	\item separate instruction and data buses, optional instruction cache;
@@ -37,6 +37,8 @@ Being a lightweight IP core, \lxp{} also has certain limitations:
 \end{itemize}
 
 Two major hardware versions of the CPU are provided: \lxp{}U which does not include an instruction cache and uses the Low Latency Interface (Section \ref{sec:lli}) to fetch instructions, and \lxp{}C which fetches instructions over a cached WISHBONE bus protocol. These versions are otherwise identical and have the same instruction set architecture.
+
+The \lxp{} CPU can be programmed in the assembly language covered by Appendix \ref{app:assemblylanguage}.
 
 \section{Implementation estimates}
 
@@ -95,7 +97,7 @@ General description of the \lxp{} operation from a software developer's point of
 
 Topics related to hardware, such as synthesis, implementation and interfacing other IP cores, are covered in Chapter \ref{ch:integration}, \styledtitleref{ch:integration}. The \lxp{} IP core package also includes testbenches which can be used to simulate the design as described in Chapter \ref{ch:simulation}, \styledtitleref{ch:simulation}.
 
-Tools shipped as parts of the \lxp{} IP core package (assembler/linker, disassembler and interconnect generator) are documented in Chapter \ref{ch:developmenttools}, \styledtitleref{ch:developmenttools}.
+Documentation for tools shipped with the \lxp{} IP core package (assembler/linker, disassembler and interconnect generator) is provided in Chapter \ref{ch:developmenttools}, \styledtitleref{ch:developmenttools}.
 
 Appendices include a detailed description of the \lxp{} instruction set, instruction cycle counts and \lxp{} assembly language definition. WISHBONE datasheet required by the WISHBONE specification is also provided.
 
@@ -317,13 +319,13 @@ A high level block diagram of the CPU is presented on Figure \ref{fig:blockdiagr
 	\label{fig:symbols}
 \end{figure}
 
-\lxp{}U uses the Low Latency Interface (Section \ref{sec:lli}) to fetch instructions. This interface is designed to interact with low latency on-chip peripherals such as RAM blocks or similar devices that are generally expected to return data word after one cycle since the instruction address has been set. It can be also connected to a custom (external) instruction cache.
+\lxp{}U uses the Low Latency Interface (LLI) described in Section \ref{sec:lli} to fetch instructions. This interface is designed to interact with low latency on-chip peripherals such as RAM blocks. It works best with slaves that can return the instruction on the next cycle after its address has been set, although the slave can still introduce wait states if needed. Low Latency Interface can be also connected to a custom (external) instruction cache.
 
-To achieve the least possible latency, some LLI signals are not registered. For this reason the LLI is not suitable for interaction with off-chip peripherals.
+To achieve the least possible latency, some LLI outputs are not registered. For this reason the LLI is not suitable for interaction with off-chip peripherals.
 
-\lxp{}C fetches instructions over the WISHBONE instruction bus. To maximize throughput, it supports the WISHBONE registered feedback signals [CTI\_O()] and [BTE\_O()]. All outputs on this bus are registered. This version is recommended for use with high latency memory devices such as SDRAM chips, as well as for situations where LLI combinatorial delays are unacceptable.
+\lxp{}C is designed to work with high latency memory controllers and uses a simple instruction cache based on a ring buffer. The instructions are fetched over the WISHBONE instruction bus. To maximize throughput, the CPU makes use of the WISHBONE registered feedback signals [CTI\_O()] and [BTE\_O()]. All outputs on this bus are registered. This version is also recommended for use in situations where LLI combinatorial delays are unacceptable.
 
-Both \lxp{}U and \lxp{}C use WISHBONE protocol for the data bus.
+Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 
 \section{Ports}
 
@@ -379,7 +381,7 @@ The following generics can be used to configure the \lxp{} IP core parameters.
 
 By default, \lxp{} uses the \signal{dbus\_sel\_o} (byte enable) port to perform byte-granular write transactions initiated by the \instr{sb} (\instrname{Store Byte}) instruction. If this option is set to \code{true}, \signal{dbus\_sel\_o} is always tied to \code{"1111"}, and byte-granular write access is performed using the RMW (read-modify-write) cycle. The latter method is slower, but can work with slaves that do not have the [SEL\_I()] port.
 
-This feature requires data bus transactions to be idempotent, that is, repeating a transaction must not alter the slave state. Care should be taken with non-memory slaves to ensure that this condition is satisfied.
+This feature is designed with the assumption that read and write transactions don't cause side effects, thus it can be unsuitable for some slaves.
 
 \subsection{DIVIDER\_EN}
 
@@ -432,9 +434,9 @@ In SRAM-based FPGAs flip-flops and RAM blocks have deterministic state after a b
 \section{Low Latency Interface}
 \label{sec:lli}
 
-Low Latency Interface is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. Its timing diagram is shown on Figure \ref{fig:llitiming}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after the request is valid the slave must either produce data on \signal{lmi\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. Note that the values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the CPU while the slave is busy.
+Low Latency Interface is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. Its timing diagram is shown on Figure \ref{fig:llitiming}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after the request is valid the slave must either produce data on \signal{lli\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. Note that the values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the CPU while the slave is busy.
 
-The simplest, ``always ready'' slaves such as on-chip RAM blocks can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0}. Slaves are also allowed to introduce wait states, which makes it possible to implement external caching.
+The simplest, ``always ready'' slaves such as on-chip RAM blocks can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0} (you can even ignore \signal{lli\_re\_o} in this case, although doing so can theoretically increase power consumption). Slaves are also allowed to introduce wait states, which makes it possible to implement external caching.
 
 \begin{figure}[htbp]
 	\centering
@@ -445,13 +447,13 @@ The simplest, ``always ready'' slaves such as on-chip RAM blocks can be triviall
 
 Note that the \signal{lli\_adr\_o} signal has a width of 30 bits since it addresses words, not bytes (instructions are always word-aligned).
 
-Since this interface is not registered, it is not suitable for interaction with off-chip peripherals. Also, care should be taken to avoid introducing too much additional combinatorial delay on its outputs.
+Since the \signal{lli\_re\_o} output signal is not registered, this interface is not suitable for interaction with off-chip peripherals. Also, care should be taken to avoid introducing too much additional combinatorial delay on its outputs.
 
 \section{WISHBONE instruction bus}
 
 The \lxp{}C CPU fetches instructions over the WISHBONE bus. Its parameters are defined in the WISHBONE datasheet (Appendix \ref{app:wishbonedatasheet}). For a detailed description of the bus protocol refer to the WISHBONE specification, revision B3.
 
-With classic WISHBONE handshake decent throughput can be only achieved when the slave is able to terminate cycles asynchronously. It is usually possible only for the simplest slaves, which should probably be using the Low Latency Interface in the first place. To maximize throughput for complex, high latency slaves, \lxp{}C instruction bus uses optional WISHBONE address tags [CTI\_O()] (Cycle Type Identifier) and [BTE\_O()] (Burst Type Extension). These signals are hints allowing the slave to predict the address that will be set by the master in the next cycle and prepare data in advance. The slave can ignore these hints, processing requests as classic WISHBONE cycles, although performance would almost certainly suffer in this case.
+With classic WISHBONE handshake decent throughput can be only achieved when the slave is able to terminate cycles asynchronously. It is usually possible only for the simplest slaves which should probably be using the Low Latency Interface instead. To maximize throughput for complex, high latency slaves, \lxp{}C instruction bus uses optional WISHBONE address tags [CTI\_O()] (Cycle Type Identifier) and [BTE\_O()] (Burst Type Extension). These signals are hints allowing the slave to predict the address that will be set by the master in the next cycle and prepare data in advance. The slave can ignore these hints, processing requests as classic WISHBONE cycles, although performance would almost certainly suffer in this case.
 
 A typical \lxp{}C instruction bus burst timing diagram is shown on Figure \ref{fig:ibustiming}.
 
@@ -717,7 +719,7 @@ Supported options are:
 
 \section{\shellcmd{wigen} -- Interconnect generator}
 
-\shellcmd{wigen} is a small tool that generates VHDL description of a simple WISHBONE interconnect based on shared bus topology. It supports any number of masters and slaves.
+\shellcmd{wigen} is a small tool that generates VHDL description of a simple WISHBONE interconnect based on shared bus topology. It supports any number of masters and slaves. The interconnect can then be used to create a SoC based on \lxp{}.
 
 For interconnects with multiple masters a priority-based arbitration circuit is inserted with lower-numbered masters taking precedence. However, when a bus cycle is in progress ([CYC\_O] is asserted by the active master), the arbiter will not interrupt it even if a master with a higher priority level requests bus ownership.
 
@@ -768,7 +770,7 @@ The following software is required to build \lxp{} tools from source:
 
 \subsection{Build procedure}
 
-This software uses CMake as a build system generator. Building it involves two steps: first, the \shellcmd{cmake} program is invoked to generate a native build environment (a set of Makefiles or an IDE project); second, the generated environment is used to build the software.
+This software uses CMake as a build system generator. Building it involves two steps: first, the \shellcmd{cmake} program is invoked to generate a native build environment (a set of Makefiles or an IDE project); second, the generated environment is used to build the software. More details can be found in the CMake documentation.
 
 \subsubsection{Examples}
 
@@ -813,8 +815,6 @@ For other platforms:
     make
     make install
 \end{codepar}
-
-More details can be found in the CMake documentation.
 
 \appendix
 
@@ -1744,11 +1744,9 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 
 \section*{Version 1.1 (TBD)}
 
-This release introduces a minor but potentially breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
+This release introduces a minor but still technically breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
 
 The other breaking change affects the assembly language syntax. Previously all symbols used to be public, and multiple modules could not define symbols with the same name. As of now only symbols explicitly exported using the \instr{\#export} directive are public. \instr{\#extern} directive has been replaced by \instr{\#import}.
-
-The instruction set architecture (ISA) is backwards compatible with the previous release, so code compiled for the previous version will still work.
 
 Other notable changes include:
 

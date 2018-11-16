@@ -42,6 +42,7 @@ architecture rtl of lxp32_cpu is
 
 signal fetch_word: std_logic_vector(31 downto 0);
 signal fetch_next_ip: std_logic_vector(29 downto 0);
+signal fetch_current_ip: std_logic_vector(29 downto 0);
 signal fetch_valid: std_logic;
 signal fetch_jump_ready: std_logic;
 
@@ -106,6 +107,7 @@ fetch_inst: entity work.lxp32_fetch(rtl)
 		
 		word_o=>fetch_word,
 		next_ip_o=>fetch_next_ip,
+		current_ip_o=>fetch_current_ip,
 		valid_o=>fetch_valid,
 		ready_i=>decode_ready,
 		
@@ -121,6 +123,7 @@ decode_inst: entity work.lxp32_decode(rtl)
 		
 		word_i=>fetch_word,
 		next_ip_i=>fetch_next_ip,
+		current_ip_i=>fetch_current_ip,
 		valid_i=>fetch_valid,
 		jump_valid_i=>execute_jump_valid,
 		ready_o=>decode_ready,

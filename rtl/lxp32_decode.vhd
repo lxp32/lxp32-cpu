@@ -19,6 +19,7 @@ entity lxp32_decode is
 		
 		word_i: in std_logic_vector(31 downto 0);
 		next_ip_i: in std_logic_vector(29 downto 0);
+		current_ip_i: in std_logic_vector(29 downto 0);
 		valid_i: in std_logic;
 		jump_valid_i: in std_logic;
 		ready_o: out std_logic;
@@ -77,8 +78,6 @@ signal destination: std_logic_vector(7 downto 0);
 signal rd1: std_logic_vector(7 downto 0);
 signal rd2: std_logic_vector(7 downto 0);
 
-signal current_ip: unsigned(next_ip_i'range);
-
 -- Signals related to pipeline control
 
 signal downstream_busy: std_logic;
@@ -117,8 +116,6 @@ rd2<=word_i(7 downto 0);
 
 downstream_busy<=valid_out and not ready_i;
 busy<=downstream_busy or self_busy;
-
-current_ip<=unsigned(next_ip_i)-1;
 
 process (clk_i) is
 begin
@@ -187,7 +184,7 @@ begin
 					if interrupt_valid_i='1' and valid_i='1' then
 						cmd_jump_o<='1';
 						cmd_loadop3_o<='1';
-						op3_o<=std_logic_vector(current_ip)&"01"; -- LSB indicates interrupt return
+						op3_o<=current_ip_i&"01"; -- LSB indicates interrupt return
 						dst_out<=X"FD"; -- interrupt return pointer
 						rd1_select<='1';
 						rd2_select<='0';

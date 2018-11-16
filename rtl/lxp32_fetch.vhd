@@ -26,6 +26,7 @@ entity lxp32_fetch is
 		lli_busy_i: in std_logic;
 		
 		word_o: out std_logic_vector(31 downto 0);
+		current_ip_o: out std_logic_vector(29 downto 0);
 		next_ip_o: out std_logic_vector(29 downto 0);
 		valid_o: out std_logic;
 		ready_i: in std_logic;
@@ -59,6 +60,7 @@ signal fifo_full: std_logic;
 signal jr: std_logic:='0';
 
 signal next_ip: std_logic_vector(fetch_addr'range);
+signal current_ip: std_logic_vector(fetch_addr'range);
 
 begin
 
@@ -115,12 +117,13 @@ begin
 				requested<=re and not (jump_valid_i and not jr);
 			end if;
 			if next_word='1' then
--- It's not immediately obvious why, but next_ip will contain the address
--- of the next instruction to be fetched by the time the instruction is
--- passed to the decode stage. Basically, this is because when either the
--- decoder or the IBUS stalls, the fetch_addr counter will also stop
--- incrementing.
+-- It's not immediately obvious why, but current_ip and next_ip will contain
+-- the addresses of the current instruction and the next instruction to be
+-- fetched, respectively, by the time the instruction is passed to the decode
+-- stage. Basically, this is because when either the decoder or the IBUS
+-- stalls, the fetch_addr counter will also stop incrementing.
 				next_ip<=fetch_addr;
+				current_ip<=next_ip;
 				if jump_valid_i='1' and jr='0' then
 					fetch_addr<=jump_dst_i;
 					jr<='1';
@@ -164,6 +167,7 @@ ubuf_inst: entity work.lxp32_ubuf(rtl)
 	);
 
 next_ip_o<=next_ip;
+current_ip_o<=current_ip;
 word_o<=fifo_dout when init='1' else X"40"&std_logic_vector(init_cnt)&X"0000";
 valid_o<=not fifo_empty or not init;
 

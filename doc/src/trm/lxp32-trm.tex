@@ -26,19 +26,9 @@
 	\item optional divider.
 \end{itemize}
 
-Being a lightweight IP core, \lxp{} also has certain limitations:
-
-\begin{itemize}
-	\item no branch prediction;
-	\item no floating-point unit;
-	\item no memory management unit;
-	\item no nested interrupt handling;
-	\item no debugging facilities.
-\end{itemize}
+As a lightweight CPU core, \lxp{} lacks some features of more advanced processors, such as nested interrupt handling, debugging support, floating-point and memory management units. \lxp{} is based on an original ISA (Instruction Set Architecture) which does not currently have a C compiler. It can be programmed in the assembly language covered by Appendix \ref{app:assemblylanguage}.
 
 Two major hardware versions of the CPU are provided: \lxp{}U which does not include an instruction cache and uses the Low Latency Interface (Section \ref{sec:lli}) to fetch instructions, and \lxp{}C which fetches instructions over a cached WISHBONE bus protocol. These versions are otherwise identical and have the same instruction set architecture.
-
-The \lxp{} CPU can be programmed in the assembly language covered by Appendix \ref{app:assemblylanguage}.
 
 \section{Implementation estimates}
 
@@ -95,7 +85,7 @@ The slowest speed grade was used for clock frequency estimation.
 
 General description of the \lxp{} operation from a software developer's point of view can be found in Chapter \ref{ch:isa}, \styledtitleref{ch:isa}. Future versions of the \lxp{} CPU are intended to be at least backwards compatible with this architecture.
 
-Topics related to hardware, such as synthesis, implementation and interfacing other IP cores, are covered in Chapter \ref{ch:integration}, \styledtitleref{ch:integration}. The \lxp{} IP core package also includes testbenches which can be used to simulate the design as described in Chapter \ref{ch:simulation}, \styledtitleref{ch:simulation}.
+Topics related to hardware, such as synthesis, implementation and interfacing other IP cores, are covered in Chapter \ref{ch:integration}, \styledtitleref{ch:integration}. A brief description of the \lxp{} pipelined architecture is provided in Chapter \ref{ch:pipeline}, \styledtitleref{ch:pipeline}. The \lxp{} IP core package includes a verification environment (self-checking testbench) which can be used to simulate the design as described in Chapter \ref{ch:simulation}, \styledtitleref{ch:simulation}.
 
 Documentation for tools shipped with the \lxp{} IP core package (assembler/linker, disassembler and interconnect generator) is provided in Chapter \ref{ch:developmenttools}, \styledtitleref{ch:developmenttools}.
 
@@ -381,7 +371,7 @@ The following generics can be used to configure the \lxp{} IP core parameters.
 
 By default, \lxp{} uses the \signal{dbus\_sel\_o} (byte enable) port to perform byte-granular write transactions initiated by the \instr{sb} (\instrname{Store Byte}) instruction. If this option is set to \code{true}, \signal{dbus\_sel\_o} is always tied to \code{"1111"}, and byte-granular write access is performed using the RMW (read-modify-write) cycle. The latter method is slower, but can work with slaves that do not have the [SEL\_I()] port.
 
-This feature is designed with the assumption that read and write transactions don't cause side effects, thus it can be unsuitable for some slaves.
+This feature is designed with the assumption that read and write transactions do not cause side effects, thus it can be unsuitable for some slaves.
 
 \subsection{DIVIDER\_EN}
 
@@ -536,6 +526,64 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 	
 	\item Increase the fanout limit in the synthesizer settings to reduce buffer replication.
 \end{enumerate}
+
+\chapter{Hardware architecture}
+\label{ch:pipeline}
+
+The \lxp{} CPU is based on a 3-stage hazard-free pipelined architecture and uses a large RAM-based register file (scratchpad) with two read ports and one write port. The pipeline includes the following stages:
+
+\begin{itemize}
+	\item\emph{Fetch} -- fetches instructions from the program memory.
+	\item\emph{Decode} -- decodes instructions and reads register operand values from the scratchpad.
+	\item\emph{Execute} -- executes instructions and writes the results (if any) to the scratchpad.
+\end{itemize}
+
+\lxp{} instructions are encoded in such a way that operand register numbers can be known without decoding the instruction (Section \ref{sec:instructionformat}). When the \emph{Fetch} stage produces an instruction, scratchpad input addresses are set immediately, before the instruction itself is decoded. If the instruction does not use one or both of the register operands, the corresponding data read from the scratchpad are discarded. Collision bypass logic in the scratchpad detects situations where the \emph{Decode} stage tries to read a register which is currently being written by the \emph{Execute} stage and forwards its value, bypassing the RAM block and avoiding Read After Write (RAW) pipeline hazards. Other types of data hazards are also impossible with this architecture.
+
+As an example, consider the following simple code chunk:
+
+\begin{codepar}
+    \instr{mov} r0, 10 \emph{// alias for add r0, 10, 0}
+    \instr{mov} r1, 20 \emph{// alias for add r1, 20, 0}
+    \instr{add} r2, r0, r1
+\end{codepar}
+
+Table \ref{tab:examplepipeline} illustrates how this chunk is processed by the \lxp{} pipeline. Note that on the fourth cycle the \emph{Decode} stage requests the \code{r1} register value while the \emph{Execute} stage writes to the same register. Collision bypass logic in the scratchpad ensures that the \emph{Decode} stage reads the correct (new) value of \code{r1} without stalling the pipeline.
+
+\begin{table}[htbp]
+	\caption{Example of the \lxp{} pipeline operation}
+	\small
+	\label{tab:examplepipeline}
+	\begin{tabularx}{\textwidth}{lllL}
+		\toprule
+		Cycle & Fetch & Decode & Execute \\
+		\midrule
+		1 & \code{\instr{add} r0, 10, 0} & & \\
+		\midrule
+		2 & \code{\instr{add} r1, 20, 0} & \code{\instr{add} r0, 10, 0} & \\
+		  & & Request \code{r10} (discarded) & \\
+		  & & Request \code{r0} (discarded) & \\
+		  & & Pass 10 and 0 as operands & \\
+		\midrule
+		3 & \code{\instr{add} r2, r0, r1} & \code{\instr{add} r1, 20, 0} & Perform the addition \\
+		  & & Request \code{r20} (discarded) & Write 10 to \code{r0} \\
+		  & & Request \code{r0} (discarded) & \\
+		  & & Pass 20 and 0 as operands & \\
+		\midrule
+		4 & & \code{\instr{add} r2, r0, r1} & Perform the addition \\
+		  & & Request \code{r0} & Write 20 to \code{r1} \\
+		  & & Request \code{r1} (bypass) & \\
+		  & & Pass 10 and 20 as operands & \\
+		\midrule
+		5 & & & Perform the addition \\
+		  & & & Write 30 to \code{r2} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+When an instruction takes more than one cycle to execute, the \emph{Execute} stage simply stalls the pipeline.
+
+Branch hazards are impossible in \lxp{} as well since the pipeline is flushed whenever an execution transfer occurs.
 
 \chapter{Simulation}
 \label{ch:simulation}
@@ -1086,7 +1134,7 @@ Alias for \code{\instr{jmp} irp}.
 \subsection{\instr{lc} -- Load Constant}
 \label{subsec:instr:lc}
 
-Load a 32-bit word to the specified register. Note that values from the [-1048576; 1048575] range can be loaded more efficiently using the \instr{lcs} instruction. Values from the [-128; 127] range can be also loaded using the \instr{mov} instruction alias.
+Load a 32-bit word to the specified register. Note that values from the [-1048576; 1048575] range can be loaded more efficiently using the \instr{lcs} instruction.
 
 \subsubsection{Syntax}
 
@@ -1107,7 +1155,7 @@ Example: \code{\instr{lc} r1, 0x12345678} $\rightarrow$ \code{0x04010000 0x12345
 \subsection{\instr{lcs} -- Load Constant Short}
 \label{subsec:instr:lcs}
 
-Load a signed value from the [-1048576; 1048575] range to the specified register. Unlike the \instr{lc} instruction, this instruction is encoded as a single word.
+Load a signed value from the [-1048576; 1048575] range (a sign extended 21-bit value) to the specified register. Unlike the \instr{lc} instruction, this instruction is encoded as a single word.
 
 \subsubsection{Syntax}
 
@@ -1751,9 +1799,9 @@ The other breaking change affects the assembly language syntax. Previously all s
 Other notable changes include:
 
 \begin{itemize}
-	\item A new instruction, \instr{lcs}, has been added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
+	\item A new instruction, \instr{lcs} (\instrname{Load Constant Short}), has been added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
 	\item Optimizations in the divider unit. Division instructions (\instr{divs} and \instr{divu}) now take one fewer cycle to execute (modulo instructions are unaffected).
-	\item LXP32 assembly language now supports a new instruction alias, \instr{neg}, which is equivalent to \code{\instr{sub} dst, 0, src}.
+	\item LXP32 assembly language now supports a new instruction alias, \instr{neg} (\instrname{Negate}), which is equivalent to \code{\instr{sub} dst, 0, src}.
 \end{itemize}
 
 \section*{Version 1.0 (2016-02-20)}

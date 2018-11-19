@@ -16,7 +16,7 @@
 \lxp{} (\emph{Lightweight eXecution Pipeline}) is a small 32-bit CPU IP core optimized for FPGA implementation. Its key features include:
 
 \begin{itemize}
-	\item described in portable VHDL-93, not tied to any particular vendor;
+	\item portability (described in behavioral VHDL-93, not tied to any particular vendor);
 	\item 3-stage hazard-free pipeline;
 	\item 256 registers implemented as a RAM block;
 	\item simple instruction set with only 30 distinct opcodes;
@@ -375,7 +375,7 @@ This feature is designed with the assumption that read and write transactions do
 
 \subsection{DIVIDER\_EN}
 
-\lxp{} includes a divider unit which occupies a considerable amount of resources. It can be excluded by setting this option to \code{false}.
+\lxp{} includes a divider unit which has quite a low performance but occupies a considerable amount of resources. It can be disabled by setting this option to \code{false}.
 
 \subsection{IBUS\_BURST\_SIZE}
 
@@ -508,7 +508,7 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 \subsection{Optimizing for timing}
 
 \begin{enumerate}
-	\item Set up reasonable timing constraints. Do not overconstrain the design by more that 10--15~\%.
+	\item Set up reasonable timing constraints. Do not overconstrain the design by more than 10--15~\%.
 	
 	\item Analyze the worst path. The natural \lxp{} timing bottleneck usually goes from the scratchpad (register file) output through the ALU (in the Execute stage) to the scratchpad input. If timing analysis lists other critical paths, the problem can lie elsewhere. If the \signal{rst\_i} signal becomes a bottleneck, promote it to a global network or, with SRAM-based FPGAs, consider operating without reset (see Section \ref{sec:clockreset}). Critical paths affecting the WISHBONE state machines could indicate problems with interconnect performance.
 	
@@ -520,7 +520,7 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 \subsection{Optimizing for area}
 
 \begin{enumerate}
-	\item Consider excluding the divider if not using it (see Section \ref{sec:generics}).
+	\item Consider disabling the divider if not using it (see Section \ref{sec:generics}).
 	
 	\item Relaxing timing constraints can sometimes allow the synthesizer to produce a more area-efficient circuit.
 	

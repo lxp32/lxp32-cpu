@@ -424,9 +424,7 @@ In SRAM-based FPGAs flip-flops and RAM blocks have deterministic state after a b
 \section{Low Latency Interface}
 \label{sec:lli}
 
-Low Latency Interface is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. Its timing diagram is shown on Figure \ref{fig:llitiming}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after the request is valid the slave must either produce data on \signal{lli\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. Note that the values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the CPU while the slave is busy.
-
-The simplest, ``always ready'' slaves such as on-chip RAM blocks can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0} (you can even ignore \signal{lli\_re\_o} in this case, although doing so can theoretically increase power consumption). Slaves are also allowed to introduce wait states, which makes it possible to implement external caching.
+Low Latency Interface (LLI) is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. It was designed to allow simple connection of the CPU to on-chip program RAM or cache. The timing diagram of the LLI is shown on Figure \ref{fig:llitiming}.
 
 \begin{figure}[htbp]
 	\centering
@@ -434,6 +432,14 @@ The simplest, ``always ready'' slaves such as on-chip RAM blocks can be triviall
 	\caption{Low Latency Interface timing diagram (\lxp{}U)}
 	\label{fig:llitiming}
 \end{figure}
+
+To request a word, the master produces its address on \signal{lli\_adr\_o} and asserts \signal{lli\_re\_o}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after a valid request, the slave must either produce data on \signal{lli\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. \signal{lli\_busy\_i} must be held high until the valid data are present on the \signal{lli\_dat\_i} port.
+
+The data provided by the slave are only required to be valid on the next cycle after a valid request (if \signal{lli\_busy\_i} is not asserted) or on the cycle when \signal{lli\_busy\_i} is deasserted after being held high. Otherwise \signal{lli\_dat\_i} is undefined.
+
+The values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the master while the slave is busy.
+
+The simplest slaves such as on-chip RAM blocks which are never busy can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0} (you can even ignore \signal{lli\_re\_o} in this case, although doing so can theoretically increase power consumption).
 
 Note that the \signal{lli\_adr\_o} signal has a width of 30 bits since it addresses words, not bytes (instructions are always word-aligned).
 

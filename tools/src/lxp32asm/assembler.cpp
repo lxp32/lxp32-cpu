@@ -211,7 +211,10 @@ void Assembler::expand(TokenList &list) {
 // Perform macro substitution
 	for(auto &token: list) {
 		auto it=_macros.find(token);
-		if(it==_macros.end()) newlist.push_back(std::move(token));
+// Note: we don't expand a macro identifier in the #define statement
+// since that would lead to counter-intuitive results
+		if(it==_macros.end()||(newlist.size()==1&&newlist[0]=="#define"))
+			newlist.push_back(std::move(token));
 		else for(auto const &replace: it->second) newlist.push_back(replace);
 	}
 	list=std::move(newlist);
@@ -248,8 +251,12 @@ void Assembler::elaborateDirective(TokenList &list) {
 	assert(!list.empty());
 	
 	if(list[0]=="#define") {
-		if(list.size()<3) throw std::runtime_error("Wrong number of tokens in the directive");
-		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
+		if(list.size()<3)
+			throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_macros.find(list[1])!=_macros.end())
+			throw std::runtime_error("Macro \""+list[1]+"\" has been already defined");
+		if(!validateIdentifier(list[1]))
+			throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
 		_macros.emplace(list[1],TokenList(list.begin()+2,list.end()));
 	}
 	else if(list[0]=="#export") {

@@ -213,8 +213,10 @@ void Assembler::expand(TokenList &list) {
 		auto it=_macros.find(token);
 // Note: we don't expand a macro identifier in the #define statement
 // since that would lead to counter-intuitive results
-		if(it==_macros.end()||(newlist.size()==1&&newlist[0]=="#define"))
-			newlist.push_back(std::move(token));
+		if(it==_macros.end()||
+			(newlist.size()==1&&newlist[0]=="#define")||
+			(newlist.size()==3&&newlist[1]==":"&&newlist[2]=="#define"))
+				newlist.push_back(std::move(token));
 		else for(auto const &replace: it->second) newlist.push_back(replace);
 	}
 	list=std::move(newlist);

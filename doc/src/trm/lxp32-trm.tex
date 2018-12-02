@@ -19,9 +19,9 @@
 	\item portability (described in behavioral VHDL-93, not tied to any particular vendor);
 	\item 3-stage hazard-free pipeline;
 	\item 256 registers implemented as a RAM block;
-	\item simple instruction set with only 30 distinct opcodes;
+	\item a simple instruction set with only 30 distinct opcodes;
 	\item separate instruction and data buses, optional instruction cache;
-	\item WISHBONE compatible;
+	\item WISHBONE compatibility;
 	\item 8 interrupts with hardwired priorities;
 	\item optional divider.
 \end{itemize}
@@ -199,31 +199,39 @@ Before using the stack, the \code{sp} register must be set up to point to a vali
 \section{Calling procedures}
 \label{sec:callingprocedures}
 
-\lxp{} provides a \instr{call} instruction which stores the address of the next instruction in the \code{rp} register and transfers execution to the procedure pointed by \instr{call} operand. Return from a procedure is performed by \code{\instr{jmp} rp} instruction which also has \instr{ret} alias.
+\lxp{} provides a \instr{call} instruction which saves the address of the next instruction in the \code{rp} register and transfers execution to the address stored in the register operand. Return from a procedure is performed by the \code{\instr{jmp} rp} instruction which also has a \instr{ret} alias.
 
-If a procedure must in turn call some procedure itself, the return pointer in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence the procedure must save its value somewhere; the most general solution is to use the stack:
+If a procedure must in turn call a nested procedure itself, the return address in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence the procedure must save its value somewhere; the most general solution is to use the stack:
 
 \begin{codepar}
     \instr{sub} sp, sp, 4
     \instr{sw} sp, rp
     ...
-    \instr{call} r1
+    \instr{lc} r0, Nested_proc
+    \instr{call} r0
     ...
     \instr{lw} rp, sp
     \instr{add} sp, sp, 4
     \instr{ret}
 \end{codepar}
 
-Procedures that don't use the \instr{call} instruction (sometimes called \emph{leaf} procedures) don't need to save the \code{rp} value.
+Procedures that don't use the \instr{call} instruction (sometimes called \emph{leaf procedures}) don't need to save the \code{rp} value.
 
-Since \instr{ret} is just an alias for \code{\instr{jmp} rp}, one can also use \instrname{Compare and Jump} instructions (\instr{cjmp\emph{xxx}}) to perform a conditional procedure return.
+Since \instr{ret} is just an alias for \code{\instr{jmp} rp}, one can also use \instrname{Compare and Jump} instructions (\instr{cjmp\emph{xxx}}) to perform a conditional procedure return. For example, consider the following procedure which calculates the absolute value of \code{r1}:
+
+\begin{codepar}
+Abs:
+    \instr{cjmpsge} rp, r1, 0 \emph{// return immediately if r1>=0}
+    \instr{neg} r1, r1 \emph{// otherwise, negate r1}
+    \instr{ret} \emph{// jmp rp}
+\end{codepar}
 
 Although the \lxp{} architecture doesn't mandate any particular calling convention, some general recommendations are presented below:
 
 \begin{enumerate}
-	\item Pass arguments through the \code{r1}--\code{r31} registers.
-	\item Return value through the \code{r0} register.
-	\item Designate \code{r0}--\code{r31} registers as \emph{caller-saved}, that is, they are not guaranteed to be preserved during procedure calls and must be saved by the caller if needed. The procedure can use them for any purpose, regardless of whether they are used to pass arguments and/or return values. For obvious reasons, this rule does not apply to interrupt handlers.
+	\item Pass arguments and return values through the \code{r1}--\code{r31} registers (a procedure can have multiple return values).
+	\item If necessary, the \code{r0} register can be used to load the procedure address.
+	\item Designate \code{r0}--\code{r31} registers as \emph{caller-saved}, that is, they are not guaranteed to be preserved during procedure calls and must be saved by the caller if needed. The procedure can use them for any purpose, regardless of whether they are used to pass arguments and/or return values.
 \end{enumerate}
 
 \section{Interrupt handling}
@@ -261,7 +269,7 @@ Like other registers, \code{cr} is zero-initialized during the CPU reset, meanin
 
 Interrupt handlers are invoked by the CPU similarly to procedures (Section \ref{sec:callingprocedures}), the difference being that in this case return address is stored in the \code{irp} register (as opposed to \code{rp}), and the least significant bit of the register (\code{IRF} -- \emph{Interrupt Return Flag}) is set.
 
-An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that the \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. It is also possible to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
+An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has an \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that the \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. It is also possible to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
 
 \subsection{Non-returnable interrupts}
 
@@ -1630,6 +1638,8 @@ jump\_label:
 data\_word:
     \instr{.word} 0x12345678
 \end{codeparbreakable}
+
+It can be useful to adopt a naming convention to distinguish between various types of identifiers. For example, use upper case for macros (see below), capitalize the first letter for procedure labels and use lower case for other kinds of symbols.
 
 \section{Statements}
 

@@ -93,7 +93,7 @@ end generate;
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
-		ack_read<=wbs_cyc_i and wbs_stb_i and not wbs_we_i;
+		ack_read<=wbs_cyc_i and wbs_stb_i and not wbs_we_i and not ack_read;
 	end if;
 end process;
 

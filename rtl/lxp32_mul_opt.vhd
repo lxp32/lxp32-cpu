@@ -65,6 +65,7 @@ signal acc_carry: unsigned(31 downto 0);
 
 signal cnt: integer range 0 to 4:=0;
 
+signal result: std_logic_vector(result_o'range);
 signal ceo: std_logic:='0';
 
 begin
@@ -139,7 +140,29 @@ begin
 	end if;
 end process;
 
-result_o<=std_logic_vector(acc_sum+acc_carry);
+result<=std_logic_vector(acc_sum+acc_carry);
+
+result_o<=result;
 ce_o<=ceo;
+
+-- A simulation-time multiplication check
+
+-- synthesis translate_off
+
+process (clk_i) is
+	variable p: unsigned(op1_i'length+op2_i'length-1 downto 0);
+begin
+	if rising_edge(clk_i) then
+		if ce_i='1' then
+			p:=unsigned(op1_i)*unsigned(op2_i);
+		elsif ceo='1' then
+			assert result=std_logic_vector(p(result'range))
+				report "Incorrect multiplication result"
+				severity failure;
+		end if;
+	end if;
+end process;
+
+-- synthesis translate_on
 
 end architecture;

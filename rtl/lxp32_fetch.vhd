@@ -208,6 +208,7 @@ begin
 					assert next_ip=std_logic_vector(unsigned(current_ip)+1)
 						report "Fetch: incorrect next_ip"
 						severity failure;
+					exit;
 				end if;
 			end loop;
 			assert found

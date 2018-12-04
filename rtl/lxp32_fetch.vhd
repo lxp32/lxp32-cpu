@@ -171,4 +171,52 @@ current_ip_o<=current_ip;
 word_o<=fifo_dout when init='1' else X"40"&std_logic_vector(init_cnt)&X"0000";
 valid_o<=not fifo_empty or not init;
 
+-- Note: the following code contains a few simulation-only assertions
+-- to check that current_ip and next_ip signals, used in procedure calls
+-- and interrupts, are correct. 
+-- It should be ignored by a synthesizer, but we also surround it
+-- by metacomments, just in case
+
+-- synthesis translate_off
+
+process (clk_i) is
+	type Pair is record
+		addr: std_logic_vector(fetch_addr'range);
+		data: std_logic_vector(31 downto 0);
+	end record;
+	type Pairs is array (2 downto 0) of Pair;
+	variable last_pairs: Pairs;
+	variable current_pair: Pair;
+	variable found: boolean;
+begin
+	if falling_edge(clk_i) then
+		if fifo_we='1' then -- LLI returned data
+			current_pair.data:=fifo_din;
+			last_pairs:=last_pairs(last_pairs'high-1 downto 0)&current_pair;
+		end if;
+		if re='1' and lli_busy_i='0' then -- data requested
+			current_pair.addr:=fetch_addr;
+		end if;
+		if fifo_empty='0' then -- fetch output is valid
+			found:=false;
+			for i in last_pairs'reverse_range loop
+				if current_ip=last_pairs(i).addr then
+					found:=true;
+					assert fifo_dout=last_pairs(i).data
+					report "Fetch: incorrect output data"
+					severity failure;
+					assert next_ip=std_logic_vector(unsigned(current_ip)+1)
+					report "Fetch: incorrect next_ip"
+					severity failure;
+				end if;
+			end loop;
+			assert found
+			report "Fetch: address not found"
+			severity failure;
+		end if;
+	end if;
+end process;
+
+-- synthesis translate_on
+
 end architecture;

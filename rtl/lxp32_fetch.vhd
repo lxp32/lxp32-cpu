@@ -174,8 +174,8 @@ valid_o<=not fifo_empty or not init;
 -- Note: the following code contains a few simulation-only assertions
 -- to check that current_ip and next_ip signals, used in procedure calls
 -- and interrupts, are correct. 
--- It should be ignored by a synthesizer, but we also surround it
--- by metacomments, just in case
+-- This code should be ignored by a synthesizer since it doesn't drive
+-- any signals, but we also surround it by metacomments, just in case.
 
 -- synthesis translate_off
 
@@ -184,36 +184,39 @@ process (clk_i) is
 		addr: std_logic_vector(fetch_addr'range);
 		data: std_logic_vector(31 downto 0);
 	end record;
-	type Pairs is array (2 downto 0) of Pair;
-	variable last_pairs: Pairs;
+	type Pairs is array (7 downto 0) of Pair;
+	variable buf: Pairs;
+	variable count: integer range buf'range:=0;
 	variable current_pair: Pair;
-	variable found: boolean;
 begin
-	if falling_edge(clk_i) then
-		if fifo_we='1' then -- LLI returned data
+	if rising_edge(clk_i) then
+		if fifo_rst='1' then -- jump
+			count:=0;
+		elsif fifo_we='1' then -- LLI returned data
 			current_pair.data:=fifo_din;
-			last_pairs:=last_pairs(last_pairs'high-1 downto 0)&current_pair;
+			buf(count):=current_pair;
+			count:=count+1;
 		end if;
 		if re='1' and lli_busy_i='0' then -- data requested
 			current_pair.addr:=fetch_addr;
 		end if;
-		if fifo_empty='0' then -- fetch output is valid
-			found:=false;
-			for i in last_pairs'reverse_range loop
-				if current_ip=last_pairs(i).addr then
-					found:=true;
-					assert fifo_dout=last_pairs(i).data
-						report "Fetch: incorrect output data"
-						severity failure;
-					assert next_ip=std_logic_vector(unsigned(current_ip)+1)
-						report "Fetch: incorrect next_ip"
-						severity failure;
-					exit;
-				end if;
-			end loop;
-			assert found
-				report "Fetch: address not found"
+		if fifo_empty='0' and fifo_rst='0' then -- fetch output is valid
+			assert count>0
+				report "Fetch: buffer should be empty"
 				severity failure;
+			assert buf(0).data=fifo_dout
+				report "Fetch: incorrect data"
+				severity failure;
+			assert buf(0).addr=current_ip
+				report "Fetch: incorrect current_ip"
+				severity failure;
+			assert std_logic_vector(unsigned(buf(0).addr)+1)=next_ip
+				report "Fetch: incorrect next_ip"
+				severity failure;
+			if ready_i='1' then
+				buf(buf'high-1 downto 0):=buf(buf'high downto 1); -- we don't care about the highest item
+				count:=count-1;
+			end if;
 		end if;
 	end if;
 end process;

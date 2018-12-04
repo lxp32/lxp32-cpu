@@ -203,16 +203,16 @@ begin
 				if current_ip=last_pairs(i).addr then
 					found:=true;
 					assert fifo_dout=last_pairs(i).data
-					report "Fetch: incorrect output data"
-					severity failure;
+						report "Fetch: incorrect output data"
+						severity failure;
 					assert next_ip=std_logic_vector(unsigned(current_ip)+1)
-					report "Fetch: incorrect next_ip"
-					severity failure;
+						report "Fetch: incorrect next_ip"
+						severity failure;
 				end if;
 			end loop;
 			assert found
-			report "Fetch: address not found"
-			severity failure;
+				report "Fetch: address not found"
+				severity failure;
 		end if;
 	end if;
 end process;

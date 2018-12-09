@@ -1612,7 +1612,7 @@ String literals must be enclosed in double quotes. The most common escape sequen
 \section{Symbols}
 \label{sec:symbols}
 
-Symbols are used to refer to data or code locations. \lxp{} assembly language does not have distinct code labels and variable declarations: symbols are used in both these contexts.
+Symbols (labels) are used to refer to data or code locations. \lxp{} assembly language does not have distinct code and data labels: symbols are used in both these contexts.
 
 Symbol names must be valid identifiers. A valid identifier must start with an alphabetic character or an underscore, and may contain alphanumeric characters and underscores.
 
@@ -1622,7 +1622,7 @@ Symbols can be used as operands to the \instr{lc} and \instr{lcs} instruction st
 
 By default all symbols are local, that is, they can be only referenced from the module where they were defined. To make a symbol accessible from other modules, use the \instr{\#export} directive. To reference a symbol defined in another module use the \instr{\#import} directive.
 
-A special \code{entry} symbol is used to inform the linker about the program entry point if there are multiple input files. It does not have to be exported. If defined, this symbol must precede the first instruction or data definition statement in the module.
+A symbol named \code{entry} or \code{Entry} has a special meaning: it is used to inform the linker about the program entry point if there are multiple input files. It does not have to be exported. If defined, this symbol must precede the first instruction or data definition statement in the module. Only one module in the program can define the entry symbol.
 
 \begin{codeparbreakable}
     \instr{lc} r10, jump\_label
@@ -1638,8 +1638,6 @@ jump\_label:
 data\_word:
     \instr{.word} 0x12345678
 \end{codeparbreakable}
-
-It can be useful to adopt a naming convention to distinguish between various types of identifiers. For example, use upper case for macros (see below), capitalize the first letter for procedure labels and use lower case for other kinds of symbols.
 
 \section{Statements}
 

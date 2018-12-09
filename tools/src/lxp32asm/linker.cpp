@@ -32,7 +32,7 @@ void Linker::link(OutputWriter &writer) {
 // Determine entry point
 	if(_objects.size()==1) _entryObject=_objects[0];
 	else if(_entryObject==nullptr)
-		throw std::runtime_error("Entry point not defined: cannot find \"entry\" symbol");
+		throw std::runtime_error("Entry point not defined: cannot find \"entry\" or \"Entry\" symbol");
 	
 // Assign virtual addresses
 	placeObjects();
@@ -103,7 +103,7 @@ void Linker::buildSymbolTable() {
 	for(auto const &obj: _objects) {
 		auto const &table=obj->symbols();
 		for(auto const &item: table) {
-			if(item.first=="entry"&&item.second.type!=LinkableObject::Imported) {
+			if((item.first=="entry"||item.first=="Entry")&&item.second.type!=LinkableObject::Imported) {
 				if(_entryObject) {
 					std::ostringstream msg;
 					msg<<obj->name()<<": Duplicate definition of the entry symbol ";

@@ -72,12 +72,8 @@ void Assembler::processFileRecursive(const std::string &filename) {
 	_state=savedState;
 	_currentFileName=savedFileName;
 	
-	for(auto const &label: _currentLabels) {
-		_obj.addSymbol(label,
-			static_cast<LinkableObject::Word>(_obj.codeSize()));
-	}
-	
-	_currentLabels.clear();
+	if(!_currentLabels.empty())
+		throw std::runtime_error("Symbol definition must be followed by an instruction or data definition statement");
 }
 
 void Assembler::addIncludeSearchDir(const std::string &dir) {

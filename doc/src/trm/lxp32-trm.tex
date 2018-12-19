@@ -201,7 +201,7 @@ Before using the stack, the \code{sp} register must be set up to point to a vali
 
 \lxp{} provides a \instr{call} instruction which saves the address of the next instruction in the \code{rp} register and transfers execution to the address stored in the register operand. Return from a procedure is performed by the \code{\instr{jmp} rp} instruction which also has a \instr{ret} alias.
 
-If a procedure must in turn call a nested procedure itself, the return address in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence the procedure must save its value somewhere; the most general solution is to use the stack:
+If a procedure must in turn call a nested procedure itself, the return address in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence, unless it is a tail call (see below), the procedure must save the \code{rp} value somewhere; the most general solution is to use the stack:
 
 \begin{codepar}
     \instr{sub} sp, sp, 4
@@ -220,11 +220,13 @@ Procedures that don't use the \instr{call} instruction (sometimes called \emph{l
 Since \instr{ret} is just an alias for \code{\instr{jmp} rp}, one can also use \instrname{Compare and Jump} instructions (\instr{cjmp\emph{xxx}}) to perform a conditional procedure return. For example, consider the following procedure which calculates the absolute value of \code{r1}:
 
 \begin{codepar}
-Abs:
+Abs_proc:
     \instr{cjmpsge} rp, r1, 0 \emph{// return immediately if r1>=0}
     \instr{neg} r1, r1 \emph{// otherwise, negate r1}
     \instr{ret} \emph{// jmp rp}
 \end{codepar}
+
+A \emph{tail call} is a special type of procedure call where the calling procedure calls a nested procedure as the last action before return. In such cases the \instr{call} instruction can be replaced with \instr{jmp}, so that when the nested procedure executes \instr{ret}, it returns directly to the caller's parent procedure.
 
 Although the \lxp{} architecture doesn't mandate any particular calling convention, some general recommendations are presented below:
 

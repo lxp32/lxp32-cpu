@@ -50,33 +50,23 @@ The slowest speed grade was used for clock frequency estimation.
 		\toprule
 		Resource & Compact & Full \\
 		\midrule
-		\multicolumn{3}{c}{Altera\textregistered{} Cyclone\textregistered{} V 5CEBA2F23C8} \\
-		\midrule
-		Logic Array Blocks (LABs) & 79 & 119 \\
-		\hspace*{1em}ALMs & 630 & 972 \\
-		\hspace*{2em}ALUTs & 982 & 1531 \\
-		\hspace*{2em}Flip-flops & 537 & 942 \\
-		DSP blocks & 3 & 3 \\
-		RAM blocks (M10K) & 2 & 3 \\
-		Clock frequency & 103.9 MHz & 98.8 MHz \\
-		\midrule
 		\multicolumn{3}{c}{Microsemi\textregistered{} IGLOO\textregistered{}2 M2GL005-FG484} \\
 		\midrule
-		Logic elements (LUT+DFF) & 1529 & 2226 \\
-		\hspace*{1em}LUTs & 1471 & 2157 \\
-		\hspace*{1em}Flip-flops & 718 & 1181 \\
+		Logic elements (LUT+DFF) & 1457 & 2086 \\
+		\hspace*{1em}LUTs & 1421 & 1999 \\
+		\hspace*{1em}Flip-flops & 706 & 1110 \\
 		Mathblocks (MACC) & 3 & 3 \\
 		RAM blocks (RAM1K18) & 2 & 3 \\
-		Clock frequency & 111.7 MHz & 107.8 MHz \\
+		Clock frequency & 107.7 MHz & 109.2 MHz \\
 		\midrule
 		\multicolumn{3}{c}{Xilinx\textregistered{} Artix\textregistered{}-7 xc7a15tfgg484-1} \\
 		\midrule
-		Slices & 264 & 381 \\
-		\hspace*{1em}LUTs & 809 & 1151 \\
-		\hspace*{1em}Flip-flops & 527 & 923 \\
+		Slices & 235 & 365 \\
+		\hspace*{1em}LUTs & 666 & 1011 \\
+		\hspace*{1em}Flip-flops & 528 & 883 \\
 		DSP blocks (DSP48E1) & 4 & 4 \\
 		RAM blocks (RAMB18E1) & 2 & 3 \\
-		Clock frequency & 113.6 MHz & 109.3 MHz \\
+		Clock frequency & 111.9 MHz & 120.2 MHz \\
 		\bottomrule
 	\end{tabularx}
 \end{table}
@@ -1808,7 +1798,7 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 
 \section*{Version 1.1 (TBD)}
 
-This release introduces a minor but still technically breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
+This release introduces a minor but technically breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
 
 The other breaking change affects the assembly language syntax. Previously all symbols used to be public, and multiple modules could not define symbols with the same name. As of now only symbols explicitly exported using the \instr{\#export} directive are public. \instr{\#extern} directive has been replaced by \instr{\#import}.
 

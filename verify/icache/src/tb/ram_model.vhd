@@ -51,6 +51,7 @@ begin
 end process;
 
 process is
+	variable rng_state: rng_state_type;
 	variable delay: integer;
 begin
 	wait until rising_edge(clk_i) and wbm_cyc_i='1' and wbm_stb_i='1';
@@ -58,7 +59,7 @@ begin
 	
 -- Random delay before the first beat
 	if cycle='0' then
-		delay:=rand(0,3);
+		rand(rng_state,0,3,delay);
 		if delay>0 then
 			for i in 1 to delay loop
 				wait until rising_edge(clk_i) and wbm_cyc_i='1' and wbm_stb_i='1';

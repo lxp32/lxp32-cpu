@@ -27,21 +27,21 @@ private:
 		int _value;
 	public:
 		Operand(Type t,int value);
-		
 		Type type() const;
 		int value() const;
-		std::string str() const;
 	};
 	
 	std::istream &_is;
 	std::ostream &_os;
 	Format _fmt;
+	bool _preferAliases;
 	int _lineNumber;
 	Word _pos;
 public:
 	Disassembler(std::istream &is,std::ostream &os);
 	void setFormat(Format fmt);
 	void setBase(Word base);
+	void setPreferAliases(bool b);
 	void dump();
 	
 	template <typename T> static std::string hex(const T &w) {
@@ -58,11 +58,12 @@ public:
 	}
 private:
 	bool getWord(Word &w);
+	std::string str(const Operand &op);
 	static Operand decodeRd1Operand(Word w);
 	static Operand decodeRd2Operand(Word w);
 	static Operand decodeDstOperand(Word w);
-	static std::string decodeSimpleInstruction(const std::string &op,Word w);
 	
+	std::string decodeSimpleInstruction(const std::string &op,Word w);
 	std::string decodeAdd(Word w);
 	std::string decodeAnd(Word w);
 	std::string decodeCall(Word w);
@@ -72,6 +73,7 @@ private:
 	std::string decodeHlt(Word w);
 	std::string decodeJmp(Word w);
 	std::string decodeLc(Word w,bool &valid,Word &operand);
+	std::string decodeLcs(Word w);
 	std::string decodeLsb(Word w);
 	std::string decodeLub(Word w);
 	std::string decodeLw(Word w);

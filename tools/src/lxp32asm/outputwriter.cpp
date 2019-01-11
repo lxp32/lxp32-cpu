@@ -22,6 +22,11 @@
  * OutputWriter members
  */
 
+void OutputWriter::write(const char *data,std::size_t n) {
+	writeData(data,n);
+	_size+=n;
+}
+
 void OutputWriter::pad(std::size_t size) {
 	static char zeros[256]; // static objects are zero-initialized
 	while(size>0) {
@@ -29,6 +34,10 @@ void OutputWriter::pad(std::size_t size) {
 		write(zeros,n);
 		size-=n;
 	}
+}
+
+std::size_t OutputWriter::size() const {
+	return _size;
 }
 
 /*
@@ -42,7 +51,7 @@ BinaryOutputWriter::BinaryOutputWriter(const std::string &filename):
 	if(!_os) throw std::runtime_error("Cannot open \""+filename+"\" for writing");
 }
 
-void BinaryOutputWriter::write(const char *data,std::size_t n) {
+void BinaryOutputWriter::writeData(const char *data,std::size_t n) {
 	_os.write(data,n);
 }
 
@@ -70,7 +79,7 @@ TextOutputWriter::~TextOutputWriter() {
 	}
 }
 
-void TextOutputWriter::write(const char *data,std::size_t n) {
+void TextOutputWriter::writeData(const char *data,std::size_t n) {
 	while(n>0) {
 		assert(_buf.size()<4);
 		auto count=std::min(4-_buf.size(),n);

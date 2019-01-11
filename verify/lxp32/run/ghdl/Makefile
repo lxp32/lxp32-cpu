@@ -13,7 +13,7 @@ all: batch
 
 .PHONY: all compile batch gui clean
 
-.PRECIOUS: $(WAVE_OUT)
+.PRECIOUS: $(WAVE_OUT) $(WAVE_VCD)
 
 compile: compile.stamp $(FIRMWARE)
 
@@ -42,8 +42,8 @@ $(WAVE_OUT): $(WAVE_VCD)
 $(WAVE_VCD): compile.stamp $(FIRMWARE)
 	ghdl -r $(GHDL_FLAGS) $(TB_MOD) --vcd=$(WAVE_VCD)
 
-compile.stamp: $(LXP32_RTL) $(PLATFORM_RTL) $(TB_SRC)
-	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(PLATFORM_RTL) $(TB_SRC)
+compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
+	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
 	ghdl -e $(GHDL_FLAGS) $(TB_MOD)
 	echo > compile.stamp
 

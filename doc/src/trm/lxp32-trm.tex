@@ -16,25 +16,17 @@
 \lxp{} (\emph{Lightweight eXecution Pipeline}) is a small 32-bit CPU IP core optimized for FPGA implementation. Its key features include:
 
 \begin{itemize}
-	\item described in portable VHDL-93, not tied to any particular vendor;
-	\item 3-stage pipeline;
+	\item portability (described in behavioral VHDL-93, not tied to any particular vendor);
+	\item 3-stage hazard-free pipeline;
 	\item 256 registers implemented as a RAM block;
-	\item simple instruction set with less than 30 distinct opcodes;
+	\item a simple instruction set with only 30 distinct opcodes;
 	\item separate instruction and data buses, optional instruction cache;
-	\item WISHBONE compatible;
+	\item WISHBONE compatibility;
 	\item 8 interrupts with hardwired priorities;
 	\item optional divider.
 \end{itemize}
 
-Being a lightweight IP core, \lxp{} also has certain limitations:
-
-\begin{itemize}
-	\item no branch prediction;
-	\item no floating-point unit;
-	\item no memory management unit;
-	\item no nested interrupt handling;
-	\item no debugging facilities.
-\end{itemize}
+As a lightweight CPU core, \lxp{} lacks some features of more advanced processors, such as nested interrupt handling, debugging support, floating-point and memory management units. \lxp{} is based on an original ISA (Instruction Set Architecture) which does not currently have a C compiler. It can be programmed in the assembly language covered by Appendix \ref{app:assemblylanguage}.
 
 Two major hardware versions of the CPU are provided: \lxp{}U which does not include an instruction cache and uses the Low Latency Interface (Section \ref{sec:lli}) to fetch instructions, and \lxp{}C which fetches instructions over a cached WISHBONE bus protocol. These versions are otherwise identical and have the same instruction set architecture.
 
@@ -58,33 +50,23 @@ The slowest speed grade was used for clock frequency estimation.
 		\toprule
 		Resource & Compact & Full \\
 		\midrule
-		\multicolumn{3}{c}{Altera\textregistered{} Cyclone\textregistered{} V 5CEBA2F23C8} \\
-		\midrule
-		Logic Array Blocks (LABs) & 79 & 119 \\
-		\hspace*{1em}ALMs & 630 & 972 \\
-		\hspace*{2em}ALUTs & 982 & 1531 \\
-		\hspace*{2em}Flip-flops & 537 & 942 \\
-		DSP blocks & 3 & 3 \\
-		RAM blocks (M10K) & 2 & 3 \\
-		Clock frequency & 103.9 MHz & 98.8 MHz \\
-		\midrule
 		\multicolumn{3}{c}{Microsemi\textregistered{} IGLOO\textregistered{}2 M2GL005-FG484} \\
 		\midrule
-		Logic elements (LUT+DFF) & 1529 & 2226 \\
-		\hspace*{1em}LUTs & 1471 & 2157 \\
-		\hspace*{1em}Flip-flops & 718 & 1181 \\
+		Logic elements (LUT+DFF) & 1457 & 2086 \\
+		\hspace*{1em}LUTs & 1421 & 1999 \\
+		\hspace*{1em}Flip-flops & 706 & 1110 \\
 		Mathblocks (MACC) & 3 & 3 \\
 		RAM blocks (RAM1K18) & 2 & 3 \\
-		Clock frequency & 111.7 MHz & 107.8 MHz \\
+		Clock frequency & 107.7 MHz & 109.2 MHz \\
 		\midrule
 		\multicolumn{3}{c}{Xilinx\textregistered{} Artix\textregistered{}-7 xc7a15tfgg484-1} \\
 		\midrule
-		Slices & 264 & 381 \\
-		\hspace*{1em}LUTs & 809 & 1151 \\
-		\hspace*{1em}Flip-flops & 527 & 923 \\
+		Slices & 235 & 365 \\
+		\hspace*{1em}LUTs & 666 & 1011 \\
+		\hspace*{1em}Flip-flops & 528 & 883 \\
 		DSP blocks (DSP48E1) & 4 & 4 \\
 		RAM blocks (RAMB18E1) & 2 & 3 \\
-		Clock frequency & 113.6 MHz & 109.3 MHz \\
+		Clock frequency & 111.9 MHz & 120.2 MHz \\
 		\bottomrule
 	\end{tabularx}
 \end{table}
@@ -93,9 +75,9 @@ The slowest speed grade was used for clock frequency estimation.
 
 General description of the \lxp{} operation from a software developer's point of view can be found in Chapter \ref{ch:isa}, \styledtitleref{ch:isa}. Future versions of the \lxp{} CPU are intended to be at least backwards compatible with this architecture.
 
-Topics related to hardware, such as synthesis, implementation and interfacing other IP cores, are covered in Chapter \ref{ch:integration}, \styledtitleref{ch:integration}. The \lxp{} IP core package also includes testbenches which can be used to simulate the design as described in Chapter \ref{ch:simulation}, \styledtitleref{ch:simulation}.
+Topics related to hardware, such as synthesis, implementation and interfacing other IP cores, are covered in Chapter \ref{ch:integration}, \styledtitleref{ch:integration}. A brief description of the \lxp{} pipelined architecture is provided in Chapter \ref{ch:pipeline}, \styledtitleref{ch:pipeline}. The \lxp{} IP core package includes a verification environment (self-checking testbench) which can be used to simulate the design as described in Chapter \ref{ch:simulation}, \styledtitleref{ch:simulation}.
 
-Tools shipped as parts of the \lxp{} IP core package (assembler/linker, disassembler and interconnect generator) are documented in Chapter \ref{ch:developmenttools}, \styledtitleref{ch:developmenttools}.
+Documentation for tools shipped with the \lxp{} IP core package (assembler/linker, disassembler and interconnect generator) is provided in Chapter \ref{ch:developmenttools}, \styledtitleref{ch:developmenttools}.
 
 Appendices include a detailed description of the \lxp{} instruction set, instruction cycle counts and \lxp{} assembly language definition. WISHBONE datasheet required by the WISHBONE specification is also provided.
 
@@ -207,31 +189,41 @@ Before using the stack, the \code{sp} register must be set up to point to a vali
 \section{Calling procedures}
 \label{sec:callingprocedures}
 
-\lxp{} provides a \instr{call} instruction which stores the address of the next instruction in the \code{rp} register and transfers execution to the procedure pointed by \instr{call} operand. Return from a procedure is performed by \code{\instr{jmp} rp} instruction which also has \instr{ret} alias.
+\lxp{} provides a \instr{call} instruction which saves the address of the next instruction in the \code{rp} register and transfers execution to the address stored in the register operand. Return from a procedure is performed by the \code{\instr{jmp} rp} instruction which also has a \instr{ret} alias.
 
-If a procedure must in turn call some procedure itself, the return pointer in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence the procedure must save its value somewhere; the most general solution is to use the stack:
+If a procedure must in turn call a nested procedure itself, the return address in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence, unless it is a tail call (see below), the procedure must save the \code{rp} value somewhere; the most general solution is to use the stack:
 
 \begin{codepar}
     \instr{sub} sp, sp, 4
     \instr{sw} sp, rp
     ...
-    \instr{call} r1
+    \instr{lc} r0, Nested_proc
+    \instr{call} r0
     ...
     \instr{lw} rp, sp
     \instr{add} sp, sp, 4
     \instr{ret}
 \end{codepar}
 
-Procedures that don't use the \instr{call} instruction (sometimes called \emph{leaf} procedures) don't need to save the \code{rp} value.
+Procedures that don't use the \instr{call} instruction (sometimes called \emph{leaf procedures}) don't need to save the \code{rp} value.
 
-Since \instr{ret} is just an alias for \code{\instr{jmp} rp}, one can also use \instrname{Compare and Jump} instructions (\instr{cjmp\emph{xxx}}) to perform a conditional procedure return.
+Since \instr{ret} is just an alias for \code{\instr{jmp} rp}, one can also use \instrname{Compare and Jump} instructions (\instr{cjmp\emph{xxx}}) to perform a conditional procedure return. For example, consider the following procedure which calculates the absolute value of \code{r1}:
+
+\begin{codepar}
+Abs_proc:
+    \instr{cjmpsge} rp, r1, 0 \emph{// return immediately if r1>=0}
+    \instr{neg} r1, r1 \emph{// otherwise, negate r1}
+    \instr{ret} \emph{// jmp rp}
+\end{codepar}
+
+A \emph{tail call} is a special type of procedure call where the calling procedure calls a nested procedure as the last action before return. In such cases the \instr{call} instruction can be replaced with \instr{jmp}, so that when the nested procedure executes \instr{ret}, it returns directly to the caller's parent procedure.
 
 Although the \lxp{} architecture doesn't mandate any particular calling convention, some general recommendations are presented below:
 
 \begin{enumerate}
-	\item Pass arguments through the \code{r1}--\code{r31} registers.
-	\item Return value through the \code{r0} register.
-	\item Designate \code{r0}--\code{r31} registers as \emph{caller-saved}, that is, they are not guaranteed to be preserved during procedure calls and must be saved by the caller if needed. The procedure can use them for any purpose, regardless of whether they are used to pass arguments and/or return values. For obvious reasons, this rule does not apply to interrupt handlers.
+	\item Pass arguments and return values through the \code{r1}--\code{r31} registers (a procedure can have multiple return values).
+	\item If necessary, the \code{r0} register can be used to load the procedure address.
+	\item Designate \code{r0}--\code{r31} registers as \emph{caller-saved}, that is, they are not guaranteed to be preserved during procedure calls and must be saved by the caller if needed. The procedure can use them for any purpose, regardless of whether they are used to pass arguments and/or return values.
 \end{enumerate}
 
 \section{Interrupt handling}
@@ -269,20 +261,23 @@ Like other registers, \code{cr} is zero-initialized during the CPU reset, meanin
 
 Interrupt handlers are invoked by the CPU similarly to procedures (Section \ref{sec:callingprocedures}), the difference being that in this case return address is stored in the \code{irp} register (as opposed to \code{rp}), and the least significant bit of the register (\code{IRF} -- \emph{Interrupt Return Flag}) is set.
 
-An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. This behavior can be exploited to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
+An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has an \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that the \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. It is also possible to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
 
-Another technique can be useful when waiting for a single event, such as a coprocessor finishing its job: the interrupt handler can be set up to return to a designated address instead of the address stored in the \code{irp} register. This designated address must have the \code{IRF} flag set, otherwise all further interrupt processing will be disabled:
+\subsection{Non-returnable interrupts}
 
-\begin{codepar}
-    \instr{lc} r0, continue@1 \emph{// IRF flag}
-    \instr{lc} iv0, handler
-    ... \emph{// issue coprocessor command}
-    \instr{hlt} \emph{// wait for an interrupt}
-continue:
-    ... \emph{// the execution will continue here}
-handler:
-    \instr{jmp} r0
-\end{codepar}
+If an interrupt vector has the least significant bit (\code{IRF}) set, the CPU will resume interrupt processing immediately. One should not try to invoke \instr{iret} from such a handler since the \code{irp} register could have been overwritten by another interrupt. This technique can be useful when the CPU's only task is to process external events:
+
+\begin{codeparbreakable}
+\emph{// Set the IRF to mark the interrupt as non-returnable}
+    \instr{lc} iv0, main\_loop@1
+    \instr{mov} cr, 1 \emph{// enable the interrupt}
+    \instr{hlt} \emph{// wait for an interrupt request}
+main\_loop:
+\emph{// Process the event...}
+    \instr{hlt} \emph{// wait for the next interrupt request}
+\end{codeparbreakable}
+
+Note that \instr{iret} is never called in this example.
 
 \chapter{Integration}
 \label{ch:integration}
@@ -314,13 +309,13 @@ A high level block diagram of the CPU is presented on Figure \ref{fig:blockdiagr
 	\label{fig:symbols}
 \end{figure}
 
-\lxp{}U uses the Low Latency Interface (Section \ref{sec:lli}) to fetch instructions. This interface is designed to interact with low latency on-chip peripherals such as RAM blocks or similar devices that are generally expected to return data word after one cycle since the instruction address has been set. It can be also connected to a custom (external) instruction cache.
+\lxp{}U uses the Low Latency Interface (LLI) described in Section \ref{sec:lli} to fetch instructions. This interface is designed to interact with low latency on-chip peripherals such as RAM blocks. It works best with slaves that can return the instruction on the next cycle after its address has been set, although the slave can still introduce wait states if needed. Low Latency Interface can be also connected to a custom (external) instruction cache.
 
-To achieve the least possible latency, some LLI signals are not registered. For this reason the LLI is not suitable for interaction with off-chip peripherals.
+To achieve the least possible latency, some LLI outputs are not registered. For this reason the LLI is not suitable for interaction with off-chip peripherals.
 
-\lxp{}C fetches instructions over the WISHBONE instruction bus. To maximize throughput, it supports the WISHBONE registered feedback signals [CTI\_O()] and [BTE\_O()]. All outputs on this bus are registered. This version is recommended for use with high latency memory devices such as SDRAM chips, as well as for situations where LLI combinatorial delays are unacceptable.
+\lxp{}C is designed to work with high latency memory controllers and uses a simple instruction cache based on a ring buffer. The instructions are fetched over the WISHBONE instruction bus. To maximize throughput, the CPU makes use of the WISHBONE registered feedback signals [CTI\_O()] and [BTE\_O()]. All outputs on this bus are registered. This version is also recommended for use in situations where LLI combinatorial delays are unacceptable.
 
-Both \lxp{}U and \lxp{}C use WISHBONE protocol for the data bus.
+Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 
 \section{Ports}
 
@@ -376,11 +371,11 @@ The following generics can be used to configure the \lxp{} IP core parameters.
 
 By default, \lxp{} uses the \signal{dbus\_sel\_o} (byte enable) port to perform byte-granular write transactions initiated by the \instr{sb} (\instrname{Store Byte}) instruction. If this option is set to \code{true}, \signal{dbus\_sel\_o} is always tied to \code{"1111"}, and byte-granular write access is performed using the RMW (read-modify-write) cycle. The latter method is slower, but can work with slaves that do not have the [SEL\_I()] port.
 
-This feature requires data bus transactions to be idempotent, that is, repeating a transaction must not alter the slave state. Care should be taken with non-memory slaves to ensure that this condition is satisfied.
+This feature is designed with the assumption that read and write transactions do not cause side effects, thus it can be unsuitable for some slaves.
 
 \subsection{DIVIDER\_EN}
 
-\lxp{} includes a divider unit which occupies a considerable amount of resources. It can be excluded by setting this option to \code{false}.
+\lxp{} includes a divider unit which has quite a low performance but occupies a considerable amount of resources. It can be disabled by setting this option to \code{false}.
 
 \subsection{IBUS\_BURST\_SIZE}
 
@@ -406,7 +401,7 @@ For older FPGA families that don't provide dedicated multipliers the \code{"opt"
 
 \subsection{START\_ADDR}
 
-Address of the first instruction to be executed after CPU reset. Default value is \code{0}. Note that it is a 30-bit value as it is used to address 32-bit words, not bytes.
+Address of the first instruction to be executed after CPU reset. Default value is \code{0}. The two least significant bits are ignored as instructions are always word-aligned.
 
 \section{Clock and reset}
 \label{sec:clockreset}
@@ -429,9 +424,7 @@ In SRAM-based FPGAs flip-flops and RAM blocks have deterministic state after a b
 \section{Low Latency Interface}
 \label{sec:lli}
 
-Low Latency Interface is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. Its timing diagram is shown on Figure \ref{fig:llitiming}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after the request is valid the slave must either produce data on \signal{lmi\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. Note that the values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the CPU while the slave is busy.
-
-The simplest, ``always ready'' slaves such as on-chip RAM blocks can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0}. Slaves are also allowed to introduce wait states, which makes it possible to implement external caching.
+Low Latency Interface (LLI) is a simple pipelined synchronous protocol with a typical latency of 1 cycle used by \lxp{}U to fetch instructions. It was designed to allow simple connection of the CPU to on-chip program RAM or cache. The timing diagram of the LLI is shown on Figure \ref{fig:llitiming}.
 
 \begin{figure}[htbp]
 	\centering
@@ -440,15 +433,23 @@ The simplest, ``always ready'' slaves such as on-chip RAM blocks can be triviall
 	\label{fig:llitiming}
 \end{figure}
 
+To request a word, the master produces its address on \signal{lli\_adr\_o} and asserts \signal{lli\_re\_o}. The request is considered valid when \signal{lli\_re\_o} is high and \signal{lli\_busy\_i} is low on the same clock cycle. On the next cycle after a valid request, the slave must either produce data on \signal{lli\_dat\_i} or assert \signal{lli\_busy\_i} to indicate that data are not ready. \signal{lli\_busy\_i} must be held high until the valid data are present on the \signal{lli\_dat\_i} port.
+
+The data provided by the slave are only required to be valid on the next cycle after a valid request (if \signal{lli\_busy\_i} is not asserted) or on the cycle when \signal{lli\_busy\_i} is deasserted after being held high. Otherwise \signal{lli\_dat\_i} is undefined.
+
+The values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to be preserved by the master while the slave is busy.
+
+The simplest slaves such as on-chip RAM blocks which are never busy can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0} (you can even ignore \signal{lli\_re\_o} in this case, although doing so can theoretically increase power consumption).
+
 Note that the \signal{lli\_adr\_o} signal has a width of 30 bits since it addresses words, not bytes (instructions are always word-aligned).
 
-Since this interface is not registered, it is not suitable for interaction with off-chip peripherals. Also, care should be taken to avoid introducing too much additional combinatorial delay on its outputs.
+Since the \signal{lli\_re\_o} output signal is not registered, this interface is not suitable for interaction with off-chip peripherals. Also, care should be taken to avoid introducing too much additional combinatorial delay on its outputs.
 
 \section{WISHBONE instruction bus}
 
 The \lxp{}C CPU fetches instructions over the WISHBONE bus. Its parameters are defined in the WISHBONE datasheet (Appendix \ref{app:wishbonedatasheet}). For a detailed description of the bus protocol refer to the WISHBONE specification, revision B3.
 
-With classic WISHBONE handshake decent throughput can be only achieved when the slave is able to terminate cycles asynchronously. It is usually possible only for the simplest slaves, which should probably be using the Low Latency Interface in the first place. To maximize throughput for complex, high latency slaves, \lxp{}C instruction bus uses optional WISHBONE address tags [CTI\_O()] (Cycle Type Identifier) and [BTE\_O()] (Burst Type Extension). These signals are hints allowing the slave to predict the address that will be set by the master in the next cycle and prepare data in advance. The slave can ignore these hints, processing requests as classic WISHBONE cycles, although performance would almost certainly suffer in this case.
+With classic WISHBONE handshake decent throughput can be only achieved when the slave is able to terminate cycles asynchronously. It is usually possible only for the simplest slaves which should probably be using the Low Latency Interface instead. To maximize throughput for complex, high latency slaves, \lxp{}C instruction bus uses optional WISHBONE address tags [CTI\_O()] (Cycle Type Identifier) and [BTE\_O()] (Burst Type Extension). These signals are hints allowing the slave to predict the address that will be set by the master in the next cycle and prepare data in advance. The slave can ignore these hints, processing requests as classic WISHBONE cycles, although performance would almost certainly suffer in this case.
 
 A typical \lxp{}C instruction bus burst timing diagram is shown on Figure \ref{fig:ibustiming}.
 
@@ -494,6 +495,8 @@ Typical timing diagrams for write and read cycles are shown on Figure \ref{fig:d
 
 These design units contain behavioral description of respective hardware that is recognizable by FPGA synthesis tools. Usually no adjustments are needed as the synthesizer will automatically infer an appropriate primitive from its behavioral description. If automatic inference produces unsatisfactory results, these design units can be replaced with library element wrappers. The same is true for ASIC logic synthesis software which is unlikely to infer complex primitives.
 
+\lxp{} implements its own bypass logic dealing with situations when RAM read and write addresses collide. It does not depend on the read/write conflict resolution behavior of the underlying primitive.
+
 \subsection{General optimization guidelines}
 
 This subsection contains general advice on achieving satisfactory synthesis results regardless of the optimization goal. Some of these suggestions are also mentioned in other parts of this manual.
@@ -504,12 +507,14 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 	\item Ensure that the instruction bus has adequate throughput. For \lxp{}C, check that the slave supports the WISHBONE registered feedback signals [CTI\_I()] and [BTE\_I()].
 	
 	\item Multiplexing instruction and data buses, or connecting them to the same interconnect that allows only one master at a time to be active (i.e. \emph{shared bus} interconnect topology) is not recommended. If you absolutely must do so, assign a higher priority level to the data bus, otherwise instruction prefetches will massively slow down data transactions.
+	
+	\item For small programs, consider mapping code and data memory to the beginning or end of the address space (i.e. \code{0x00000000}--\code{0x000FFFFF} or \code{0xFFF00000}--\code{0xFFFFFFFF}) to be able to load pointers with the \instr{lcs} instruction which saves both memory and CPU cycles as compared to \instr{lc}.
 \end{enumerate}
 
 \subsection{Optimizing for timing}
 
 \begin{enumerate}
-	\item Set up reasonable timing constraints. Do not overconstrain the design by more that 10--15~\%.
+	\item Set up reasonable timing constraints. Do not overconstrain the design by more than 10--15~\%.
 	
 	\item Analyze the worst path. The natural \lxp{} timing bottleneck usually goes from the scratchpad (register file) output through the ALU (in the Execute stage) to the scratchpad input. If timing analysis lists other critical paths, the problem can lie elsewhere. If the \signal{rst\_i} signal becomes a bottleneck, promote it to a global network or, with SRAM-based FPGAs, consider operating without reset (see Section \ref{sec:clockreset}). Critical paths affecting the WISHBONE state machines could indicate problems with interconnect performance.
 	
@@ -521,12 +526,70 @@ This subsection contains general advice on achieving satisfactory synthesis resu
 \subsection{Optimizing for area}
 
 \begin{enumerate}
-	\item Consider excluding the divider if not using it (see Section \ref{sec:generics}).
+	\item Consider disabling the divider if not using it (see Section \ref{sec:generics}).
 	
 	\item Relaxing timing constraints can sometimes allow the synthesizer to produce a more area-efficient circuit.
 	
 	\item Increase the fanout limit in the synthesizer settings to reduce buffer replication.
 \end{enumerate}
+
+\chapter{Hardware architecture}
+\label{ch:pipeline}
+
+The \lxp{} CPU is based on a 3-stage hazard-free pipelined architecture and uses a large RAM-based register file (scratchpad) with two read ports and one write port. The pipeline includes the following stages:
+
+\begin{itemize}
+	\item\emph{Fetch} -- fetches instructions from the program memory.
+	\item\emph{Decode} -- decodes instructions and reads register operand values from the scratchpad.
+	\item\emph{Execute} -- executes instructions and writes the results (if any) to the scratchpad.
+\end{itemize}
+
+\lxp{} instructions are encoded in such a way that operand register numbers can be known without decoding the instruction (Section \ref{sec:instructionformat}). When the \emph{Fetch} stage produces an instruction, scratchpad input addresses are set immediately, before the instruction itself is decoded. If the instruction does not use one or both of the register operands, the corresponding data read from the scratchpad are discarded. Collision bypass logic in the scratchpad detects situations where the \emph{Decode} stage tries to read a register which is currently being written by the \emph{Execute} stage and forwards its value, bypassing the RAM block and avoiding Read After Write (RAW) pipeline hazards. Other types of data hazards are also impossible with this architecture.
+
+As an example, consider the following simple code chunk:
+
+\begin{codepar}
+    \instr{mov} r0, 10 \emph{// alias for add r0, 10, 0}
+    \instr{mov} r1, 20 \emph{// alias for add r1, 20, 0}
+    \instr{add} r2, r0, r1
+\end{codepar}
+
+Table \ref{tab:examplepipeline} illustrates how this chunk is processed by the \lxp{} pipeline. Note that on the fourth cycle the \emph{Decode} stage requests the \code{r1} register value while the \emph{Execute} stage writes to the same register. Collision bypass logic in the scratchpad ensures that the \emph{Decode} stage reads the correct (new) value of \code{r1} without stalling the pipeline.
+
+\begin{table}[htbp]
+	\caption{Example of the \lxp{} pipeline operation}
+	\small
+	\label{tab:examplepipeline}
+	\begin{tabularx}{\textwidth}{lllL}
+		\toprule
+		Cycle & Fetch & Decode & Execute \\
+		\midrule
+		1 & \code{\instr{add} r0, 10, 0} & & \\
+		\midrule
+		2 & \code{\instr{add} r1, 20, 0} & \code{\instr{add} r0, 10, 0} & \\
+		  & & Request \code{r10} (discarded) & \\
+		  & & Request \code{r0} (discarded) & \\
+		  & & Pass 10 and 0 as operands & \\
+		\midrule
+		3 & \code{\instr{add} r2, r0, r1} & \code{\instr{add} r1, 20, 0} & Perform the addition \\
+		  & & Request \code{r20} (discarded) & Write 10 to \code{r0} \\
+		  & & Request \code{r0} (discarded) & \\
+		  & & Pass 20 and 0 as operands & \\
+		\midrule
+		4 & & \code{\instr{add} r2, r0, r1} & Perform the addition \\
+		  & & Request \code{r0} & Write 20 to \code{r1} \\
+		  & & Request \code{r1} (bypass) & \\
+		  & & Pass 10 and 20 as operands & \\
+		\midrule
+		5 & & & Perform the addition \\
+		  & & & Write 30 to \code{r2} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+When an instruction takes more than one cycle to execute, the \emph{Execute} stage simply stalls the pipeline.
+
+Branch hazards are impossible in \lxp{} as well since the pipeline is flushed whenever an execution transfer occurs.
 
 \chapter{Simulation}
 \label{ch:simulation}
@@ -590,6 +653,7 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 	
 	Produced \shellcmd{*.ram} files must be placed to the simulator's working directory.
 	\item Compile the \lxp{} RTL description (\shellcmd{rtl} directory).
+	\item Compile the common package (\shellcmd{verify/common\_pkg}).
 	\item Compile the test platform (\shellcmd{verify/lxp32/src/platform} directory).
 	\item Compile the testbench itself (\shellcmd{verify/lxp32/src/tb} directory).
 	\item Simulate the \shellcmd{tb} design unit defined in the \shellcmd{tb.vhd} file.
@@ -600,6 +664,8 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 Simulation parameters can be configured by overriding generics defined by the \shellcmd{tb} design unit:
 
 \begin{itemize}
+	\item \code{CPU\_DBUS\_RMW} -- \code{DBUS\_RMW} CPU generic value (see Section \ref{sec:generics}).
+	\item \code{CPU\_MUL\_ARCH} -- \code{MUL\_ARCH} CPU generic value (see Section \ref{sec:generics}).
 	\item \code{MODEL\_LXP32C} -- simulate the \lxp{}C version. By default, this option is set to \code{true}. If set to \code{false}, \lxp{}U is simulated instead.
 	\item \code{TEST\_CASE} -- if set to a non-empty string, specifies the file name of a test case to run. If set to an empty string (default), all tests are executed.
 	\item \code{THROTTLE\_DBUS} -- perform pseudo-random data bus throttling. By default, this option is set to \code{true}.
@@ -630,39 +696,50 @@ Simulation parameters can be configured by overriding generics defined by the \s
 In the simplest case there is only one input source file which doesn't contain external symbol references. If there are multiple input files, one of them must define the \code{entry} symbol at the beginning of the code.
 
 \subsection{Command line syntax}
+\label{subsec:assemblercmdline}
 
 \begin{codepar}
     lxp32asm [ \emph{options} | \emph{input files} ]
 \end{codepar}
 
-Options supported by \shellcmd{lxp32asm} are listed below:
+\subsubsection{General options}
 
 \begin{itemize}
-	\item \shellcmd{-a \emph{align}} -- section alignment. Must be a multiple of 4, default value is 4. Ignored in compile-only mode.
-	
-	\item \shellcmd{-b \emph{addr}} -- Base address, that is, address in memory where the executable image will be located. Must be a multiple of section alignment. Default value is 0. Ignored in compile-only mode.
-	
 	\item \shellcmd{-c} -- compile only (skip the Link stage).
-	
-	\item \shellcmd{-f \emph{fmt}} -- select executable image format (see below for the list of supported formats). Ignored in compile-only mode.
 	
 	\item \shellcmd{-h}, \shellcmd{--help} -- display a short help message and exit.
 	
-	\item \shellcmd{-i \emph{dir}} -- add \emph{dir} to the list of directories used to search for included files. Multiple directories can be specified with multiple \shellcmd{-i} arguments.
-	
 	\item \shellcmd{-o \emph{file}} -- output file name.
 	
-	\item \shellcmd{-s \emph{size}} -- size of the executable image. Must be a multiple of 4. If total code size is less than the specified value, the executable image is padded with zeros. By default, image is not padded. This option is ignored in compile-only mode.
+	\item \shellcmd{--} -- do not interpret the subsequent command line arguments as options. Can be used if there are input file names starting with a dash.
+\end{itemize}
+
+\subsubsection{Compiler options}
+
+\begin{itemize}
+	\item \shellcmd{-i \emph{dir}} -- add \emph{dir} to the list of directories used to search for included files. Multiple directories can be specified with multiple \shellcmd{-i} arguments.
+\end{itemize}
+
+\subsubsection{Linker options (ignored in compile-only mode)}
+
+\begin{itemize}
+	\item \shellcmd{-a \emph{align}} -- object alignment. Must be a power of 2 and can't be less than 4. Default value is 4.
 	
-	\item \shellcmd{--} -- do not interpret subsequent command line arguments as options. Can be used if there are input file names starting with dash.
+	\item \shellcmd{-b \emph{addr}} -- base address, that is, the address in memory where the executable image will be located. Must be a multiple of object alignment. Default value is 0.
+	
+	\item \shellcmd{-f \emph{fmt}} -- executable image format. See below for the list of supported formats.
+	
+	\item \shellcmd{-m \emph{file}} -- generate a map file. A map file is a human-readable list of all object and symbol addresses in the executable image.
+	
+	\item \shellcmd{-s \emph{size}} -- size of the executable image. Must be a multiple of 4. If total code size is less than the specified value, the executable image is padded with zeros. By default, the image is not padded.
 \end{itemize}
 
 \subsection{Output formats}
 
-The following output formats are supported by \shellcmd{lxp32asm}:
+Output formats that can be specified with the \shellcmd{-f} command line option are listed below.
 
 \begin{itemize}
-	\item \shellcmd{bin} -- raw binary image. This is the default format.
+	\item \shellcmd{bin} -- raw binary image (little-endian). This is the default format.
 	\item \shellcmd{textio} -- text format representing binary data as a sequence of zeros and ones. This format can be directly read from VHDL (using the \code{std.textio} package) or Verilog\textregistered{} (using the \code{\$readmemb} function).
 	\item \shellcmd{dec} -- text format representing each word as a decimal number.
 	\item \shellcmd{hex} -- text format representing each word as a hexadecimal number.
@@ -687,6 +764,8 @@ Supported options are:
 	
 	\item \shellcmd{-h}, \shellcmd{--help} -- display a short help message and exit.
 	
+	\item \shellcmd{-na} -- do not use instruction aliases (such as \instr{mov}, \instr{ret}, \instr{not}) and register aliases (such as \code{sp}, \code{rp}).
+	
 	\item \shellcmd{-o \emph{file}} -- output file name. By default, the standard output stream is used.
 	
 	\item \shellcmd{--} -- do not interpret subsequent command line arguments as options.
@@ -694,7 +773,7 @@ Supported options are:
 
 \section{\shellcmd{wigen} -- Interconnect generator}
 
-\shellcmd{wigen} is a small tool that generates VHDL description of a simple WISHBONE interconnect based on shared bus topology. It supports any number of masters and slaves.
+\shellcmd{wigen} is a small tool that generates VHDL description of a simple WISHBONE interconnect based on shared bus topology. It supports any number of masters and slaves. The interconnect can then be used to create a SoC based on \lxp{}.
 
 For interconnects with multiple masters a priority-based arbitration circuit is inserted with lower-numbered masters taking precedence. However, when a bus cycle is in progress ([CYC\_O] is asserted by the active master), the arbiter will not interrupt it even if a master with a higher priority level requests bus ownership.
 
@@ -745,7 +824,7 @@ The following software is required to build \lxp{} tools from source:
 
 \subsection{Build procedure}
 
-This software uses CMake as a build system generator. Building it involves two steps: first, the \shellcmd{cmake} program is invoked to generate a native build environment (a set of Makefiles or an IDE project); second, the generated environment is used to build the software.
+This software uses CMake as a build system generator. Building it involves two steps: first, the \shellcmd{cmake} program is invoked to generate a native build environment (a set of Makefiles or an IDE project); second, the generated environment is used to build the software. More details can be found in the CMake documentation.
 
 \subsubsection{Examples}
 
@@ -791,8 +870,6 @@ For other platforms:
     make install
 \end{codepar}
 
-More details can be found in the CMake documentation.
-
 \appendix
 
 \chapter{Instruction set reference}
@@ -810,6 +887,7 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:mov]{\instr{mov}} & Move & alias for \code{\instr{add} dst, src, 0} \\
 	\hyperref[subsec:instr:lc]{\instr{lc}} & Load Constant & \code{000001} \\
+	\hyperref[subsec:instr:lcs]{\instr{lcs}} & Load Constant Short & \code{101xxx} \\
 	\hyperref[subsec:instr:lw]{\instr{lw}} & Load Word & \code{001000} \\
 	\hyperref[subsec:instr:lub]{\instr{lub}} & Load Unsigned Byte & \code{001010} \\
 	\hyperref[subsec:instr:lsb]{\instr{lsb}} & Load Signed Byte & \code{001011} \\
@@ -820,6 +898,7 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:add]{\instr{add}} & Add & \code{010000} \\
 	\hyperref[subsec:instr:sub]{\instr{sub}} & Subtract & \code{010001} \\
+	\hyperref[subsec:instr:neg]{\instr{neg}} & Negate & alias for \code{\instr{sub} dst, 0, src} \\
 	\hyperref[subsec:instr:mul]{\instr{mul}} & Multiply & \code{010010} \\
 	\hyperref[subsec:instr:divu]{\instr{divu}} & Divide Unsigned & \code{010100} \\
 	\hyperref[subsec:instr:divs]{\instr{divs}} & Divide Signed & \code{010101} \\
@@ -959,7 +1038,7 @@ Opcodes:
 \instr{cjmpuge} & \code{111010} \\
 \end{tabularx}
 
-\instr{cjmpsl}, \instr{cjmpsle}, \instr{cjmpul}, \instr{cjmpule} are aliases for \instr{cjmpsg}, \instr{cjmpsge}, \instr{cjmpug}, \instr{cjmpuge}, respectively, with RD1 and RD2 operands swapped.
+\instr{cjmpsl}, \instr{cjmpsle}, \instr{cjmpul}, \instr{cjmpule} instructions are aliases for \instr{cjmpsg}, \instr{cjmpsge}, \instr{cjmpug}, \instr{cjmpuge}, respectively, with RD1 and RD2 operands swapped.
 
 Example: \code{\instr{cjmpuge} r2, r1, 5} $\rightarrow$ \code{0xEA020105}
 
@@ -1061,7 +1140,7 @@ Alias for \code{\instr{jmp} irp}.
 \subsection{\instr{lc} -- Load Constant}
 \label{subsec:instr:lc}
 
-Load a 32-bit word to the specified register. Note that values in the [-128; 127] range can be loaded more efficiently using the \instr{mov} instruction alias.
+Load a 32-bit word to the specified register. Note that values from the [-1048576; 1048575] range can be loaded more efficiently using the \instr{lcs} instruction.
 
 \subsubsection{Syntax}
 
@@ -1078,6 +1157,25 @@ Example: \code{\instr{lc} r1, 0x12345678} $\rightarrow$ \code{0x04010000 0x12345
 \subsubsection{Operation}
 
 \code{DST := WORD32}
+
+\subsection{\instr{lcs} -- Load Constant Short}
+\label{subsec:instr:lcs}
+
+Load a signed value from the [-1048576; 1048575] range (a sign extended 21-bit value) to the specified register. Unlike the \instr{lc} instruction, this instruction is encoded as a single word.
+
+\subsubsection{Syntax}
+
+\code{\instr{lcs} DST, VAL}
+
+\subsubsection{Encoding}
+
+\code{101 VAL[20:16] DST VAL[15:0]}
+
+Example: \code{\instr{lcs} r1, -1000000} $\rightarrow$ \code{0xB001BDC0}
+
+\subsubsection{Operation}
+
+\code{DST := (\emph{signed}) VAL}
 
 \subsection{\instr{lsb} -- Load Signed Byte}
 \label{subsec:instr:lsb}
@@ -1219,6 +1317,15 @@ Example: \code{\instr{mul} r2, r1, 3} $\rightarrow$ \code{0x4A020103}
 \code{DST := RD1 * RD2}
 
 Since the product width is the same as the operand width, the result of a multiplication does not depend on operand signedness.
+
+\subsection{\instr{neg} -- Negate}
+\label{subsec:instr:neg}
+
+\subsubsection{Syntax}
+
+\code{\instr{neg} DST, RD2}
+
+Alias for \code{\instr{sub} DST, 0, RD2}
 
 \subsection{\instr{nop} -- No Operation}
 \label{subsec:instr:nop}
@@ -1415,7 +1522,7 @@ Example: \code{\instr{xor} r2, r1, 0x3F} $\rightarrow$ \code{0x6A02013F}
 
 \chapter{Instruction cycle counts}
 
-Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These values can change in future hardware revisions.
+Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based on an assumption that no pipeline stalls are caused by the instruction bus latency or cache misses. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
 
 \begin{table}[htbp]
 	\centering
@@ -1423,18 +1530,19 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 	\label{tab:cycles}
 	\begin{tabularx}{0.8\textwidth}{LLLL}
 		\toprule
-		Instruction & Cycle count & Instruction & Cycle count \\
+		Instruction & Cycles & Instruction & Cycles \\
 		\midrule
 		\instr{add} & 1 & \instr{modu} & 37 \\
 		\instr{and} & 1 & \instr{mov} & 1 \\
-		\instr{call} & $\ge$ 4\footnotemark[1] & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
-		\instr{cjmp\emph{xxx}} & $\ge$ 5\footnotemark[1] & \instr{nop} & 1 \\
-		\instr{divs} & 37 & \instr{not} & 1 \\
-		\instr{divu} & 37 & \instr{or} & 1 \\
-		\instr{hlt} & N/A & \instr{ret} & $\ge$ 4\footnotemark[1] \\
-		\instr{jmp} & $\ge$ 4\footnotemark[1] & \instr{sb} & $\ge$ 2\footnotemark[2] \\
-		\instr{iret} & $\ge$ 4\footnotemark[1] & \instr{sl} & 2 \\
-		\instr{lc} & 2 & \instr{srs} & 2 \\
+		\instr{call} & 4 & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
+		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{neg} & 1 \\
+		\instr{divs} & 36 & \instr{nop} & 1 \\
+		\instr{divu} & 36 & \instr{not} & 1 \\
+		\instr{hlt} & N/A & \instr{or} & 1 \\
+		\instr{jmp} & 4 & \instr{ret} & 4 \\
+		\instr{iret} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
+		\instr{lc} & 2 & \instr{sl} & 2 \\
+		\instr{lcs} & 1 & \instr{srs} & 2 \\
 		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sru} & 2 \\
 		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
 		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
@@ -1443,9 +1551,9 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These
 	\end{tabularx}
 \end{table}
 
-\footnotetext[1]{Depends on instruction bus latency. Includes pipeline flushing overhead.}
-\footnotetext[2]{Depends on data bus latency.}
-\footnotetext[3]{Depends on multiplier architecture set with the \code{MUL\_ARCH} generic. See Section \ref{sec:generics}.}
+\footnotetext[1]{Depends on whether the jump is taken or not.}
+\footnotetext[2]{Depends on the data bus latency.}
+\footnotetext[3]{Depends on the multiplier architecture. See Section \ref{sec:generics}.}
 
 \chapter{LXP32 assembly language}
 \label{app:assemblylanguage}
@@ -1472,7 +1580,7 @@ From a parser's point of view comments are equivalent to whitespace.
 
 Numeric literals can take form of decimal, hexadecimal or octal numbers. Literals prefixed with \code{0x} are interpreted as hexadecimal, literals prefixed with \code{0} are interpreted as octal, other literals are interpreted as decimal. A numeric literal can also start with an unary plus or minus sign which is also considered a part of the literal.
 
-String literals must be enclosed in double quotes. The most common escape sequences used in C are supported (Table \ref{tab:stringescape}).
+String literals must be enclosed in double quotes. The most common escape sequences used in C are supported (Table \ref{tab:stringescape}). Note that strings are not null-terminated in the LXP32 assembly language; when required, terminating null character must be inserted explicitly.
 
 \begin{table}[htbp]
 	\caption{Escape sequences used in string literals}
@@ -1496,15 +1604,17 @@ String literals must be enclosed in double quotes. The most common escape sequen
 \section{Symbols}
 \label{sec:symbols}
 
-Symbols are used to refer to data or code locations. \lxp{} assembly language does not have distinct code labels and variable declarations: symbols are used in both these contexts.
+Symbols (labels) are used to refer to data or code locations. \lxp{} assembly language does not have distinct code and data labels: symbols are used in both these contexts.
 
 Symbol names must be valid identifiers. A valid identifier must start with an alphabetic character or an underscore, and may contain alphanumeric characters and underscores.
 
 A symbol definition must be the first token in a source code line followed by a colon. A symbol definition can occupy a separate line (in which case it refers to the following statement). Alternatively, a statement can follow the symbol definition on the same line.
 
-A special \code{entry} symbol is used to inform the linker about program entry point if there are multiple input files. If defined, this symbol must precede the first instruction or data definition statement in the module.
+Symbols can be used as operands to the \instr{lc} and \instr{lcs} instruction statements. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. For the \instr{lcs} instruction, the resulting address must still fit into the sign extended 21-bit value range (\code{0x00000000}--\code{0x000FFFFF} or \code{0xFFF00000}--\code{0xFFFFFFFF}), otherwise the linker will report an error.
 
-Symbols can be used as operands to the \instr{lc} instruction statement. A symbol reference can end with a \code{@\emph{n}} sequence, where \code{\emph{n}} is a numeric literal; in this case it is interpreted as an offset (in bytes) relative to the symbol definition. To refer to symbols defined in other modules, they must first be declared external using the \instr{\#extern} directive.
+By default all symbols are local, that is, they can be only referenced from the module where they were defined. To make a symbol accessible from other modules, use the \instr{\#export} directive. To reference a symbol defined in another module use the \instr{\#import} directive.
+
+A symbol named \code{entry} or \code{Entry} has a special meaning: it is used to inform the linker about the program entry point if there are multiple input files. It does not have to be exported. If defined, this symbol must precede the first instruction or data definition statement in the module. Only one module in the program can define the entry symbol.
 
 \begin{codeparbreakable}
     \instr{lc} r10, jump\_label
@@ -1542,10 +1652,16 @@ The first token of a directive statement always starts with the \code{\#} charac
 Defines a macro that will be substituted with one or more tokens. The \code{\emph{identifier}} must satisfy the requirements listed in Section \ref{sec:symbols}. Tokens can be anything, including keywords, identifiers, literals and separators (i.e. comma and colon characters).
 
 \begin{codepar}
-\instr{\#extern} \emph{identifier}
+\instr{\#export} \emph{identifier}
 \end{codepar}
 
-Declares \code{\emph{identifier}} as an external symbol. Used to refer to symbols defined in other modules.
+Declares \code{\emph{identifier}} as an exported symbol. Exported symbols can be referenced by other modules.
+
+\begin{codepar}
+\instr{\#import} \emph{identifier}
+\end{codepar}
+
+Declares \code{\emph{identifier}} as an imported symbol. Used to refer to symbols exported by other modules.
 
 \begin{codepar}
 \instr{\#include} \emph{filename}
@@ -1567,13 +1683,17 @@ The first token of a data definition statement always starts with the \code{.} (
 \instr{.align} [ \emph{alignment} ]
 \end{codepar}
 
-Ensures that code generated by the next data definition or instruction statement is aligned to a multiple of \code{\emph{alignment}} bytes, inserting padding zeros if needed. Default \code{\emph{alignment}} is 4. Instructions and words are always at least word-aligned; the \instr{.align} statement can be used to align them to a larger boundary, or to align byte data (see below).
+Ensures that code generated by the next data definition or instruction statement is aligned to a multiple of \code{\emph{alignment}} bytes, inserting padding zeros if needed. \code{\emph{alignment}} must be a power of 2 and can't be less than 4. Default \code{\emph{alignment}} is 4. Instructions and words are always at least word-aligned; the \instr{.align} statement can be used to align them to a larger boundary, or to align byte data (see below).
+
+The \instr{.align} statement is not guaranteed to work if the requested alignment is greater than the section alignment specified for the linker (see Subsection \ref{subsec:assemblercmdline}).
 
 \begin{codepar}
 \instr{.byte} \emph{token} [, \emph{token} ... ]
 \end{codepar}
 
 Inserts one or more bytes to the output code. Each \code{\emph{token}} can be either a numeric literal with a valid range of [-128; 255] or a string literal. By default, bytes are not aligned.
+
+To define a null-terminated string, the terminating null character must be inserted explicitly.
 
 \begin{codepar}
 \instr{.reserve} \emph{n}
@@ -1673,5 +1793,25 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 	Data transfer sequence & UNDEFINED \\
 	\bottomrule
 \end{ctabular}
+
+\chapter{List of changes}
+
+\section*{Version 1.1 (2019-01-11)}
+
+This release introduces a minor but technically breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.
+
+The other breaking change affects the assembly language syntax. Previously all symbols used to be public, and multiple modules could not define symbols with the same name. As of now only symbols explicitly exported using the \instr{\#export} directive are public. \instr{\#extern} directive has been replaced by \instr{\#import}.
+
+Other notable changes include:
+
+\begin{itemize}
+	\item A new instruction, \instr{lcs} (\instrname{Load Constant Short}), has been added, which loads a 21-bit sign extended constant to a register. Unlike \instr{lc}, it is encoded as a single word and takes one cycle to execute.
+	\item Optimizations in the divider unit. Division instructions (\instr{divs} and \instr{divu}) now take one fewer cycle to execute (modulo instructions are unaffected).
+	\item LXP32 assembly language now supports a new instruction alias, \instr{neg} (\instrname{Negate}), which is equivalent to \code{\instr{sub} dst, 0, src}.
+\end{itemize}
+
+\section*{Version 1.0 (2016-02-20)}
+
+Initial public release.
 
 \end{document}

@@ -96,22 +96,30 @@ void LinkableObject::replaceWord(Word rva,Word value) {
 	_code[rva++]=static_cast<Byte>(value>>24);
 }
 
-void LinkableObject::addLocalSymbol(const std::string &name,Word rva) {
+void LinkableObject::addSymbol(const std::string &name,Word rva) {
 	auto &data=symbol(name);
 	if(data.type!=Unknown) throw std::runtime_error("Symbol \""+name+"\" is already defined");
 	data.type=Local;
 	data.rva=rva;
 }
 
-void LinkableObject::addExternalSymbol(const std::string &name) {
+void LinkableObject::addImportedSymbol(const std::string &name) {
 	auto &data=symbol(name);
 	if(data.type!=Unknown) throw std::runtime_error("Symbol \""+name+"\" is already defined");
-	data.type=External;
+	data.type=Imported;
 }
 
-void LinkableObject::addReference(const std::string &symbolName,const std::string &source,int line,Word rva) {
+void LinkableObject::exportSymbol(const std::string &name) {
+	auto it=_symbols.find(name);
+	if(it==_symbols.end()||it->second.type==Unknown) throw std::runtime_error("Undefined symbol \""+name+"\"");
+	if(it->second.type==Imported) throw std::runtime_error("Symbol \""+name+"\" can't be both imported and exported at the same time");
+	if(it->second.type==Exported) throw std::runtime_error("Symbol \""+name+"\" has been already exported");
+	it->second.type=Exported;
+}
+
+void LinkableObject::addReference(const std::string &symbolName,const Reference &ref) {
 	auto &data=symbol(symbolName);
-	data.refs.push_back({source,line,rva});
+	data.refs.push_back(ref);
 }
 
 LinkableObject::SymbolData &LinkableObject::symbol(const std::string &name) {
@@ -120,7 +128,7 @@ LinkableObject::SymbolData &LinkableObject::symbol(const std::string &name) {
 
 const LinkableObject::SymbolData &LinkableObject::symbol(const std::string &name) const {
 	auto const it=_symbols.find(name);
-	if(it==_symbols.end()) throw std::runtime_error("Undefined symbol");
+	if(it==_symbols.end()) throw std::runtime_error("Undefined symbol \""+name+"\"");
 	return it->second;
 }
 
@@ -151,10 +159,18 @@ void LinkableObject::serialize(const std::string &filename) const {
 		out<<std::endl;
 		out<<"Start Symbol"<<std::endl;
 		out<<"\tName "<<Utils::urlEncode(sym.first)<<std::endl;
-		if(sym.second.type==Local) out<<"\tRVA 0x"<<Utils::hex(sym.second.rva)<<std::endl;
-		else out<<"\tExternal"<<std::endl;
+		if(sym.second.type==Local) out<<"\tType Local"<<std::endl;
+		else if(sym.second.type==Exported) out<<"\tType Exported"<<std::endl;
+		else out<<"\tType Imported"<<std::endl;
+		if(sym.second.type!=Imported) out<<"\tRVA 0x"<<Utils::hex(sym.second.rva)<<std::endl;
 		for(auto const &ref: sym.second.refs) {
-			out<<"\tRef "<<Utils::urlEncode(ref.source)<<" "<<ref.line<<" 0x"<<Utils::hex(ref.rva)<<std::endl;
+			out<<"\tRef ";
+			out<<Utils::urlEncode(ref.source)<<" ";
+			out<<ref.line<<" ";
+			out<<"0x"<<Utils::hex(ref.rva)<<" ";
+			out<<ref.offset<<" ";
+			if(ref.type==Regular) out<<"Regular"<<std::endl;
+			else if(ref.type==Short) out<<"Short"<<std::endl;
 		}
 		out<<"End Symbol"<<std::endl;
 	}
@@ -231,10 +247,15 @@ void LinkableObject::deserializeSymbol(std::istream &in) {
 			if(tokens.size()<2) throw std::runtime_error("Unexpected end of line");
 			name=Utils::urlDecode(tokens[1]);
 		}
-		else if(tokens[0]=="External") data.type=External;
+		else if(tokens[0]=="Type") {
+			if(tokens.size()<2) throw std::runtime_error("Unexpected end of line");
+			if(tokens[1]=="Local") data.type=Local;
+			else if(tokens[1]=="Exported") data.type=Exported;
+			else if(tokens[1]=="Imported") data.type=Imported;
+			else throw std::runtime_error("Bad symbol type");
+		}
 		else if(tokens[0]=="RVA") {
 			if(tokens.size()<2) throw std::runtime_error("Unexpected end of line");
-			data.type=Local;
 			data.rva=std::strtoul(tokens[1].c_str(),NULL,0);
 		}
 		else if(tokens[0]=="Ref") {
@@ -243,6 +264,10 @@ void LinkableObject::deserializeSymbol(std::istream &in) {
 			ref.source=Utils::urlDecode(tokens[1]);
 			ref.line=std::strtoul(tokens[2].c_str(),NULL,0);
 			ref.rva=std::strtoul(tokens[3].c_str(),NULL,0);
+			ref.offset=std::strtoll(tokens[4].c_str(),NULL,0);
+			if(tokens[5]=="Regular") ref.type=Regular;
+			else if(tokens[5]=="Short") ref.type=Short;
+			else throw std::runtime_error("Invalid reference type: \""+tokens[5]+"\"");
 			data.refs.push_back(std::move(ref));
 		}
 	}

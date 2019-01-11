@@ -45,11 +45,10 @@ signal request_addr: std_logic_vector(29 downto 0);
 
 signal finish: std_logic:='0';
 
-shared variable current_latency: integer:=1;
-shared variable max_latency: integer:=-1;
-shared variable total_latency: integer:=0;
-shared variable total_requests: integer:=0;
-shared variable spurious_misses: integer:=0;
+signal current_latency: integer:=1;
+signal max_latency: integer:=-1;
+signal total_latency: integer:=0;
+signal spurious_misses: integer:=0;
 
 begin
 
@@ -59,23 +58,29 @@ process is
 	variable size: integer;
 	variable addr: integer:=0;
 	variable delay: integer;
+	variable rng_state: rng_state_type;
+	variable r: integer;
+	variable total_requests: integer:=0;
 begin
 	while b<=BLOCKS loop
-		if rand(1,10)=1 then -- insert large block occasionally
-			size:=rand(1,400);
+		rand(rng_state,1,10,r);
+		if r=1 then -- insert large block occasionally
+			rand(rng_state,1,400,size);
 		else -- small block
-			size:=rand(1,32);
+			rand(rng_state,1,32,size);
 		end if;
 		
-		if rand(0,1)=0 then -- long jump
-			start:=rand(0,1024);
+		rand(rng_state,0,1,r);
+		if r=0 then -- long jump
+			rand(rng_state,0,1024,start);
 			addr:=start;
 			if VERBOSE then
 				report "Fetching block #"&integer'image(b)&" at address "&integer'image(addr)&
 					" of size "&integer'image(size);
 			end if;
 		else -- short jump
-			start:=addr+rand(0,20)-10;
+			rand(rng_state,-10,10,r);
+			start:=addr+r;
 			if start<0 then
 				start:=0;
 			end if;
@@ -93,7 +98,7 @@ begin
 			wait until rising_edge(clk_i) and lli_busy_i='0';
 			re<='0';
 			addr:=addr+1;
-			delay:=rand(0,4);
+			rand(rng_state,0,4,delay);
 			if delay>0 then
 				for i in 1 to delay loop
 					wait until rising_edge(clk_i);
@@ -147,23 +152,28 @@ begin
 	if rising_edge(clk_i) then
 		if lli_busy_i='0' then
 			if request='1' then
-				total_latency:=total_latency+current_latency;
+				total_latency<=total_latency+current_latency;
 				if current_latency>max_latency then
-					max_latency:=current_latency;
+					max_latency<=current_latency;
 				end if;
 			end if;
-			current_latency:=1;
+			current_latency<=1;
 		else
 			if lli_dat_i=(("00"&request_addr) xor xor_constant) and current_latency=1 then
-				spurious_misses:=spurious_misses+1;
+				spurious_misses<=spurious_misses+1;
 			end if;
-			current_latency:=current_latency+1;
+			current_latency<=current_latency+1;
 		end if;
 	end if;
 end process;
 
-assert not rising_edge(clk_i) or lli_busy_i='0' or request='1'
-	report "LLI busy signal asserted without a request"
-	severity failure;
+process (clk_i) is
+begin
+	if rising_edge(clk_i) then
+		assert lli_busy_i='0' or request='1'
+			report "LLI busy signal asserted without a request"
+			severity failure;
+	end if;
+end process;
 
 end architecture;

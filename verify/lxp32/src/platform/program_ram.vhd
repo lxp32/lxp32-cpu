@@ -16,6 +16,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+use work.common_pkg.all;
+
 entity program_ram is
 	generic(
 		THROTTLE: boolean
@@ -91,7 +93,7 @@ end generate;
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
-		ack_read<=wbs_cyc_i and wbs_stb_i and not wbs_we_i;
+		ack_read<=wbs_cyc_i and wbs_stb_i and not wbs_we_i and not ack_read;
 	end if;
 end process;
 
@@ -101,6 +103,16 @@ wbs_ack_o<=ack_read or ack_write;
 wbs_dat_o<=ram_a_rdata;
 
 -- Low Latency Interface (with optional pseudo-random throttling)
+
+process (clk_i) is
+begin
+	if rising_edge(clk_i) then
+		assert lli_re_i='0' or lli_adr_i(lli_adr_i'high downto 14)=X"0000"
+			report "Attempted to fetch instruction from a non-existent address 0x"&
+				hex_string(lli_adr_i&"00")
+			severity failure;
+	end if;
+end process;
 
 gen_throttling: if THROTTLE generate
 	throttle_inst: entity work.scrambler(rtl)

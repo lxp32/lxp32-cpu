@@ -19,11 +19,15 @@
  */
 
 class OutputWriter {
+	std::size_t _size=0;
 public:
 	virtual ~OutputWriter() {}
-	virtual void write(const char *data,std::size_t n)=0;
+	virtual void write(const char *data,std::size_t n);
 	virtual void abort() {}
 	void pad(std::size_t size);
+	std::size_t size() const;
+protected:
+	virtual void writeData(const char *data,std::size_t n)=0;
 };
 
 /*
@@ -35,8 +39,9 @@ class BinaryOutputWriter : public OutputWriter {
 	std::ofstream _os;
 public:
 	BinaryOutputWriter(const std::string &filename);
-	virtual void write(const char *data,std::size_t n) override;
 	virtual void abort() override;
+protected:
+	virtual void writeData(const char *data,std::size_t n) override;
 };
 
 /*
@@ -54,8 +59,9 @@ private:
 public:
 	TextOutputWriter(const std::string &filename,Format f);
 	~TextOutputWriter();
-	virtual void write(const char *data,std::size_t n) override;
 	virtual void abort() override;
+protected:
+	virtual void writeData(const char *data,std::size_t n) override;
 };
 
 #endif

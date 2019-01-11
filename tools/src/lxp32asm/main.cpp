@@ -8,6 +8,7 @@
 
 #include "assembler.h"
 #include "linker.h"
+#include "utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -25,6 +26,7 @@ struct Options {
 	
 	bool compileOnly=false;
 	std::string outputFileName;
+	std::string mapFileName;
 	std::vector<std::string> includeSearchDirs;
 	LinkableObject::Word base=0;
 	std::size_t align=4;
@@ -38,19 +40,21 @@ static void displayUsage(std::ostream &os,const char *program) {
 	os<<"    "<<program<<" [ option(s) | input file(s) ]"<<std::endl<<std::endl;
 	
 	os<<"Options:"<<std::endl;
-	os<<"    -a <align>   Section alignment (default: 4)"<<std::endl;
+	os<<"    -a <align>   Object alignment (default: 4)"<<std::endl;
 	os<<"    -b <addr>    Base address (default: 0)"<<std::endl;
 	os<<"    -c           Compile only (don't link)"<<std::endl;
 	os<<"    -f <fmt>     Output file format (see below)"<<std::endl;
 	os<<"    -h, --help   Display a short help message"<<std::endl;
 	os<<"    -i <dir>     Add directory to the list of directories used to search"<<std::endl;
 	os<<"                 for included files (multiple directories can be specified)"<<std::endl;
+	os<<"    -m <file>    Generate map file"<<std::endl;
 	os<<"    -o <file>    Output file name"<<std::endl;
 	os<<"    -s <size>    Output image size"<<std::endl;
 	os<<"    --           Do not interpret subsequent arguments as options"<<std::endl;
 	os<<std::endl;
-	os<<"Section alignment and image size must be multiples of 4."<<std::endl;
-	os<<"Base address must be a multiple of section alignment."<<std::endl;
+	os<<"Object alignment must be a power of two and can't be less than 4."<<std::endl;
+	os<<"Base address must be a multiple of object alignment."<<std::endl;
+	os<<"Image size must be a multiple of 4."<<std::endl;
 	os<<std::endl;
 	
 	os<<"Output file formats:"<<std::endl;
@@ -67,6 +71,8 @@ static bool isLinkableObject(const std::string &filename) {
 	
 	std::ifstream in(filename,std::ios_base::in);
 	if(!in) return false;
+	if(in.tellg()==static_cast<std::ifstream::pos_type>(-1))
+		return false; // the stream is not seekable
 	
 	std::vector<char> buf(idSize);
 	in.read(buf.data(),idSize);
@@ -84,7 +90,7 @@ int main(int argc,char *argv[]) try {
 	bool noMoreOptions=false;
 	
 	std::cout<<"LXP32 Platform Assembler and Linker"<<std::endl;
-	std::cout<<"Copyright (c) 2016 by Alex I. Kuznetsov"<<std::endl;
+	std::cout<<"Copyright (c) 2016-2019 by Alex I. Kuznetsov"<<std::endl;
 	
 	if(argc<=1) {
 		displayUsage(std::cout,argv[0]);
@@ -101,11 +107,12 @@ int main(int argc,char *argv[]) try {
 			}
 			try {
 				options.align=std::stoul(argv[i],nullptr,0);
-				if(options.align%4!=0||options.align==0) throw std::exception();
+				if(!Utils::isPowerOf2(options.align)) throw std::exception();
+				if(options.align<4) throw std::exception();
 				alignmentSpecified=true;
 			}
 			catch(std::exception &) {
-				throw std::runtime_error("Invalid section alignment");
+				throw std::runtime_error("Invalid object alignment");
 			}
 		}
 		else if(!strcmp(argv[i],"-b")) {
@@ -115,7 +122,6 @@ int main(int argc,char *argv[]) try {
 			}
 			try {
 				options.base=std::stoul(argv[i],nullptr,0);
-				//if(options.base%4!=0) throw std::exception();
 				baseSpecified=true;
 			}
 			catch(std::exception &) {
@@ -148,6 +154,13 @@ int main(int argc,char *argv[]) try {
 			}
 			options.includeSearchDirs.push_back(argv[i]);
 		}
+		else if(!strcmp(argv[i],"-m")) {
+			if(++i==argc) {
+				displayUsage(std::cerr,argv[0]);
+				return EXIT_FAILURE;
+			}
+			options.mapFileName=argv[i];
+		}
 		else if(!strcmp(argv[i],"-o")) {
 			if(++i==argc) {
 				displayUsage(std::cerr,argv[0]);
@@ -172,17 +185,19 @@ int main(int argc,char *argv[]) try {
 	}
 	
 	if(options.base%options.align!=0)
-		throw std::runtime_error("Base address must be a multiple of section alignment");
+		throw std::runtime_error("Base address must be a multiple of object alignment");
 	
 	if(options.compileOnly) {
 		if(alignmentSpecified)
-			std::cerr<<"Warning: Section alignment is ignored in compile-only mode"<<std::endl;
+			std::cerr<<"Warning: Object alignment is ignored in compile-only mode"<<std::endl;
 		if(baseSpecified)
 			std::cerr<<"Warning: Base address is ignored in compile-only mode"<<std::endl;
 		if(formatSpecified)
 			std::cerr<<"Warning: Output format is ignored in compile-only mode"<<std::endl;
 		if(options.imageSize>0)
 			std::cerr<<"Warning: Image size is ignored in compile-only mode"<<std::endl;
+		if(!options.mapFileName.empty())
+			std::cerr<<"Warning: Map file is not generated in compile-only mode"<<std::endl;
 	}
 	
 	if(inputFiles.empty())
@@ -277,6 +292,14 @@ int main(int argc,char *argv[]) try {
 		writer->abort();
 		std::cerr<<"Linker error: "<<ex.what()<<std::endl;
 		return EXIT_FAILURE;
+	}
+	
+	std::cout<<writer->size()/4<<" words written"<<std::endl;
+	
+	if(!options.mapFileName.empty()) {
+		std::ofstream out(options.mapFileName);
+		if(!out) throw std::runtime_error("Cannot open file \""+options.mapFileName+"\" for writing");
+		linker.generateMap(out);
 	}
 }
 catch(std::exception &ex) {

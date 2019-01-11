@@ -30,6 +30,7 @@ void Assembler::processFile(const std::string &filename) {
 	_state=Initial;
 	_currentFileName=filename;
 	processFileRecursive(filename);
+
 // Examine symbol table
 	for(auto const &sym: _obj.symbols()) {
 		if(sym.second.type==LinkableObject::Unknown&&!sym.second.refs.empty()) {
@@ -40,6 +41,8 @@ void Assembler::processFile(const std::string &filename) {
 			throw std::runtime_error(msg.str());
 		}
 	}
+	
+	for(auto const &sym: _exportedSymbols) _obj.exportSymbol(sym);
 }
 
 void Assembler::processFileRecursive(const std::string &filename) {
@@ -63,16 +66,14 @@ void Assembler::processFileRecursive(const std::string &filename) {
 		_line++;
 	}
 	
+	if(_state!=Initial) throw std::runtime_error("Unexpected end of file");
+	
 	_line=savedLine;
 	_state=savedState;
 	_currentFileName=savedFileName;
 	
-	for(auto const &label: _currentLabels) {
-		_obj.addLocalSymbol(label,
-			static_cast<LinkableObject::Word>(_obj.codeSize()));
-	}
-	
-	_currentLabels.clear();
+	if(!_currentLabels.empty())
+		throw std::runtime_error("Symbol definition must be followed by an instruction or data definition statement");
 }
 
 void Assembler::addIncludeSearchDir(const std::string &dir) {
@@ -127,7 +128,7 @@ Assembler::TokenList Assembler::tokenize(const std::string &str) {
 			else throw std::runtime_error(std::string("Unexpected character: \"")+ch+"\"");
 			break;
 		case Word:
-			if(std::isalnum(ch)||ch=='_'||ch=='@') word+=ch;
+			if(std::isalnum(ch)||ch=='_'||ch=='@'||ch=='+'||ch=='-') word+=ch;
 			else {
 				i--;
 				_state=Initial;
@@ -206,7 +207,12 @@ void Assembler::expand(TokenList &list) {
 // Perform macro substitution
 	for(auto &token: list) {
 		auto it=_macros.find(token);
-		if(it==_macros.end()) newlist.push_back(std::move(token));
+// Note: we don't expand a macro identifier in the #define statement
+// since that would lead to counter-intuitive results
+		if(it==_macros.end()||
+			(newlist.size()==1&&newlist[0]=="#define")||
+			(newlist.size()==3&&newlist[1]==":"&&newlist[2]=="#define"))
+				newlist.push_back(std::move(token));
 		else for(auto const &replace: it->second) newlist.push_back(replace);
 	}
 	list=std::move(newlist);
@@ -233,7 +239,7 @@ void Assembler::elaborate(TokenList &list) {
 		else rva=elaborateInstruction(list);
 		
 		for(auto const &label: _currentLabels) {
-			_obj.addLocalSymbol(label,rva);
+			_obj.addSymbol(label,rva);
 		}
 		_currentLabels.clear();
 	}
@@ -243,14 +249,23 @@ void Assembler::elaborateDirective(TokenList &list) {
 	assert(!list.empty());
 	
 	if(list[0]=="#define") {
-		if(list.size()<3) throw std::runtime_error("Wrong number of tokens in the directive");
-		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
+		if(list.size()<3)
+			throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_macros.find(list[1])!=_macros.end())
+			throw std::runtime_error("Macro \""+list[1]+"\" has been already defined");
+		if(!validateIdentifier(list[1]))
+			throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
 		_macros.emplace(list[1],TokenList(list.begin()+2,list.end()));
 	}
-	else if(list[0]=="#extern") {
+	else if(list[0]=="#export") {
 		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
 		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
-		_obj.addExternalSymbol(list[1]);
+		_exportedSymbols.push_back(list[1]);
+	}
+	else if(list[0]=="#import") {
+		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
+		_obj.addImportedSymbol(list[1]);
 	}
 	else if(list[0]=="#include") {
 		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
@@ -285,6 +300,8 @@ LinkableObject::Word Assembler::elaborateDataDefinition(TokenList &list) {
 		if(list.size()>2) throw std::runtime_error("Unexpected token: \""+list[2]+"\"");
 		std::size_t align=4;
 		if(list.size()>1) align=static_cast<std::size_t>(numericLiteral(list[1]));
+		if(!Utils::isPowerOf2(align)) throw std::runtime_error("Alignment must be a power of 2");
+		if(align<4) throw std::runtime_error("Alignment must be at least 4");
 		rva=_obj.addPadding(align);
 	}
 	else if(list[0]==".reserve") {
@@ -351,6 +368,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="jmp") encodeJmp(list);
 	else if(list[0]=="iret") encodeIret(list);
 	else if(list[0]=="lc") encodeLc(list);
+	else if(list[0]=="lcs") encodeLcs(list);
 	else if(list[0]=="lsb") encodeLsb(list);
 	else if(list[0]=="lub") encodeLub(list);
 	else if(list[0]=="lw") encodeLw(list);
@@ -358,6 +376,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="modu") encodeModu(list);
 	else if(list[0]=="mov") encodeMov(list);
 	else if(list[0]=="mul") encodeMul(list);
+	else if(list[0]=="neg") encodeNeg(list);
 	else if(list[0]=="nop") encodeNop(list);
 	else if(list[0]=="not") encodeNot(list);
 	else if(list[0]=="or") encodeOr(list);
@@ -456,7 +475,7 @@ std::vector<Assembler::Operand> Assembler::getOperands(const TokenList &list) {
 				arglist.push_back(std::move(a));
 			}
 			else if(list[i].size()==3&&list[i].substr(0,2)=="iv"&&
-				std::isdigit(list[i][2])) // interrupt vector
+				list[i][2]>='0'&&list[i][2]<='7') // interrupt vector
 			{
 				a.type=Operand::Register;
 				a.reg=240+(list[i][2]-'0');
@@ -598,11 +617,6 @@ void Assembler::encodeCjmpxx(const TokenList &list) {
 void Assembler::encodeDivs(const TokenList &list) {
 	auto args=getOperands(list);
 	if(args.size()!=3) throw std::runtime_error("divs instruction requires 3 operands");
-	if(args[2].type==Operand::NumericLiteral&&args[2].i==0) {
-		std::cerr<<currentFileName()<<":"<<line()<<": ";
-		std::cerr<<"Warning: Division by zero"<<std::endl;
-	}
-	
 	LinkableObject::Word w=0x54000000;
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);
@@ -613,11 +627,6 @@ void Assembler::encodeDivs(const TokenList &list) {
 void Assembler::encodeDivu(const TokenList &list) {
 	auto args=getOperands(list);
 	if(args.size()!=3) throw std::runtime_error("divu instruction requires 3 operands");
-	if(args[2].type==Operand::NumericLiteral&&args[2].i==0) {
-		std::cerr<<currentFileName()<<":"<<line()<<": ";
-		std::cerr<<"Warning: Division by zero"<<std::endl;
-	}
-	
 	LinkableObject::Word w=0x50000000;
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);
@@ -656,11 +665,43 @@ void Assembler::encodeLc(const TokenList &list) {
 	_obj.addWord(w);
 	
 	if(args[1].type==Operand::Identifier) {
-		auto symRva=_obj.addWord(static_cast<LinkableObject::Word>(args[1].i));
-		_obj.addReference(args[1].str,currentFileName(),line(),symRva);
+		LinkableObject::Reference ref;
+		ref.source=currentFileName();
+		ref.line=line();
+		ref.rva=_obj.addWord(0);
+		ref.offset=args[1].i;
+		ref.type=LinkableObject::Regular;
+		_obj.addReference(args[1].str,ref);
 	}
 	else if(args[1].type==Operand::NumericLiteral) {
 		_obj.addWord(static_cast<LinkableObject::Word>(args[1].i));
+	}
+	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
+}
+
+void Assembler::encodeLcs(const TokenList &list) {
+	auto args=getOperands(list);
+	if(args.size()!=2) throw std::runtime_error("lcs instruction requires 2 operands");
+	
+	LinkableObject::Word w=0xA0000000;
+	encodeDstOperand(w,args[0]);
+	
+	if(args[1].type==Operand::NumericLiteral) {
+		if((args[1].i<-1048576||args[1].i>1048575)&&(args[1].i<0xFFF00000||args[1].i>0xFFFFFFFF))
+			throw std::runtime_error("\""+args[1].str+"\": out of range");
+		auto c=static_cast<LinkableObject::Word>(args[1].i)&0x1FFFFF;
+		w|=(c&0xFFFF);
+		w|=((c<<8)&0x1F000000);
+		_obj.addWord(w);
+	}
+	else if(args[1].type==Operand::Identifier) {
+		LinkableObject::Reference ref;
+		ref.source=currentFileName();
+		ref.line=line();
+		ref.rva=_obj.addWord(w);
+		ref.offset=args[1].i;
+		ref.type=LinkableObject::Short;
+		_obj.addReference(args[1].str,ref);
 	}
 	else throw std::runtime_error("\""+args[1].str+"\": bad argument");
 }
@@ -732,6 +773,16 @@ void Assembler::encodeMul(const TokenList &list) {
 	encodeDstOperand(w,args[0]);
 	encodeRd1Operand(w,args[1]);
 	encodeRd2Operand(w,args[2]);
+	_obj.addWord(w);
+}
+
+void Assembler::encodeNeg(const TokenList &list) {
+// Note: "neg" is not a real instruction, but an alias for "sub dst, 0, src"
+	auto args=getOperands(list);
+	if(args.size()!=2) throw std::runtime_error("neg instruction requires 2 operands");
+	LinkableObject::Word w=0x44000000;
+	encodeDstOperand(w,args[0]);
+	encodeRd2Operand(w,args[1]);
 	_obj.addWord(w);
 }
 

@@ -26,24 +26,12 @@ int Disassembler::Operand::value() const {
 	return _value;
 }
 
-std::string Disassembler::Operand::str() const {
-	if(_type==Register) {
-		if(_value>=240&&_value<=247) return "iv"+std::to_string(_value-240);
-		else if(_value==252) return "cr";
-		else if(_value==253) return "irp";
-		else if(_value==254) return "rp";
-		else if(_value==255) return "sp";
-		else return "r"+std::to_string(_value);
-	}
-	else return std::to_string(_value);
-}
-
 /*
  * Disassembler class members
  */
 
 Disassembler::Disassembler(std::istream &is,std::ostream &os):
-	_is(is),_os(os),_fmt(Bin),_lineNumber(0),_pos(0) {}
+	_is(is),_os(os),_fmt(Bin),_preferAliases(true),_lineNumber(0),_pos(0) {}
 
 void Disassembler::setFormat(Format fmt) {
 	_fmt=fmt;
@@ -51,6 +39,10 @@ void Disassembler::setFormat(Format fmt) {
 
 void Disassembler::setBase(Word base) {
 	_pos=base;
+}
+
+void Disassembler::setPreferAliases(bool b) {
+	_preferAliases=b;
 }
 
 void Disassembler::dump() {
@@ -138,6 +130,7 @@ void Disassembler::dump() {
 			break;
 		default:
 			if((opcode>>4)==0x03) instruction=decodeCjmpxx(word);
+			else if((opcode>>3)==0x05) instruction=decodeLcs(word);
 			else instruction=decodeWord(word);
 		}
 		
@@ -183,6 +176,19 @@ bool Disassembler::getWord(Word &w) {
 	return true;
 }
 
+std::string Disassembler::str(const Operand &op) {
+	if(op.type()==Operand::Register) {
+		if(!_preferAliases) return "r"+std::to_string(op.value());
+		else if(op.value()>=240&&op.value()<=247) return "iv"+std::to_string(op.value()-240);
+		else if(op.value()==252) return "cr";
+		else if(op.value()==253) return "irp";
+		else if(op.value()==254) return "rp";
+		else if(op.value()==255) return "sp";
+		else return "r"+std::to_string(op.value());
+	}
+	else return std::to_string(op.value());
+}
+
 Disassembler::Operand Disassembler::decodeRd1Operand(Word w) {
 	int value=(w>>8)&0xFF;
 	if(w&0x02000000) return Operand(Operand::Register,value);
@@ -211,7 +217,7 @@ std::string Disassembler::decodeSimpleInstruction(const std::string &op,Word w) 
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
-	oss<<op<<' '<<dst.str()<<", "<<rd1.str()<<", "<<rd2.str();
+	oss<<op<<' '<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
 	return oss.str();
 }
 
@@ -222,10 +228,10 @@ std::string Disassembler::decodeAdd(Word w) {
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
-	if(rd2.type()==Operand::Direct&&rd2.value()==0)
-		oss<<"mov "<<dst.str()<<", "<<rd1.str();
+	if(rd2.type()==Operand::Direct&&rd2.value()==0&&_preferAliases)
+		oss<<"mov "<<str(dst)<<", "<<str(rd1);
 	else
-		oss<<"add "<<dst.str()<<", "<<rd1.str()<<", "<<rd2.str();
+		oss<<"add "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
 	
 	return oss.str();
 }
@@ -243,7 +249,7 @@ std::string Disassembler::decodeCall(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	return "call "+rd1.str();
+	return "call "+str(rd1);
 }
 
 std::string Disassembler::decodeCjmpxx(Word w) {
@@ -302,9 +308,9 @@ std::string Disassembler::decodeJmp(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	if(rd1.value()==253) return "iret";
-	if(rd1.value()==254) return "ret";
-	return "jmp "+rd1.str();
+	if(rd1.value()==253&&_preferAliases) return "iret";
+	if(rd1.value()==254&&_preferAliases) return "ret";
+	return "jmp "+str(rd1);
 }
 
 std::string Disassembler::decodeLc(Word w,bool &valid,Word &operand) {
@@ -321,7 +327,15 @@ std::string Disassembler::decodeLc(Word w,bool &valid,Word &operand) {
 	if(!b) return decodeWord(w);
 	
 	valid=true;
-	return "lc "+dst.str()+", 0x"+hex(operand);
+	return "lc "+str(dst)+", 0x"+hex(operand);
+}
+
+std::string Disassembler::decodeLcs(Word w) {
+	auto dst=decodeDstOperand(w);
+	auto operand=w&0xFFFF;
+	operand|=(w>>8)&0x001F0000;
+	if(operand&0x00100000) operand|=0xFFE00000;
+	return "lcs "+str(dst)+", 0x"+hex(operand);
 }
 
 std::string Disassembler::decodeLsb(Word w) {
@@ -334,7 +348,7 @@ std::string Disassembler::decodeLsb(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	return "lsb "+dst.str()+", "+rd1.str();
+	return "lsb "+str(dst)+", "+str(rd1);
 }
 
 std::string Disassembler::decodeLub(Word w) {
@@ -347,7 +361,7 @@ std::string Disassembler::decodeLub(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	return "lub "+dst.str()+", "+rd1.str();
+	return "lub "+str(dst)+", "+str(rd1);
 }
 
 std::string Disassembler::decodeLw(Word w) {
@@ -360,7 +374,7 @@ std::string Disassembler::decodeLw(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
 	
-	return "lw "+dst.str()+", "+rd1.str();
+	return "lw "+str(dst)+", "+str(rd1);
 }
 
 std::string Disassembler::decodeMods(Word w) {
@@ -398,7 +412,7 @@ std::string Disassembler::decodeSb(Word w) {
 	if(dst.value()!=0) return decodeWord(w);
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	
-	return "sb "+rd1.str()+", "+rd2.str();
+	return "sb "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeSl(Word w) {
@@ -420,7 +434,18 @@ std::string Disassembler::decodeSru(Word w) {
 }
 
 std::string Disassembler::decodeSub(Word w) {
-	return decodeSimpleInstruction("sub",w);
+	std::ostringstream oss;
+	
+	auto dst=decodeDstOperand(w);
+	auto rd1=decodeRd1Operand(w);
+	auto rd2=decodeRd2Operand(w);
+	
+	if(rd1.type()==Operand::Direct&&rd1.value()==0&&_preferAliases)
+		oss<<"neg "<<str(dst)<<", "<<str(rd2);
+	else
+		oss<<"sub "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
+	
+	return oss.str();
 }
 
 std::string Disassembler::decodeSw(Word w) {
@@ -433,7 +458,7 @@ std::string Disassembler::decodeSw(Word w) {
 	if(dst.value()!=0) return decodeWord(w);
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	
-	return "sw "+rd1.str()+", "+rd2.str();
+	return "sw "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeXor(Word w) {
@@ -443,10 +468,10 @@ std::string Disassembler::decodeXor(Word w) {
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
-	if(rd2.type()==Operand::Direct&&rd2.value()==-1)
-		oss<<"not "<<dst.str()<<", "<<rd1.str();
+	if(rd2.type()==Operand::Direct&&rd2.value()==-1&&_preferAliases)
+		oss<<"not "<<str(dst)<<", "<<str(rd1);
 	else
-		oss<<"xor "<<dst.str()<<", "<<rd1.str()<<", "<<rd2.str();
+		oss<<"xor "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
 	
 	return oss.str();
 }

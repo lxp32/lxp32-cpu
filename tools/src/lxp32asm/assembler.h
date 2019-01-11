@@ -41,6 +41,7 @@ class Assembler {
 	std::vector<std::string> _currentLabels;
 	std::string _currentFileName;
 	std::vector<std::string> _includeSearchDirs;
+	std::vector<std::string> _exportedSymbols;
 public:
 	void processFile(const std::string &filename);
 	
@@ -80,6 +81,7 @@ private:
 	void encodeJmp(const TokenList &list);
 	void encodeIret(const TokenList &list);
 	void encodeLc(const TokenList &list);
+	void encodeLcs(const TokenList &list);
 	void encodeLsb(const TokenList &list);
 	void encodeLub(const TokenList &list);
 	void encodeLw(const TokenList &list);
@@ -87,6 +89,7 @@ private:
 	void encodeModu(const TokenList &list);
 	void encodeMov(const TokenList &list);
 	void encodeMul(const TokenList &list);
+	void encodeNeg(const TokenList &list);
 	void encodeNop(const TokenList &list);
 	void encodeNot(const TokenList &list);
 	void encodeOr(const TokenList &list);

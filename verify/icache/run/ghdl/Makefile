@@ -41,7 +41,7 @@ $(WAVE_OUT): $(WAVE_VCD)
 $(WAVE_VCD): compile.stamp
 	ghdl -r $(GHDL_FLAGS) $(TB_MOD) --vcd=$(WAVE_VCD)
 
-compile.stamp: $(LXP32_RTL) $(TB_SRC)
-	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(TB_SRC)
+compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
+	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
 	ghdl -e $(GHDL_FLAGS) $(TB_MOD)
 	echo > compile.stamp

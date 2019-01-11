@@ -47,6 +47,9 @@ architecture rtl of dbus_monitor is
 signal prbs: std_logic;
 signal cycle: std_logic:='0';
 
+signal cyc_ff: std_logic:='0';
+signal ack_ff: std_logic:='0';
+
 begin
 
 -- Manage throttling
@@ -88,8 +91,27 @@ wbm_sel_o<=wbs_sel_i;
 wbm_adr_o<=wbs_adr_i;
 wbm_dat_o<=wbs_dat_i;
 
-assert not rising_edge(clk_i) or wbm_ack_i='0' or (wbs_cyc_i and (not prbs or cycle))='1'
-	report "DBUS error: ACK asserted without CYC"
-	severity failure;
+-- Check handshake correctness
+
+process (clk_i) is
+begin
+	if rising_edge(clk_i) then
+		if rst_i='1' then
+			cyc_ff<='0';
+			ack_ff<='0';
+		else
+			cyc_ff<=wbs_cyc_i;
+			ack_ff<=wbm_ack_i;
+			
+			assert wbm_ack_i='0' or (wbs_cyc_i and (not prbs or cycle))='1'
+				report "DBUS error: ACK asserted without CYC"
+				severity failure;
+			
+			assert not (wbs_cyc_i='0' and cyc_ff='1' and ack_ff/='1')
+				report "DBUS error: cycle terminated prematurely"
+				severity failure;
+		end if;
+	end if;
+end process;
 
 end architecture;

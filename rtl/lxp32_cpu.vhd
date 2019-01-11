@@ -14,7 +14,7 @@ entity lxp32_cpu is
 		DBUS_RMW: boolean;
 		DIVIDER_EN: boolean;
 		MUL_ARCH: string;
-		START_ADDR: std_logic_vector(29 downto 0)
+		START_ADDR: std_logic_vector(31 downto 0)
 	);
 	port(
 		clk_i: in std_logic;
@@ -42,6 +42,7 @@ architecture rtl of lxp32_cpu is
 
 signal fetch_word: std_logic_vector(31 downto 0);
 signal fetch_next_ip: std_logic_vector(29 downto 0);
+signal fetch_current_ip: std_logic_vector(29 downto 0);
 signal fetch_valid: std_logic;
 signal fetch_jump_ready: std_logic;
 
@@ -61,7 +62,6 @@ signal decode_cmd_cmp: std_logic;
 signal decode_cmd_jump: std_logic;
 signal decode_cmd_negate_op2: std_logic;
 signal decode_cmd_and: std_logic;
-signal decode_cmd_or: std_logic;
 signal decode_cmd_xor: std_logic;
 signal decode_cmd_shift: std_logic;
 signal decode_cmd_shift_right: std_logic;
@@ -89,8 +89,6 @@ signal interrupt_valid: std_logic;
 signal interrupt_vector: std_logic_vector(2 downto 0);
 signal interrupt_ready: std_logic;
 signal interrupt_return: std_logic;
-signal interrupts_enabled: std_logic_vector(7 downto 0);
-signal interrupts_blocked: std_logic_vector(7 downto 0);
 
 begin
 
@@ -109,6 +107,7 @@ fetch_inst: entity work.lxp32_fetch(rtl)
 		
 		word_o=>fetch_word,
 		next_ip_o=>fetch_next_ip,
+		current_ip_o=>fetch_current_ip,
 		valid_o=>fetch_valid,
 		ready_i=>decode_ready,
 		
@@ -124,6 +123,7 @@ decode_inst: entity work.lxp32_decode(rtl)
 		
 		word_i=>fetch_word,
 		next_ip_i=>fetch_next_ip,
+		current_ip_i=>fetch_current_ip,
 		valid_i=>fetch_valid,
 		jump_valid_i=>execute_jump_valid,
 		ready_o=>decode_ready,
@@ -153,7 +153,6 @@ decode_inst: entity work.lxp32_decode(rtl)
 		cmd_jump_o=>decode_cmd_jump,
 		cmd_negate_op2_o=>decode_cmd_negate_op2,
 		cmd_and_o=>decode_cmd_and,
-		cmd_or_o=>decode_cmd_or,
 		cmd_xor_o=>decode_cmd_xor,
 		cmd_shift_o=>decode_cmd_shift,
 		cmd_shift_right_o=>decode_cmd_shift_right,
@@ -189,7 +188,6 @@ execute_inst: entity work.lxp32_execute(rtl)
 		cmd_jump_i=>decode_cmd_jump,
 		cmd_negate_op2_i=>decode_cmd_negate_op2,
 		cmd_and_i=>decode_cmd_and,
-		cmd_or_i=>decode_cmd_or,
 		cmd_xor_i=>decode_cmd_xor,
 		cmd_shift_i=>decode_cmd_shift,
 		cmd_shift_right_i=>decode_cmd_shift_right,
@@ -221,9 +219,7 @@ execute_inst: entity work.lxp32_execute(rtl)
 		jump_dst_o=>execute_jump_dst,
 		jump_ready_i=>fetch_jump_ready,
 		
-		interrupt_return_o=>interrupt_return,
-		interrupts_enabled_o=>interrupts_enabled,
-		interrupts_blocked_o=>interrupts_blocked
+		interrupt_return_o=>interrupt_return
 	);
 
 scratchpad_inst: entity work.lxp32_scratchpad(rtl)
@@ -247,13 +243,14 @@ interrupt_mux_inst: entity work.lxp32_interrupt_mux(rtl)
 		
 		irq_i=>irq_i,
 		
-		interrupts_enabled_i=>interrupts_enabled,
-		interrupts_blocked_i=>interrupts_blocked,
-		
 		interrupt_valid_o=>interrupt_valid,
 		interrupt_vector_o=>interrupt_vector,
 		interrupt_ready_i=>interrupt_ready,
-		interrupt_return_i=>interrupt_return
+		interrupt_return_i=>interrupt_return,
+		
+		sp_waddr_i=>sp_waddr,
+		sp_we_i=>sp_we,
+		sp_wdata_i=>sp_wdata
 	);
 
 end architecture;

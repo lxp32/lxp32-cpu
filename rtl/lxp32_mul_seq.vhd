@@ -44,20 +44,27 @@ begin
 		if rst_i='1' then
 			ceo<='0';
 			cnt<=0;
+			reg1<=(others=>'-');
+			reg2<=(others=>'-');
+			acc_sum<=(others=>'-');
 		else
-			ceo<='0';
+			if cnt=1 then
+				ceo<='1';
+			else
+				ceo<='0';
+			end if;
+			
 			if ce_i='1' then
 				cnt<=32;
 				reg1<=unsigned(op1_i);
 				reg2<=unsigned(op2_i);
 				acc_sum<=(others=>'0');
-			elsif cnt>0 then
+			else
 				acc_sum<=acc_sum+pp;
 				reg1<=reg1(reg1'high-1 downto 0)&"0";
 				reg2<="0"&reg2(reg2'high downto 1);
-				cnt<=cnt-1;
-				if cnt=1 then
-					ceo<='1';
+				if cnt>0 then
+					cnt<=cnt-1;
 				end if;
 			end if;
 		end if;

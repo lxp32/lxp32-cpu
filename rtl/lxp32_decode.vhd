@@ -19,6 +19,7 @@ entity lxp32_decode is
 		
 		word_i: in std_logic_vector(31 downto 0);
 		next_ip_i: in std_logic_vector(29 downto 0);
+		current_ip_i: in std_logic_vector(29 downto 0);
 		valid_i: in std_logic;
 		jump_valid_i: in std_logic;
 		ready_o: out std_logic;
@@ -48,7 +49,6 @@ entity lxp32_decode is
 		cmd_jump_o: out std_logic;
 		cmd_negate_op2_o: out std_logic;
 		cmd_and_o: out std_logic;
-		cmd_or_o: out std_logic;
 		cmd_xor_o: out std_logic;
 		cmd_shift_o: out std_logic;
 		cmd_shift_right_o: out std_logic;
@@ -77,8 +77,6 @@ signal t2: std_logic;
 signal destination: std_logic_vector(7 downto 0);
 signal rd1: std_logic_vector(7 downto 0);
 signal rd2: std_logic_vector(7 downto 0);
-
-signal current_ip: unsigned(next_ip_i'range);
 
 -- Signals related to pipeline control
 
@@ -119,8 +117,6 @@ rd2<=word_i(7 downto 0);
 downstream_busy<=valid_out and not ready_i;
 busy<=downstream_busy or self_busy;
 
-current_ip<=unsigned(next_ip_i)-1;
-
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
@@ -129,6 +125,29 @@ begin
 			self_busy<='0';
 			state<=Regular;
 			interrupt_ready<='0';
+			cmd_loadop3_o<='-';
+			cmd_signed_o<='-';
+			cmd_dbus_o<='-';
+			cmd_dbus_store_o<='-';
+			cmd_dbus_byte_o<='-';
+			cmd_addsub_o<='-';
+			cmd_negate_op2_o<='-';
+			cmd_mul_o<='-';
+			cmd_div_o<='-';
+			cmd_div_mod_o<='-';
+			cmd_cmp_o<='-';
+			cmd_jump_o<='-';
+			cmd_and_o<='-';
+			cmd_xor_o<='-';
+			cmd_shift_o<='-';
+			cmd_shift_right_o<='-';
+			rd1_select<='-';
+			rd1_direct<=(others=>'-');
+			rd2_select<='-';
+			rd2_direct<=(others=>'-');
+			op3_o<=(others=>'-');
+			jump_type_o<=(others=>'-');
+			dst_out<=(others=>'-');
 		else
 			interrupt_ready<='0';
 			if jump_valid_i='1' then
@@ -136,34 +155,36 @@ begin
 				self_busy<='0';
 				state<=Regular;
 			elsif downstream_busy='0' then
+				op3_o<=(others=>'-');
+				rd1_direct<=std_logic_vector(resize(signed(rd1),rd1_direct'length));
+				rd2_direct<=std_logic_vector(resize(signed(rd2),rd2_direct'length));
+				
+				cmd_signed_o<=opcode(0);
+				cmd_div_mod_o<=opcode(1);
+				cmd_shift_right_o<=opcode(1);
+				cmd_dbus_byte_o<=opcode(1);
+				cmd_dbus_store_o<=opcode(2);
+				
 				case state is
 				when Regular =>
 					cmd_loadop3_o<='0';
-					cmd_signed_o<='0';
 					cmd_dbus_o<='0';
-					cmd_dbus_store_o<='0';
-					cmd_dbus_byte_o<='0';
 					cmd_addsub_o<='0';
 					cmd_negate_op2_o<='0';
 					cmd_mul_o<='0';
 					cmd_div_o<='0';
-					cmd_div_mod_o<='0';
 					cmd_cmp_o<='0';
 					cmd_jump_o<='0';
 					cmd_and_o<='0';
-					cmd_or_o<='0';
 					cmd_xor_o<='0';
 					cmd_shift_o<='0';
-					cmd_shift_right_o<='0';
-					
-					op3_o<=(others=>'-');
 					
 					jump_type_o<=opcode(3 downto 0);
 					
 					if interrupt_valid_i='1' and valid_i='1' then
 						cmd_jump_o<='1';
 						cmd_loadop3_o<='1';
-						op3_o<=std_logic_vector(current_ip)&"01"; -- LSB indicates interrupt return
+						op3_o<=current_ip_i&"01"; -- LSB indicates interrupt return
 						dst_out<=X"FD"; -- interrupt return pointer
 						rd1_select<='1';
 						rd2_select<='0';
@@ -172,18 +193,16 @@ begin
 						self_busy<='1';
 						state<=ContinueInterrupt;
 					else
-						if opcode="000001" then
+						if opcode(5 downto 3)="101" or opcode="000001" then -- lc or lcs
 							cmd_loadop3_o<='1';
+-- Setting op3_o here only affects the lcs instruction
+							op3_o<=std_logic_vector(resize(signed(opcode(2 downto 0)&
+								t1&t2&rd1&rd2),op3_o'length));
 						end if;
-						
-						cmd_signed_o<=opcode(0);
 						
 						if opcode(5 downto 3)="001" then
 							cmd_dbus_o<='1';
 						end if;
-						
-						cmd_dbus_store_o<=opcode(2);
-						cmd_dbus_byte_o<=opcode(1);
 						
 						if opcode(5 downto 1)="01000" then
 							cmd_addsub_o<='1';
@@ -199,27 +218,20 @@ begin
 							cmd_div_o<='1';
 						end if;
 						
-						cmd_div_mod_o<=opcode(1);
-						
-						if opcode="100000" then
+						if opcode(5 downto 3)="100" then -- jump or call
 							cmd_jump_o<='1';
-						end if;
-						
-						if opcode="100001" then
-							cmd_jump_o<='1';
-							cmd_loadop3_o<='1';
+							cmd_loadop3_o<=opcode(0);
+-- Setting op3_o here only affects the call instruction
 							op3_o<=next_ip_i&"00";
 						end if;
 						
-						if opcode="011000" then
+						-- Note: (a or b) = (a and b) or (a xor b)
+						
+						if opcode(5 downto 1)="01100" then
 							cmd_and_o<='1';
 						end if;
 						
-						if opcode="011001" then
-							cmd_or_o<='1';
-						end if;
-						
-						if opcode="011010" then
+						if opcode="011010" or opcode="011001" then
 							cmd_xor_o<='1';
 						end if;
 						
@@ -227,17 +239,13 @@ begin
 							cmd_shift_o<='1';
 						end if;
 						
-						cmd_shift_right_o<=opcode(1);
-						
 						if opcode(5 downto 4)="11" then
 							cmd_cmp_o<='1';
 							cmd_negate_op2_o<='1';
 						end if;
 						
 						rd1_select<=t1;
-						rd1_direct<=std_logic_vector(resize(signed(rd1),rd1_direct'length));
 						rd2_select<=t2;
-						rd2_direct<=std_logic_vector(resize(signed(rd2),rd2_direct'length));
 						
 						dst_out<=destination;
 						

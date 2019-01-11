@@ -4,10 +4,6 @@
 -- Part of the LXP32 verification environment
 --
 -- Copyright (c) 2016 by Alex I. Kuznetsov
---
--- Note: the "rand" function declared in this package implements
--- a linear congruent pseudo-random number generator as defined in
--- the ISO/IEC 9899:1999 standard.
 ---------------------------------------------------------------------
 
 library ieee;
@@ -15,10 +11,16 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package common_pkg is
-	shared variable rand_state: unsigned(31 downto 0):=to_unsigned(1,32);
+	type rng_state_type is record
+		seed1: positive;
+		seed2: positive;
+	end record;
+
+	-- Generate a pseudo-random value of integer type from [a;b] range
+	-- Output is stored in x
+	procedure rand(variable st: inout rng_state_type; a,b: integer; variable x: out integer);
 	
-	impure function rand return integer;
-	impure function rand(a: integer; b: integer) return integer;
-	
+	-- Convert std_logic_vector to a hexadecimal string (similar to
+	-- the "to_hstring" function from VHDL-2008
 	function hex_string(x: std_logic_vector) return string;
 end package;

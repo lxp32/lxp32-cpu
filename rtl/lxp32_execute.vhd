@@ -34,7 +34,6 @@ entity lxp32_execute is
 		cmd_jump_i: in std_logic;
 		cmd_negate_op2_i: in std_logic;
 		cmd_and_i: in std_logic;
-		cmd_or_i: in std_logic;
 		cmd_xor_i: in std_logic;
 		cmd_shift_i: in std_logic;
 		cmd_shift_right_i: in std_logic;
@@ -66,9 +65,7 @@ entity lxp32_execute is
 		jump_dst_o: out std_logic_vector(29 downto 0);
 		jump_ready_i: in std_logic;
 		
-		interrupt_return_o: out std_logic;
-		interrupts_enabled_o: out std_logic_vector(7 downto 0);
-		interrupts_blocked_o: out std_logic_vector(7 downto 0)
+		interrupt_return_o: out std_logic
 	);
 end entity;
 
@@ -116,8 +113,6 @@ signal dst_reg: std_logic_vector(7 downto 0);
 -- Signals related to interrupt handling
 
 signal interrupt_return: std_logic:='0';
-signal interrupts_enabled: std_logic_vector(7 downto 0):=(others=>'0');
-signal interrupts_blocked: std_logic_vector(7 downto 0):=(others=>'0');
 
 begin
 
@@ -148,7 +143,6 @@ alu_inst: entity work.lxp32_alu(rtl)
 		cmd_cmp_i=>cmd_cmp_i,
 		cmd_negate_op2_i=>cmd_negate_op2_i,
 		cmd_and_i=>cmd_and_i,
-		cmd_or_i=>cmd_or_i,
 		cmd_xor_i=>cmd_xor_i,
 		cmd_shift_i=>cmd_shift_i,
 		cmd_shift_right_i=>cmd_shift_right_i,
@@ -182,11 +176,12 @@ begin
 		if rst_i='1' then
 			jump_valid<='0';
 			interrupt_return<='0';
+			jump_dst<=(others=>'-');
 		else
 			if jump_valid='0' then
+				jump_dst<=op1_i(31 downto 2);
 				if can_execute='1' and cmd_jump_i='1' and jump_condition='1' then
 					jump_valid<='1';
-					jump_dst<=op1_i(31 downto 2);
 					interrupt_return<=op1_i(0);
 				end if;
 			elsif jump_ready_i='1' then
@@ -261,23 +256,5 @@ result_regaddr<=dst_i when can_execute='1' else dst_reg;
 sp_we_o<=result_valid;
 sp_waddr_o<=result_regaddr;
 sp_wdata_o<=result_mux;
-
-process (clk_i) is
-begin
-	if rising_edge(clk_i) then
-		if rst_i='1' then
-			interrupts_enabled<=(others=>'0');
-			interrupts_blocked<=(others=>'0');
-		else
-			if result_valid='1' and result_regaddr=X"FC" then
-				interrupts_enabled<=result_mux(7 downto 0);
-				interrupts_blocked<=result_mux(15 downto 8);
-			end if;
-		end if;
-	end if;
-end process;
-
-interrupts_enabled_o<=interrupts_enabled;
-interrupts_blocked_o<=interrupts_blocked;
 
 end architecture;

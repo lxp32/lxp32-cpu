@@ -1,2 +1,5 @@
 # Convert line endings for text files on Windows
 * text=auto
+
+# Prevent the GitHub parser from ignoring the "tools" directory contents
+/tools/* linguist-vendored=false

@@ -42,8 +42,6 @@ type regs_type is array (1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 0);
 signal regs: regs_type;
 signal regs_mux: regs_type;
 
-signal wpointer: std_logic_vector(2 downto 0):="001";
-
 begin
 
 we<=we_i and not full;
@@ -53,32 +51,31 @@ process (clk_i) is
 begin
 	if rising_edge(clk_i) then
 		if rst_i='1' then
-			wpointer<="001";
 			empty<='1';
 			full<='0';
+			regs<=(others=>(others=>'-'));
 		else
 			if re='0' then
-				regs<=regs_mux;
+				regs(0)<=regs_mux(0);
 			else
 				regs(0)<=regs_mux(1);
 			end if;
 			
+			regs(1)<=regs_mux(1);
+			
 			if we='1' and re='0' then
-				wpointer<=wpointer(1 downto 0)&"0";
 				empty<='0';
-				full<=wpointer(1);
+				full<=not empty;
 			elsif we='0' and re='1' then
-				wpointer<="0"&wpointer(2 downto 1);
-				empty<=wpointer(1);
+				empty<=not full;
 				full<='0';
 			end if;
 		end if;
 	end if;
 end process;
 
-mux: for i in regs_mux'range generate
-	regs_mux(i)<=regs(i) when we='0' or wpointer(i)='0' else d_i;
-end generate;
+regs_mux(0)<=regs(0) when we='0' or empty='0' else d_i;
+regs_mux(1)<=regs(1) when we='0' or empty='1' else d_i;
 
 d_o<=regs(0);
 empty_o<=empty;

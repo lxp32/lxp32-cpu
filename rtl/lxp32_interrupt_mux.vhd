@@ -20,13 +20,14 @@ entity lxp32_interrupt_mux is
 		
 		irq_i: in std_logic_vector(7 downto 0);
 		
-		interrupts_enabled_i: in std_logic_vector(7 downto 0);
-		interrupts_blocked_i: in std_logic_vector(7 downto 0);
-		
 		interrupt_valid_o: out std_logic;
 		interrupt_vector_o: out std_logic_vector(2 downto 0);
 		interrupt_ready_i: in std_logic;
-		interrupt_return_i: in std_logic
+		interrupt_return_i: in std_logic;
+		
+		sp_waddr_i: in std_logic_vector(7 downto 0);
+		sp_we_i: in std_logic;
+		sp_wdata_i: in std_logic_vector(31 downto 0)
 	);
 end entity;
 
@@ -40,6 +41,9 @@ signal state: state_type:=Ready;
 signal pending_interrupts: std_logic_vector(irq_i'range):=(others=>'0');
 
 signal interrupt_valid: std_logic:='0';
+
+signal interrupts_enabled: std_logic_vector(7 downto 0):=(others=>'0');
+signal interrupts_blocked: std_logic_vector(7 downto 0):=(others=>'0');
 
 begin
 
@@ -57,17 +61,18 @@ begin
 			pending_interrupts<=(others=>'0');
 			state<=Ready;
 			interrupt_valid<='0';
+			interrupt_vector_o<=(others=>'-');
 		else
 			irq_reg<=irq_i;
 			
 			pending_interrupts<=(pending_interrupts or 
 				(irq_i and not irq_reg)) and
-				interrupts_enabled_i;
+				interrupts_enabled;
 			
 			case state is
 			when Ready =>
 				for i in pending_interrupts'reverse_range loop -- lower interrupts have priority
-					if pending_interrupts(i)='1' and interrupts_blocked_i(i)='0' then
+					if pending_interrupts(i)='1' and interrupts_blocked(i)='0' then
 						pending_interrupts(i)<='0';
 						interrupt_valid<='1';
 						interrupt_vector_o<=std_logic_vector(to_unsigned(i,3));
@@ -90,5 +95,18 @@ begin
 end process;
 
 interrupt_valid_o<=interrupt_valid;
+
+process (clk_i) is
+begin
+	if rising_edge(clk_i) then
+		if rst_i='1' then
+			interrupts_enabled<=(others=>'0');
+			interrupts_blocked<=(others=>'0');
+		elsif sp_we_i='1' and sp_waddr_i=X"FC" then
+			interrupts_enabled<=sp_wdata_i(7 downto 0);
+			interrupts_blocked<=sp_wdata_i(15 downto 8);
+		end if;
+	end if;
+end process;
 
 end architecture;

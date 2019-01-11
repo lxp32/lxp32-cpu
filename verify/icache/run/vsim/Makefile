@@ -30,8 +30,8 @@ clean:
 # Normal targets
 ########################
 
-compile.stamp: $(LXP32_RTL) $(TB_SRC) | work
-	vcom $(VCOMFLAGS) $(LXP32_RTL) $(TB_SRC)
+compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC) | work
+	vcom $(VCOMFLAGS) $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
 	echo > compile.stamp
 
 work:

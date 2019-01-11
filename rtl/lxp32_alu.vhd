@@ -31,7 +31,6 @@ entity lxp32_alu is
 		cmd_cmp_i: in std_logic;
 		cmd_negate_op2_i: in std_logic;
 		cmd_and_i: in std_logic;
-		cmd_or_i: in std_logic;
 		cmd_xor_i: in std_logic;
 		cmd_shift_i: in std_logic;
 		cmd_shift_right_i: in std_logic;
@@ -62,22 +61,16 @@ signal cmp_carry: std_logic;
 signal cmp_s1: std_logic;
 signal cmp_s2: std_logic;
 
-signal and_result: std_logic_vector(31 downto 0);
-signal and_we: std_logic;
-signal or_result: std_logic_vector(31 downto 0);
-signal or_we: std_logic;
-signal xor_result: std_logic_vector(31 downto 0);
-signal xor_we: std_logic;
+signal logic_result: std_logic_vector(31 downto 0);
+signal logic_we: std_logic;
 
 signal mul_result: std_logic_vector(31 downto 0);
 signal mul_ce: std_logic;
 signal mul_we: std_logic;
 
-signal div_quotient: std_logic_vector(31 downto 0);
-signal div_remainder: std_logic_vector(31 downto 0);
+signal div_result: std_logic_vector(31 downto 0);
 signal div_ce: std_logic;
 signal div_we: std_logic;
-signal div_select_remainder: std_logic;
 
 signal shift_result: std_logic_vector(31 downto 0);
 signal shift_ce: std_logic;
@@ -97,7 +90,11 @@ assert MUL_ARCH="dsp" or MUL_ARCH="seq" or MUL_ARCH="opt"
 -- Add/subtract
 
 addend1<=unsigned(op1_i);
-addend2<=unsigned(op2_i) when cmd_negate_op2_i='0' else not unsigned(op2_i);
+
+addend2_gen: for i in addend2'range generate
+	addend2(i)<=op2_i(i) xor cmd_negate_op2_i;
+end generate;
+
 adder_result<=("0"&addend1)+("0"&addend2)+(to_unsigned(0,adder_result'length-1)&cmd_negate_op2_i);
 adder_we<=cmd_addsub_i and valid_i;
 
@@ -126,14 +123,15 @@ cmp_sg_o<=((cmp_s1 and cmp_s2 and cmp_carry) or
 	(not cmp_s1 and not cmp_s2 and cmp_carry) or
 	(not cmp_s1 and cmp_s2)) and not cmp_eq;
 
--- Logical functions
+-- Bitwise operations (and, or, xor)
+-- Note: (a or b) = (a and b) or (a xor b)
 
-and_result<=op1_i and op2_i;
-and_we<=cmd_and_i and valid_i;
-or_result<=op1_i or op2_i;
-or_we<=cmd_or_i and valid_i;
-xor_result<=op1_i xor op2_i;
-xor_we<=cmd_xor_i and valid_i;
+logic_result_gen: for i in logic_result'range generate
+	logic_result(i)<=((op1_i(i) and op2_i(i)) and cmd_and_i) or
+		((op1_i(i) xor op2_i(i)) and cmd_xor_i);
+end generate;
+
+logic_we<=(cmd_and_i or cmd_xor_i) and valid_i;
 
 -- Multiplier
 
@@ -191,26 +189,16 @@ gen_divider: if DIVIDER_EN generate
 			op1_i=>op1_i,
 			op2_i=>op2_i,
 			signed_i=>cmd_signed_i,
+			rem_i=>cmd_div_mod_i,
 			ce_o=>div_we,
-			quotient_o=>div_quotient,
-			remainder_o=>div_remainder
+			result_o=>div_result
 		);
 end generate;
 
 gen_no_divider: if not DIVIDER_EN generate
 	div_we<=div_ce;
-	div_quotient<=(others=>'0');
-	div_remainder<=(others=>'0');
+	div_result<=(others=>'0');
 end generate;
-
-process (clk_i) is
-begin
-	if rising_edge(clk_i) then
-		if div_ce='1' then
-			div_select_remainder<=cmd_div_mod_i;
-		end if;
-	end if;
-end process;
 
 -- Shifter
 
@@ -233,18 +221,15 @@ shifter_inst: entity work.lxp32_shifter(rtl)
 
 result_mux_gen: for i in result_mux'range generate
 	result_mux(i)<=(adder_result(i) and adder_we) or
-		(and_result(i) and and_we) or
-		(or_result(i) and or_we) or
-		(xor_result(i) and xor_we) or
+		(logic_result(i) and logic_we) or
 		(mul_result(i) and mul_we) or
-		(div_quotient(i) and div_we and not div_select_remainder) or
-		(div_remainder(i) and div_we and div_select_remainder) or
+		(div_result(i) and div_we) or
 		(shift_result(i) and shift_we);
 end generate;
 
 result_o<=result_mux;
 
-result_we<=adder_we or and_we or or_we or xor_we or mul_we or div_we or shift_we;
+result_we<=adder_we or logic_we or mul_we or div_we or shift_we;
 we_o<=result_we;
 
 -- Pipeline control
@@ -252,15 +237,10 @@ we_o<=result_we;
 process (clk_i) is
 begin
 	if rising_edge(clk_i) then
-		if rst_i='1' then
+		if rst_i='1' or result_we='1' then
 			busy<='0';
-		else
-			if shift_ce='1' or mul_ce='1' or div_ce='1' then
-				busy<='1';
-			end if;
-			if result_we='1' then
-				busy<='0';
-			end if;
+		elsif shift_ce='1' or mul_ce='1' or div_ce='1' then
+			busy<='1';
 		end if;
 	end if;
 end process;

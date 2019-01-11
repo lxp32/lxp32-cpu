@@ -428,7 +428,7 @@ jump10:
 // Copy itself to another portion of memory
 	mov r0, 0 // source pointer
 	lc r1, 0x00008000 // destination pointer
-	lc r2, end // size of block to copy, in bytes
+	lc r2, halt@2 // size of block to copy, in bytes
 	lc r32, copy_loop
 	
 copy_loop:
@@ -480,5 +480,3 @@ success:
 halt:
 	hlt
 	jmp r101
-
-end:

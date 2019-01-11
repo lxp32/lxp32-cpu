@@ -65,7 +65,7 @@ int main(int argc,char *argv[]) try {
 	std::string inputFileName,outputFileName;
 	
 	std::cerr<<"LXP32 Platform Disassembler"<<std::endl;
-	std::cerr<<"Copyright (c) 2016 by Alex I. Kuznetsov"<<std::endl;
+	std::cerr<<"Copyright (c) 2016-2019 by Alex I. Kuznetsov"<<std::endl;
 	
 	Disassembler::Format fmt=Disassembler::Bin;
 	bool noMoreOptions=false;

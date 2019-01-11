@@ -90,7 +90,7 @@ int main(int argc,char *argv[]) try {
 	bool noMoreOptions=false;
 	
 	std::cout<<"LXP32 Platform Assembler and Linker"<<std::endl;
-	std::cout<<"Copyright (c) 2016 by Alex I. Kuznetsov"<<std::endl;
+	std::cout<<"Copyright (c) 2016-2019 by Alex I. Kuznetsov"<<std::endl;
 	
 	if(argc<=1) {
 		displayUsage(std::cout,argv[0]);

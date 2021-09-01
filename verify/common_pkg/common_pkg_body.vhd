@@ -26,6 +26,7 @@ package body common_pkg is
 		variable i: integer:=0;
 		variable ii: integer;
 		variable c: integer;
+		variable high_index: integer;
 		variable s: string(x'length downto 1);
 	begin
 		xx:=x;
@@ -33,9 +34,15 @@ package body common_pkg is
 			ii:=i*4;
 			exit when ii>xx'high;
 			if ii+3<=xx'high then
-				c:=to_integer(unsigned(xx(ii+3 downto ii)));
+				high_index:=ii+3;
 			else
-				c:=to_integer(unsigned(xx(xx'high downto ii)));
+				high_index:=xx'high;
+			end if;
+			
+			if is_x(xx(high_index downto ii)) then
+				c:=-1;
+			else
+				c:=to_integer(unsigned(xx(high_index downto ii)));
 			end if;
 			
 			case c is

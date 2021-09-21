@@ -164,7 +164,7 @@ All registers are zero-initialized during the CPU reset.
 
 All addressing in \lxp{} is indirect. In order to access a memory location, its address must be stored in a register; any available register can be used for this purpose.
 
-Some instructions, namely \instr{lsb} (\instrname{Load Signed Byte}), \instr{lub} (\instrname{Load Unsigned Byte}) and \instr{sb} (\instrname{Store Byte}) provide byte-granular access, in which case all 32 bits in the address are significant. Otherwise the least two address bits are ignored as \lxp{} doesn't support unaligned access to 32-bit data words (during simulation, a warning is emitted if such a transaction is attempted).
+\lxp{} uses a 32-bit address space. Each address refers to an individual byte. Some instructions, namely \instr{lsb} (\instrname{Load Signed Byte}), \instr{lub} (\instrname{Load Unsigned Byte}) and \instr{sb} (\instrname{Store Byte}) provide  byte-granular access, in which case all 32 bits in the address are significant. Otherwise the least two address bits are ignored as \lxp{} doesn't support unaligned access to 32-bit data words (during simulation, a warning is emitted if such a transaction is attempted).
 
 A special rule applies to pointers that refer to instructions: since instructions are always word-aligned, the least significant bit is interpreted as the \code{IRF} (\emph{Interrupt Return Flag}). See Section \ref{sec:interrupthandling} for details.
 
@@ -421,30 +421,6 @@ In SRAM-based FPGAs flip-flops and RAM blocks have deterministic state after a b
 
 \signal{clk\_i} and \signal{rst\_i} signals also serve the role of [CLK\_I] and [RST\_I] WISHBONE signals, respectively, for both instruction and data buses.
 
-\section{Addressing and byte-granular access}
-
-From a programmer's point of view, \lxp{} uses 32-bit addresses which refer to individual bytes for both code and data, regardless of whether the hardware actually supports byte-granular access or not.
-
-The instruction bus, whether LLI or WISHBONE, doesn't support access to individual bytes and uses a 30-bit address port to address 32-bit words. The lower two bits of the 32-bit address are ignored for the purpose of addressing. Consider the following example:
-
-\begin{codeparbreakable}
-    \instr{lc} r0, 0x10000000
-    \instr{jmp} r0
-\emph{// 0x04000000 will appear on lli_adr_o or ibus_adr_o}
-\end{codeparbreakable}
-
-The data bus addresses 32-bit words as well and supports byte-granular access with the \signal{dbus\_sel\_o} (byte enable) WISHBONE port. The upper 30 bits of the address appear on the \signal{dbus\_adr\_o} port, while the lower two bits are decoded to create a 4-bit \signal{dbus\_sel\_o} signal. Consider:
-
-\begin{codeparbreakable}
-    \instr{lc} r0, 0x20000002
-    \instr{sb} r0, 0x55
-\emph{// write 0x55 to the address in r0}
-\emph{// 0x08000000 will appear on dbus_adr_o}
-\emph{// 0x4 will appear on dbus_sel_o}
-\end{codeparbreakable}
-
-The byte-granular access feature is optional. If it is not needed, just leave the \signal{dbus\_sel\_o} port unconnected. You can also set the \code{DBUS\_RMW} generic to \code{true} to enable byte-granular access emulation using the read-modify-write (RMW) cycle, which works even if the interconnect or slave doesn't provide the [SEL\_I()] port (Section \ref{sec:generics}).
-
 \section{Low Latency Interface}
 \label{sec:lli}
 
@@ -465,9 +441,15 @@ The values of \signal{lli\_re\_o} and \signal{lli\_adr\_o} are not guaranteed to
 
 The simplest slaves such as on-chip RAM blocks which are never busy can be trivially connected to the LLI by connecting address, data and read enable ports and tying the \signal{lli\_busy\_i} signal to a logical \code{0} (you can even ignore \signal{lli\_re\_o} in this case, although doing so can theoretically increase power consumption).
 
-Note that the \signal{lli\_adr\_o} signal has a width of 30 bits since it addresses words, not bytes (instructions are always word-aligned).
-
 Since the \signal{lli\_re\_o} output signal is not registered, this interface is not suitable for interaction with off-chip peripherals. Also, care should be taken to avoid introducing too much additional combinatorial delay on its outputs.
+
+The instruction bus, whether LLI or WISHBONE, doesn't support access to individual bytes and uses a 30-bit address port to address 32-bit words (instructions are always word-aligned). The lower two bits of the 32-bit address are ignored for the purpose of addressing. Consider the following example:
+
+\begin{codeparbreakable}
+    \instr{lc} r0, 0x10000000
+    \instr{jmp} r0
+\emph{// 0x04000000 will appear on lli_adr_o or ibus_adr_o}
+\end{codeparbreakable}
 
 \section{WISHBONE instruction bus}
 
@@ -488,7 +470,17 @@ A typical \lxp{}C instruction bus burst timing diagram is shown on Figure \ref{f
 
 \lxp{} uses the WISHBONE bus to interact with data memory and other peripherals. This bus is distinct from the instruction bus; its parameters are defined in the WISHBONE datasheet (Appendix \ref{app:wishbonedatasheet}).
 
-This bus uses a 30-bit \signal{dbus\_adr\_o} port to address 32-bit words; the \signal{dbus\_sel\_o} port is used to select individual bytes to be written or read. Alternatively, with the \code{DBUS\_RMW} option (Section \ref{sec:generics}) the \signal{dbus\_sel\_o} port is not used; byte-granular write access is performed using the read-modify-write cycle instead.
+The data bus uses a 30-bit \signal{dbus\_adr\_o} port to address 32-bit words; the \signal{dbus\_sel\_o} port is used to select individual bytes to be written or read. The upper 30 bits of the address appear on the \signal{dbus\_adr\_o} port, while the lower two bits are decoded to create a 4-bit \signal{dbus\_sel\_o} signal. Consider:
+
+\begin{codeparbreakable}
+    \instr{lc} r0, 0x20000002
+    \instr{sb} r0, 0x55
+\emph{// write 0x55 to the address in r0}
+\emph{// 0x08000000 will appear on dbus_adr_o}
+\emph{// 0x4 will appear on dbus_sel_o}
+\end{codeparbreakable}
+
+The byte-granular access feature is optional. If it is not needed, the \signal{dbus\_sel\_o} port can be left unconnected. It is also possible to set the \code{DBUS\_RMW} generic to \code{true} to enable byte-granular access emulation using the read-modify-write (RMW) cycle, which works even if the interconnect or slave doesn't provide the [SEL\_I()] port (Section \ref{sec:generics}).
 
 For a detailed description of the bus protocol refer to the WISHBONE specification, revision B3.
 

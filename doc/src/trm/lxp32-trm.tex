@@ -421,6 +421,30 @@ In SRAM-based FPGAs flip-flops and RAM blocks have deterministic state after a b
 
 \signal{clk\_i} and \signal{rst\_i} signals also serve the role of [CLK\_I] and [RST\_I] WISHBONE signals, respectively, for both instruction and data buses.
 
+\section{Addressing and byte-granular access}
+
+From a programmer's point of view, \lxp{} uses 32-bit addresses which refer to individual bytes for both code and data, regardless of whether the hardware actually supports byte-granular access or not.
+
+The instruction bus, whether LLI or WISHBONE, doesn't support access to individual bytes and uses a 30-bit address port to address 32-bit words. The lower two bits of the 32-bit address are ignored for the purpose of addressing. Consider the following example:
+
+\begin{codeparbreakable}
+    \instr{lc} r0, 0x10000000
+    \instr{jmp} r0
+\emph{// 0x04000000 will appear on lli_adr_o or ibus_adr_o}
+\end{codeparbreakable}
+
+The data bus addresses 32-bit words as well and supports byte-granular access with the \signal{dbus\_sel\_o} (byte enable) WISHBONE port. The upper 30 bits of the address appear on the \signal{dbus\_adr\_o} port, while the lower two bits are decoded to create a 4-bit \signal{dbus\_sel\_o} signal. Consider:
+
+\begin{codeparbreakable}
+    \instr{lc} r0, 0x20000002
+    \instr{sb} r0, 0x55
+\emph{// write 0x55 to the address in r0}
+\emph{// 0x08000000 will appear on dbus_adr_o}
+\emph{// 0x4 will appear on dbus_sel_o}
+\end{codeparbreakable}
+
+The byte-granular access feature is optional. If it is not needed, just leave the \signal{dbus\_sel\_o} port unconnected. You can also set the \code{DBUS\_RMW} generic to \code{true} to enable byte-granular access emulation using the read-modify-write (RMW) cycle, which works even if the interconnect or slave doesn't provide the [SEL\_I()] port (Section \ref{sec:generics}).
+
 \section{Low Latency Interface}
 \label{sec:lli}
 
@@ -693,7 +717,7 @@ Simulation parameters can be configured by overriding generics defined by the \s
 	Linkable objects are combined into a single executable module. References to symbols defined in external modules are resolved at this stage.
 \end{enumerate}
 
-In the simplest case there is only one input source file which doesn't contain external symbol references. If there are multiple input files, one of them must define the \code{entry} symbol at the beginning of the code.
+In the simplest case there is only one input source file which doesn't contain external symbol references. If there are multiple input files, one of them must define the \code{entry} (or \code{Entry}) symbol at the beginning of the code.
 
 \subsection{Command line syntax}
 \label{subsec:assemblercmdline}

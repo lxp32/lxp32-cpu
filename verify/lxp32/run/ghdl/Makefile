@@ -40,7 +40,7 @@ $(WAVE_OUT): $(WAVE_VCD)
 	vcd2fst $^ $@
 
 $(WAVE_VCD): compile.stamp $(FIRMWARE)
-	ghdl -r $(GHDL_FLAGS) $(TB_MOD) --vcd=$(WAVE_VCD)
+	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --vcd=$(WAVE_VCD)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
 	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)

@@ -258,17 +258,17 @@ void Assembler::elaborateDirective(TokenList &list) {
 		_macros.emplace(list[1],TokenList(list.begin()+2,list.end()));
 	}
 	else if(list[0]=="#export") {
-		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
 		_exportedSymbols.push_back(list[1]);
 	}
 	else if(list[0]=="#import") {
-		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		if(!validateIdentifier(list[1])) throw std::runtime_error("Ill-formed identifier: \""+list[1]+"\"");
 		_obj.addImportedSymbol(list[1]);
 	}
 	else if(list[0]=="#include") {
-		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		auto filename=Utils::dequoteString(list[1]);
 		if(Utils::isAbsolutePath(filename)) return processFileRecursive(filename);
 		else {
@@ -284,7 +284,7 @@ void Assembler::elaborateDirective(TokenList &list) {
 		throw std::runtime_error("Cannot locate include file \""+filename+"\"");
 	}
 	else if(list[0]=="#message") {
-		if(list.size()!=2) std::runtime_error("Wrong number of tokens in the directive");
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		auto msg=Utils::dequoteString(list[1]);
 		std::cout<<currentFileName()<<":"<<line()<<": "<<msg<<std::endl;
 	}

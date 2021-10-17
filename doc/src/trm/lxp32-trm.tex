@@ -1662,16 +1662,26 @@ Each statement occupies a single source code line. There are three kinds of stat
 The first token of a directive statement always starts with the \code{\#} character.
 
 \begin{codepar}
-\instr{\#define} \emph{identifier} \emph{token} [ \emph{token} ... ]
+\instr{\#define} \emph{identifier} [ \emph{token} ... ]
 \end{codepar}
 
-Defines a macro that will be substituted with one or more tokens. The \code{\emph{identifier}} must satisfy the requirements listed in Section \ref{sec:symbols}. Tokens can be anything, including keywords, identifiers, literals and separators (i.e. comma and colon characters).
+Defines a macro that will be substituted with zero or more tokens. The \code{\emph{identifier}} must satisfy the requirements listed in Section \ref{sec:symbols}. Tokens can be anything, including keywords, identifiers, literals and separators (i.e. comma and colon characters).
 
 \begin{codepar}
 \instr{\#export} \emph{identifier}
 \end{codepar}
 
 Declares \code{\emph{identifier}} as an exported symbol. Exported symbols can be referenced by other modules.
+
+\begin{codepar}
+\instr{\#ifdef} | \instr{\#ifndef} \emph{identifier}
+\code{...}
+\instr{\#else}
+\code{...}
+\instr{\#endif}
+\end{codepar}
+
+Define C preprocessor-style conditional sections which are processed or not based on whether a certain macro has been defined. \instr{\#else} is optional. Can be nested.
 
 \begin{codepar}
 \instr{\#import} \emph{identifier}

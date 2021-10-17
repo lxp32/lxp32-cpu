@@ -1668,6 +1668,12 @@ The first token of a directive statement always starts with the \code{\#} charac
 Defines a macro that will be substituted with zero or more tokens. The \code{\emph{identifier}} must satisfy the requirements listed in Section \ref{sec:symbols}. Tokens can be anything, including keywords, identifiers, literals and separators (i.e. comma and colon characters).
 
 \begin{codepar}
+\instr{\#error} [ \emph{msg} ]
+\end{codepar}
+
+Raises a compiler error. If \emph{msg} is supplied, uses it as an error message.
+
+\begin{codepar}
 \instr{\#export} \emph{identifier}
 \end{codepar}
 

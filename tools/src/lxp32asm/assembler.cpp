@@ -307,6 +307,11 @@ void Assembler::elaborateDirective(TokenList &list) {
 		auto msg=Utils::dequoteString(list[1]);
 		std::cout<<currentFileName()<<":"<<line()<<": "<<msg<<std::endl;
 	}
+	else if(list[0]=="#error") {
+		if(list.size()<2) throw std::runtime_error("#error directive encountered");
+		auto msg=Utils::dequoteString(list[1]);
+		throw std::runtime_error(msg);
+	}
 	else if(list[0]=="#ifdef") {
 		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		if(_macros.find(list[1])!=_macros.end()) _sectionEnabled.push_back(true);

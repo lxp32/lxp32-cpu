@@ -33,6 +33,9 @@ void Assembler::processFile(const std::string &filename) {
 	
 	if(!_currentLabels.empty())
 		throw std::runtime_error("Symbol definition must be followed by an instruction or data definition statement");
+	
+	if(!_sectionEnabled.empty())
+		throw std::runtime_error("#endif expected");
 
 // Examine symbol table
 	for(auto const &sym: _obj.symbols()) {
@@ -207,13 +210,26 @@ void Assembler::expand(TokenList &list) {
 // Perform macro substitution
 	for(auto &token: list) {
 		auto it=_macros.find(token);
-// Note: we don't expand a macro identifier in the #define statement
-// since that would lead to counter-intuitive results
-		if(it==_macros.end()||
-			(newlist.size()==1&&newlist[0]=="#define")||
-			(newlist.size()==3&&newlist[1]==":"&&newlist[2]=="#define"))
-				newlist.push_back(std::move(token));
-		else for(auto const &replace: it->second) newlist.push_back(replace);
+		bool substitute=false;
+		if(it!=_macros.end()) {
+			substitute=true;
+// Don't substitute macros for a second token in certain directives
+			if(newlist.size()==1) {
+				if(newlist[0]=="#define") substitute=false;
+				else if(newlist[0]=="#ifdef") substitute=false;
+				else if(newlist[0]=="#ifndef") substitute=false;
+			}
+			else if(newlist.size()==3&&newlist[1]==":") {
+				if(newlist[2]=="#define") substitute=false;
+				else if(newlist[2]=="#ifdef") substitute=false;
+				else if(newlist[2]=="#ifndef") substitute=false;
+			}
+		}
+		
+		if(substitute) {
+			for(auto const &replace: it->second) newlist.push_back(replace);
+		}
+		else newlist.push_back(std::move(token));
 	}
 	list=std::move(newlist);
 }
@@ -225,11 +241,14 @@ void Assembler::elaborate(TokenList &list) {
 	if(list.size()>=2&&list[1]==":") {
 		if(!validateIdentifier(list[0]))
 			throw std::runtime_error("Ill-formed identifier: \""+list[0]+"\"");
-		_currentLabels.push_back(std::move(list[0]));
+		if(isSectionEnabled()) _currentLabels.push_back(std::move(list[0]));
 		list.erase(list.begin(),list.begin()+2);
 	}
 	
 	if(list.empty()) return;
+	
+// If the section is disabled, we look only for #else or #endif
+	if(!isSectionEnabled()&&list[0]!="#else"&&list[0]!="#endif") return;
 	
 // Process statement itself
 	if(list[0][0]=='#') elaborateDirective(list);
@@ -249,7 +268,7 @@ void Assembler::elaborateDirective(TokenList &list) {
 	assert(!list.empty());
 	
 	if(list[0]=="#define") {
-		if(list.size()<3)
+		if(list.size()<2)
 			throw std::runtime_error("Wrong number of tokens in the directive");
 		if(_macros.find(list[1])!=_macros.end())
 			throw std::runtime_error("Macro \""+list[1]+"\" has been already defined");
@@ -287,6 +306,26 @@ void Assembler::elaborateDirective(TokenList &list) {
 		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
 		auto msg=Utils::dequoteString(list[1]);
 		std::cout<<currentFileName()<<":"<<line()<<": "<<msg<<std::endl;
+	}
+	else if(list[0]=="#ifdef") {
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_macros.find(list[1])!=_macros.end()) _sectionEnabled.push_back(true);
+		else _sectionEnabled.push_back(false);
+	}
+	else if(list[0]=="#ifndef") {
+		if(list.size()!=2) throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_macros.find(list[1])!=_macros.end()) _sectionEnabled.push_back(false);
+		else _sectionEnabled.push_back(true);
+	}
+	else if(list[0]=="#else") {
+		if(list.size()!=1) throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_sectionEnabled.empty()) throw std::runtime_error("Unexpected #else");
+		_sectionEnabled.back()=!_sectionEnabled.back();
+	}
+	else if(list[0]=="#endif") {
+		if(list.size()!=1) throw std::runtime_error("Wrong number of tokens in the directive");
+		if(_sectionEnabled.empty()) throw std::runtime_error("Unexpected #endif");
+		_sectionEnabled.pop_back();
 	}
 	else throw std::runtime_error("Unrecognized directive: \""+list[0]+"\"");
 }
@@ -390,6 +429,11 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="xor") encodeXor(list);
 	else throw std::runtime_error("Unrecognized instruction: \""+list[0]+"\"");
 	return rva;
+}
+
+bool Assembler::isSectionEnabled() const {
+	if(_sectionEnabled.empty()) return true;
+	else return _sectionEnabled.back();
 }
 
 bool Assembler::validateIdentifier(const std::string &str) {

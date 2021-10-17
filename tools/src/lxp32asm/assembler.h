@@ -42,6 +42,7 @@ class Assembler {
 	std::string _currentFileName;
 	std::vector<std::string> _includeSearchDirs;
 	std::vector<std::string> _exportedSymbols;
+	std::vector<bool> _sectionEnabled;
 public:
 	void processFile(const std::string &filename);
 	
@@ -62,6 +63,7 @@ private:
 	LinkableObject::Word elaborateDataDefinition(TokenList &list);
 	LinkableObject::Word elaborateInstruction(TokenList &list);
 	
+	bool isSectionEnabled() const;
 	static bool validateIdentifier(const std::string &str);
 	static Integer numericLiteral(const std::string &str);
 	static std::vector<Operand> getOperands(const TokenList &list);

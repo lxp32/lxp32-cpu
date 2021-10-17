@@ -247,8 +247,9 @@ void Assembler::elaborate(TokenList &list) {
 	
 	if(list.empty()) return;
 	
-// If the section is disabled, we look only for #else or #endif
-	if(!isSectionEnabled()&&list[0]!="#else"&&list[0]!="#endif") return;
+// If the section is disabled, we look only for #ifdef, #ifndef, #else or #endif
+	if(!isSectionEnabled()&&list[0]!="#ifdef"&&list[0]!="#ifndef"&&
+		list[0]!="#else"&&list[0]!="#endif") return;
 	
 // Process statement itself
 	if(list[0][0]=='#') elaborateDirective(list);
@@ -438,7 +439,9 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 
 bool Assembler::isSectionEnabled() const {
 	if(_sectionEnabled.empty()) return true;
-	else return _sectionEnabled.back();
+	bool enabled=true;
+	for(auto b: _sectionEnabled) enabled=enabled&&b;
+	return enabled;
 }
 
 bool Assembler::validateIdentifier(const std::string &str) {

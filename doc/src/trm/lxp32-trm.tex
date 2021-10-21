@@ -1828,6 +1828,17 @@ Depending on the instruction, operands can be registers, numeric literals or sym
 
 \chapter{List of changes}
 
+\section*{Version 1.2 (2021-10-21)}
+
+This release introduces a few non-breaking changes to the software and testbench. The CPU RTL description hasn't been changed from the previous release.
+
+\begin{itemize}
+	\item \shellcmd{lxp32asm} now supports C-style conditional processing directives: \instr{\#ifdef}, \instr{\#ifndef}, \instr{\#else} and \instr{\#endif}.
+	\item \instr{\#define} directive can now declare a macro with zero subsitute tokens.
+	\item A new \instr{\#error} directive.
+	\item Minor changes to the testbench.
+\end{itemize}
+
 \section*{Version 1.1 (2019-01-11)}
 
 This release introduces a minor but technically breaking hardware change: the START\_ADDR generic, which used to be 30-bit, has been for convenience extended to a full 32-bit word; the two least significant bits are ignored.

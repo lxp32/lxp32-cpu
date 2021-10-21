@@ -8,7 +8,6 @@
 
 #include "disassembler.h"
 
-#include <sstream>
 #include <stdexcept>
 
 /*
@@ -213,27 +212,21 @@ Disassembler::Operand Disassembler::decodeDstOperand(Word w) {
 }
 
 std::string Disassembler::decodeSimpleInstruction(const std::string &op,Word w) {
-	std::ostringstream oss;
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
-	oss<<op<<' '<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
-	return oss.str();
+	return op+' '+str(dst)+", "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeAdd(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
 	if(rd2.type()==Operand::Direct&&rd2.value()==0&&_preferAliases)
-		oss<<"mov "<<str(dst)<<", "<<str(rd1);
+		return "mov "+str(dst)+", "+str(rd1);
 	else
-		oss<<"add "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
-	
-	return oss.str();
+		return "add "+str(dst)+", "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeAnd(Word w) {
@@ -339,8 +332,6 @@ std::string Disassembler::decodeLcs(Word w) {
 }
 
 std::string Disassembler::decodeLsb(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
@@ -352,8 +343,6 @@ std::string Disassembler::decodeLsb(Word w) {
 }
 
 std::string Disassembler::decodeLub(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
@@ -365,8 +354,6 @@ std::string Disassembler::decodeLub(Word w) {
 }
 
 std::string Disassembler::decodeLw(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
@@ -403,8 +390,6 @@ std::string Disassembler::decodeOr(Word w) {
 }
 
 std::string Disassembler::decodeSb(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
@@ -434,23 +419,17 @@ std::string Disassembler::decodeSru(Word w) {
 }
 
 std::string Disassembler::decodeSub(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
 	if(rd1.type()==Operand::Direct&&rd1.value()==0&&_preferAliases)
-		oss<<"neg "<<str(dst)<<", "<<str(rd2);
+		return "neg "+str(dst)+", "+str(rd2);
 	else
-		oss<<"sub "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
-	
-	return oss.str();
+		return "sub "+str(dst)+", "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeSw(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
@@ -462,18 +441,14 @@ std::string Disassembler::decodeSw(Word w) {
 }
 
 std::string Disassembler::decodeXor(Word w) {
-	std::ostringstream oss;
-	
 	auto dst=decodeDstOperand(w);
 	auto rd1=decodeRd1Operand(w);
 	auto rd2=decodeRd2Operand(w);
 	
 	if(rd2.type()==Operand::Direct&&rd2.value()==-1&&_preferAliases)
-		oss<<"not "<<str(dst)<<", "<<str(rd1);
+		return "not "+str(dst)+", "+str(rd1);
 	else
-		oss<<"xor "<<str(dst)<<", "<<str(rd1)<<", "<<str(rd2);
-	
-	return oss.str();
+		return "xor "+str(dst)+", "+str(rd1)+", "+str(rd2);
 }
 
 std::string Disassembler::decodeWord(Word w) {

@@ -34,7 +34,8 @@ entity lxp32_cpu is
 		dbus_dat_o: out std_logic_vector(31 downto 0);
 		dbus_dat_i: in std_logic_vector(31 downto 0);
 		
-		irq_i: in std_logic_vector(7 downto 0)
+		irq_i: in std_logic_vector(7 downto 0);
+		cont_i: in std_logic
 	);
 end entity;
 
@@ -131,6 +132,7 @@ decode_inst: entity work.lxp32_decode(rtl)
 		interrupt_valid_i=>interrupt_valid,
 		interrupt_vector_i=>interrupt_vector,
 		interrupt_ready_o=>interrupt_ready,
+		cont_i=>cont_i,
 		
 		sp_raddr1_o=>sp_raddr1,
 		sp_rdata1_i=>sp_rdata1,

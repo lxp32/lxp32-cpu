@@ -27,6 +27,7 @@ entity lxp32_decode is
 		interrupt_valid_i: in std_logic;
 		interrupt_vector_i: in std_logic_vector(2 downto 0);
 		interrupt_ready_o: out std_logic;
+		cont_i: in std_logic;
 		
 		sp_raddr1_o: out std_logic_vector(7 downto 0);
 		sp_rdata1_i: in std_logic_vector(31 downto 0);
@@ -100,6 +101,7 @@ signal rd2_direct: std_logic_vector(31 downto 0);
 -- Signals related to interrupt handling
 
 signal interrupt_ready: std_logic:='0';
+signal continue: std_logic:='0';
 
 begin
 
@@ -148,8 +150,10 @@ begin
 			op3_o<=(others=>'-');
 			jump_type_o<=(others=>'-');
 			dst_out<=(others=>'-');
+			continue<='0';
 		else
 			interrupt_ready<='0';
+			continue<=continue or cont_i;
 			if jump_valid_i='1' then
 				valid_out<='0';
 				self_busy<='0';
@@ -257,6 +261,7 @@ begin
 							elsif opcode="000010" then
 								valid_out<='0';
 								self_busy<='1';
+								continue<='0';
 								state<=Halt;
 							elsif opcode(5 downto 4)="11" then
 								valid_out<='1';
@@ -285,7 +290,7 @@ begin
 				when ContinueInterrupt =>
 					valid_out<='0';
 				when Halt =>
-					if interrupt_valid_i='1' then
+					if interrupt_valid_i='1' or continue='1' then
 						self_busy<='0';
 						state<=Regular;
 					end if;

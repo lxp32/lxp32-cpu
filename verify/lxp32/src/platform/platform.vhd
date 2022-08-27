@@ -104,6 +104,9 @@ signal timer_elapsed: std_logic;
 signal coprocessor_wb: wbs_type;
 signal coprocessor_irq: std_logic;
 
+signal coprocessor2_wb: wbs_type;
+signal coprocessor2_irq: std_logic;
+
 begin
 
 -- Interconnect
@@ -165,7 +168,16 @@ intercon_inst: entity work.intercon(rtl)
 		m3_ack_i=>coprocessor_wb.ack,
 		m3_adr_o=>coprocessor_wb.adr,
 		m3_dat_o=>coprocessor_wb.wdata,
-		m3_dat_i=>coprocessor_wb.rdata
+		m3_dat_i=>coprocessor_wb.rdata,
+
+		m4_cyc_o=>coprocessor2_wb.cyc,
+		m4_stb_o=>coprocessor2_wb.stb,
+		m4_we_o=>coprocessor2_wb.we,
+		m4_sel_o=>coprocessor2_wb.sel,
+		m4_ack_i=>coprocessor2_wb.ack,
+		m4_adr_o=>coprocessor2_wb.adr,
+		m4_dat_o=>coprocessor2_wb.wdata,
+		m4_dat_i=>coprocessor2_wb.rdata
 	);
 
 -- CPU
@@ -203,7 +215,8 @@ gen_lxp32u: if not MODEL_LXP32C generate
 			dbus_dat_o=>cpu_dbus.wdata,
 			dbus_dat_i=>cpu_dbus.rdata,
 			
-			irq_i=>cpu_irq
+			irq_i=>cpu_irq,
+			cont_i=>coprocessor2_irq
 		);
 end generate;
 
@@ -238,7 +251,8 @@ gen_lxp32c: if MODEL_LXP32C generate
 			dbus_dat_o=>cpu_dbus.wdata,
 			dbus_dat_i=>cpu_dbus.rdata,
 			
-			irq_i=>cpu_irq
+			irq_i=>cpu_irq,
+			cont_i=>coprocessor2_irq
 		);
 	
 	ibus_adapter_inst: entity work.ibus_adapter(rtl)
@@ -334,7 +348,7 @@ timer_inst: entity work.timer(rtl)
 		elapsed_o=>timer_elapsed
 	);
 
--- Coprocessor
+-- Coprocessors
 
 coprocessor_inst: entity work.coprocessor(rtl)
 	port map(
@@ -351,6 +365,23 @@ coprocessor_inst: entity work.coprocessor(rtl)
 		wbs_dat_o=>coprocessor_wb.rdata,
 		
 		irq_o=>coprocessor_irq
+	);
+
+coprocessor_inst2: entity work.coprocessor(rtl)
+	port map(
+		clk_i=>clk_i,
+		rst_i=>rst_i,
+
+		wbs_cyc_i=>coprocessor2_wb.cyc,
+		wbs_stb_i=>coprocessor2_wb.stb,
+		wbs_we_i=>coprocessor2_wb.we,
+		wbs_sel_i=>coprocessor2_wb.sel,
+		wbs_ack_o=>coprocessor2_wb.ack,
+		wbs_adr_i=>coprocessor2_wb.adr,
+		wbs_dat_i=>coprocessor2_wb.wdata,
+		wbs_dat_o=>coprocessor2_wb.rdata,
+
+		irq_o=>coprocessor2_irq
 	);
 
 end architecture;

@@ -319,7 +319,7 @@ Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 
 \section{Ports}
 
-\begin{ctabular}{lccl}
+\small\begin{ctabular}{lccl}
 	\toprule
 	Port & Direction & Bus width & Description \\
 	\midrule
@@ -359,8 +359,9 @@ Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 	\tabcutin{4}{Other ports} \\
 	\midrule
 	\signal{irq\_i} & in & 8 & Interrupt requests \\
+	\signal{cont\_i} & in & 1 & Continue after \instr{hlt} \\
 	\bottomrule
-\end{ctabular}
+\end{ctabular}\normalsize
 
 \section{Generics}
 \label{sec:generics}
@@ -496,6 +497,12 @@ Typical timing diagrams for write and read cycles are shown on Figure \ref{fig:d
 \section{Interrupts}
 
 \lxp{} registers an interrupt condition when the corresponding request signal goes from \code{0} to \code{1}. Transitions from \code{1} to \code{0} are ignored. All interrupt request signals must be synchronous with the system clock (\signal{clk\_i}); if coming from an asynchronous source, they must be synchronized using a sequence of at least two flip-flops clocked by \signal{clk\_i}. These flip-flops are not included in the \lxp{} core in order not to increase interrupt processing delay for interrupt sources that are inherently synchronous. Failure to properly synchronize interrupt request signals will cause timing violations that will manifest itself as intermittent, hard to debug faults.
+
+\subsection{Continue execution}
+
+An interrupt condition will make the CPU continue execution after being halted by the \instr{hlt} instruction. Alternatively, a high level on the \signal{cont\_i} port will make the CPU continue execution without invoking an interrupt handler. The effect is similar to invoking an interrupt with an empty handler (containing only \instr{iret}), but without the additional overhead of two jumps.
+
+The \signal{cont\_i} signal does not affect the CPU when it is not halted. Like \signal{irq\_i}, \signal{cont\_i} must be synchronous with the system clock.
 
 \section{Synthesis and optimization}
 \label{sec:synthesis}
@@ -1105,7 +1112,7 @@ The result is rounded towards zero and is undefined if RD2 is zero. If the CPU w
 \subsection{\instr{hlt} -- Halt}
 \label{subsec:instr:hlt}
 
-Wait for an interrupt.
+Halt the CPU until an interrupt is received, or the \signal{cont\_i} signal is asserted.
 
 \subsubsection{Syntax}
 

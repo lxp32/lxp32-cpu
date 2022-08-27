@@ -101,7 +101,7 @@ signal rd2_direct: std_logic_vector(31 downto 0);
 -- Signals related to interrupt handling
 
 signal interrupt_ready: std_logic:='0';
-signal continue: std_logic:='0';
+signal cont_registered: std_logic:='0';
 
 begin
 
@@ -150,10 +150,10 @@ begin
 			op3_o<=(others=>'-');
 			jump_type_o<=(others=>'-');
 			dst_out<=(others=>'-');
-			continue<='0';
+			cont_registered<='0';
 		else
 			interrupt_ready<='0';
-			continue<=continue or cont_i;
+			cont_registered<=cont_registered or cont_i;
 			if jump_valid_i='1' then
 				valid_out<='0';
 				self_busy<='0';
@@ -261,7 +261,7 @@ begin
 							elsif opcode="000010" then
 								valid_out<='0';
 								self_busy<='1';
-								continue<='0';
+								cont_registered<='0';
 								state<=Halt;
 							elsif opcode(5 downto 4)="11" then
 								valid_out<='1';
@@ -290,7 +290,7 @@ begin
 				when ContinueInterrupt =>
 					valid_out<='0';
 				when Halt =>
-					if interrupt_valid_i='1' or continue='1' then
+					if interrupt_valid_i='1' or cont_i='1' or cont_registered='1' then
 						self_busy<='0';
 						state<=Regular;
 					end if;

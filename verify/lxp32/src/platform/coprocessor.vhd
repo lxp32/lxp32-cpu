@@ -38,7 +38,7 @@ architecture rtl of coprocessor is
 
 signal value: unsigned(31 downto 0):=(others=>'0');
 signal result: unsigned(31 downto 0):=(others=>'0');
-signal cnt: integer range 0 to 5:=0;
+signal cnt: integer range 0 to 50:=0;
 signal irq: std_logic:='0';
 
 begin
@@ -67,7 +67,7 @@ begin
 						if wbs_adr_i="00"&X"000000" then
 							value(i*8+7 downto i*8)<=
 								unsigned(wbs_dat_i(i*8+7 downto i*8));
-							cnt<=5;
+							cnt<=50;
 						end if;
 					end if;
 				end loop;

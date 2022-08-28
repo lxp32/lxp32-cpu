@@ -89,6 +89,7 @@ signal interrupt_valid: std_logic;
 signal interrupt_vector: std_logic_vector(2 downto 0);
 signal interrupt_ready: std_logic;
 signal interrupt_return: std_logic;
+signal interrupt_wakeup: std_logic;
 
 begin
 
@@ -131,6 +132,8 @@ decode_inst: entity work.lxp32_decode(rtl)
 		interrupt_valid_i=>interrupt_valid,
 		interrupt_vector_i=>interrupt_vector,
 		interrupt_ready_o=>interrupt_ready,
+
+		wakeup_i=>interrupt_wakeup,
 		
 		sp_raddr1_o=>sp_raddr1,
 		sp_rdata1_i=>sp_rdata1,
@@ -247,6 +250,8 @@ interrupt_mux_inst: entity work.lxp32_interrupt_mux(rtl)
 		interrupt_vector_o=>interrupt_vector,
 		interrupt_ready_i=>interrupt_ready,
 		interrupt_return_i=>interrupt_return,
+
+		wakeup_o=>interrupt_wakeup,
 		
 		sp_waddr_i=>sp_waddr,
 		sp_we_i=>sp_we,

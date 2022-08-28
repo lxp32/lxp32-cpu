@@ -10,9 +10,7 @@
 
 	lcs cr, 0x0404 // enable coprocessor interrupt and mark it as wake-up
 	
-	mov r10, 2
-	lc r0, 33
-	sw r102, r0
+	sw r102, 33
 	
 	hlt
 

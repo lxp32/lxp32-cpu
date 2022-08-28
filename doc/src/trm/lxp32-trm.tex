@@ -231,7 +231,7 @@ Although the \lxp{} architecture doesn't mandate any particular calling conventi
 
 \subsection{Control register}
 
-\lxp{} supports 8 interrupts with hardwired priority levels (interrupts with lower vector numbers have higher priority). Interrupts vectors (pointers to interrupt handlers) are stored in the \code{iv0}--\code{iv7} registers. Interrupt handling is controlled by the \code{cr} register (Table \ref{tab:cr}).
+\lxp{} supports 8 interrupts with hardwired priority levels (interrupts with lower vector numbers have higher priority). Interrupt vectors (pointers to interrupt handlers) are stored in the \code{iv0}--\code{iv7} registers. Interrupt handling is controlled by the \code{cr} register (Table \ref{tab:cr}).
 
 \begin{table}[htbp]
 	\caption{Control register}
@@ -253,7 +253,7 @@ Although the \lxp{} architecture doesn't mandate any particular calling conventi
 
 Disabled interrupts are ignored altogether: if the CPU receives an interrupt request signal while the corresponding interrupt is disabled, the interrupt will not be processed even if it is enabled later.
 
-Wake-up flag marks an interrupt as a \emph{wake-up interrupt}. When a wake-up interrupt is received, the interrupt handler is not called, but the CPU still resumes execution if halted by the \instr{hlt} instruction. The effect is similar to invoking an interrupt with an empty handler (containing only \instr{iret}), but without the overhead of interrupt processing. Wake-up interrupts do not affect the CPU when it is not halted.
+Wake-up flag marks the interrupt as a \emph{wake-up interrupt} (see below).
 
 Like other registers, \code{cr} is zero-initialized during the CPU reset, meaning that no interrupts are initially enabled.
 
@@ -262,6 +262,12 @@ Like other registers, \code{cr} is zero-initialized during the CPU reset, meanin
 Interrupt handlers are invoked by the CPU similarly to procedures (Section \ref{sec:callingprocedures}), the difference being that in this case return address is stored in the \code{irp} register (as opposed to \code{rp}), and the least significant bit of the register (\code{IRF} -- \emph{Interrupt Return Flag}) is set.
 
 An interrupt handler returns using the \code{\instr{jmp} irp} instruction which also has an \instr{iret} alias. Until the interrupt handler returns, the CPU will defer further interrupt processing (although incoming interrupt requests will still be registered). This also means that the \code{irp} register value will not be unexpectedly overwritten. When executing the \code{\instr{jmp} irp} instruction, the CPU will recognize the \code{IRF} flag and resume interrupt processing as usual. It is also possible to perform a conditional return from the interrupt handler, similarly to the technique described in Section \ref{sec:callingprocedures} for conditional procedure returns.
+
+\subsection{Wake-up interrupts}
+
+When a wake-up interrupt is received, the interrupt handler is not called, but the CPU still resumes execution if halted by the \instr{hlt} instruction. The effect is similar to invoking an interrupt with an empty handler (containing only \instr{iret}), but without the overhead of interrupt processing. Wake-up interrupts do not affect the CPU when it is not halted.
+
+Unlike normal interrupts, wake-up interrupts are processed even when the CPU executes an interrupt handler for another interrupt.
 
 \subsection{Non-returnable interrupts}
 

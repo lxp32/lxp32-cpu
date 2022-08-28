@@ -241,19 +241,19 @@ Although the \lxp{} architecture doesn't mandate any particular calling conventi
 		Bit & Description \\
 		\midrule
 		0      & Enable interrupt 0 \\
-		1      & Enable interrupt 1 \\
 		& \ldots \\
 		7      & Enable interrupt 7 \\
-		8      & Temporarily block interrupt 0 \\
-		9      & Temporarily block interrupt 1 \\
+		8      & Interrupt 0 wake-up flag \\
 		& \ldots \\
-		15     & Temporarily block interrupt 7 \\
+		15     & Interrupt 7 wake-up flag \\
 		31--16 & \emph{Reserved} \\
 		\bottomrule
 	\end{tabularx}
 \end{table}
 
-Disabled interrupts are ignored altogether: if the CPU receives an interrupt request signal while the corresponding interrupt is disabled, the interrupt handler will not be called even if the interrupt is enabled later. Conversely, temporarily blocked interrupts are still registered, but their handlers are not called until they are unblocked.
+Disabled interrupts are ignored altogether: if the CPU receives an interrupt request signal while the corresponding interrupt is disabled, the interrupt will not be processed even if it is enabled later.
+
+Wake-up flag marks an interrupt as a \emph{wake-up interrupt}. When a wake-up interrupt is received, the interrupt handler is not called, but the CPU still resumes execution if halted by the \instr{hlt} instruction. The effect is similar to invoking an interrupt with an empty handler (containing only \instr{iret}), but without the overhead of interrupt processing. Wake-up interrupts do not affect the CPU when it is not halted.
 
 Like other registers, \code{cr} is zero-initialized during the CPU reset, meaning that no interrupts are initially enabled.
 
@@ -319,7 +319,7 @@ Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 
 \section{Ports}
 
-\small\begin{ctabular}{lccl}
+\begin{ctabular}{lccl}
 	\toprule
 	Port & Direction & Bus width & Description \\
 	\midrule
@@ -359,9 +359,8 @@ Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 	\tabcutin{4}{Other ports} \\
 	\midrule
 	\signal{irq\_i} & in & 8 & Interrupt requests \\
-	\signal{cont\_i} & in & 1 & Continue execution (see \ref{sec:interrupts}) \\
 	\bottomrule
-\end{ctabular}\normalsize
+\end{ctabular}
 
 \section{Generics}
 \label{sec:generics}
@@ -498,12 +497,6 @@ Typical timing diagrams for write and read cycles are shown on Figure \ref{fig:d
 \label{sec:interrupts}
 
 \lxp{} registers an interrupt condition when the corresponding request signal goes from \code{0} to \code{1}. Transitions from \code{1} to \code{0} are ignored. All interrupt request signals must be synchronous with the system clock (\signal{clk\_i}); if coming from an asynchronous source, they must be synchronized using a sequence of at least two flip-flops clocked by \signal{clk\_i}. These flip-flops are not included in the \lxp{} core in order not to increase interrupt processing delay for interrupt sources that are inherently synchronous. Failure to properly synchronize interrupt request signals will cause timing violations that will manifest itself as intermittent, hard to debug faults.
-
-\subsection{Continue execution}
-
-Receiving an enabled, non-blocked interrupt will make the CPU continue execution after being halted by the \instr{hlt} instruction. Alternatively, a high level on the \signal{cont\_i} port will make the CPU continue execution without invoking an interrupt handler. The effect is similar to invoking an interrupt with an empty handler (containing only \instr{iret}), but without the overhead of interrupt processing.
-
-The \signal{cont\_i} signal does not affect the CPU when it is not halted. Like \signal{irq\_i}, \signal{cont\_i} must be synchronous with the system clock.
 
 \section{Synthesis and optimization}
 \label{sec:synthesis}
@@ -1113,7 +1106,7 @@ The result is rounded towards zero and is undefined if RD2 is zero. If the CPU w
 \subsection{\instr{hlt} -- Halt}
 \label{subsec:instr:hlt}
 
-Halt the CPU until an interrupt is received, or the \signal{cont\_i} signal is asserted.
+Halt the CPU until an enabled interrupt is received.
 
 \subsubsection{Syntax}
 

@@ -47,8 +47,7 @@ entity lxp32u_top is
 		dbus_dat_o: out std_logic_vector(31 downto 0);
 		dbus_dat_i: in std_logic_vector(31 downto 0);
 		
-		irq_i: in std_logic_vector(7 downto 0);
-		cont_i: in std_logic
+		irq_i: in std_logic_vector(7 downto 0)
 	);
 end entity;
 
@@ -81,8 +80,7 @@ cpu_inst: entity work.lxp32_cpu(rtl)
 		dbus_dat_o=>dbus_dat_o,
 		dbus_dat_i=>dbus_dat_i,
 		
-		irq_i=>irq_i,
-		cont_i=>cont_i
+		irq_i=>irq_i
 	);
 
 end architecture;

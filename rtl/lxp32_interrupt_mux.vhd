@@ -72,13 +72,15 @@ begin
 			irq_reg<=irq;
 			
 			pending_interrupts<=(pending_interrupts or 
-				(irq and not irq_reg)) and
+				(irq and not irq_reg)) and not interrupts_level and
 				interrupts_enabled and not interrupts_wakeup;
 			
 			case state is
 			when Ready =>
 				for i in irq'reverse_range loop -- lower interrupts have priority
-					if (interrupts_level(i)='0' and pending_interrupts(i)='1') or (interrupts_level(i)='1' and irq(i)='1') then
+					if (interrupts_level(i)='0' and pending_interrupts(i)='1') or
+							(interrupts_level(i)='1' and irq(i)='1' and
+							interrupts_enabled(i)='1' and interrupts_wakeup(i)='0') then
 						pending_interrupts(i)<='0';
 						interrupt_valid<='1';
 						interrupt_vector_o<=std_logic_vector(to_unsigned(i,3));
@@ -97,11 +99,20 @@ begin
 				end if;
 			end case;
 
-			if (irq and (not irq_reg) and interrupts_enabled and interrupts_wakeup)/=X"00" then
-				wakeup_o<='1';
-			else
-				wakeup_o<='0';
-			end if;
+			wakeup_o<='0';
+			for i in irq'range loop
+				if interrupts_enabled(i)='1' and interrupts_wakeup(i)='1' then
+					if interrupts_level(i)='0' then -- edge triggered
+						if irq(i)='1' and irq_reg(i)='0' then
+							wakeup_o<='1';
+						end if;
+					else -- level triggered
+						if irq(i)='1' then
+							wakeup_o<='1';
+						end if;
+					end if;
+				end if;
+			end loop;
 		end if;
 	end if;
 end process;

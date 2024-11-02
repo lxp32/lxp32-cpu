@@ -16,10 +16,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity timer is
-	generic(
-		IRQ_LEVEL_TRIGGERED: boolean:=false;
-		IRQ_INVERT: boolean:=false
-	);
 	port(
 		clk_i: in std_logic;
 		rst_i: in std_logic;
@@ -39,6 +35,9 @@ end entity;
 
 architecture rtl of timer is
 
+signal irq_level_triggered: std_logic:='0';
+signal irq_invert: std_logic:='0';
+
 signal pulses: unsigned(31 downto 0):=(others=>'0');
 signal interval: unsigned(31 downto 0):=(others=>'0');
 signal cnt: unsigned(31 downto 0):=(others=>'0');
@@ -55,7 +54,7 @@ begin
 			cnt<=(others=>'0');
 			elapsed<='0';
 		else
-			if not IRQ_LEVEL_TRIGGERED then
+			if irq_level_triggered='0' then
 				elapsed<='0';
 			end if;
 			if pulses/=X"00000000" or cnt/=X"00000000" then
@@ -87,7 +86,11 @@ begin
 								unsigned(wbs_dat_i(i*8+7 downto i*8));
 							cnt<=(others=>'0');
 						end if;
-						if wbs_adr_i="00"&X"000002" and wbs_dat_i(0)='1' and i=0 then
+						if wbs_adr_i="00"&X"000002" and i=0 then
+							irq_level_triggered<=wbs_dat_i(0);
+							irq_invert<=wbs_dat_i(1);
+						end if;
+						if wbs_adr_i="00"&X"000003" and wbs_dat_i(0)='1' and i=0 then
 							elapsed<='0';
 						end if;
 					end if;
@@ -102,6 +105,6 @@ wbs_dat_o<=std_logic_vector(pulses) when wbs_adr_i="00"&X"000000" else
 	std_logic_vector(interval) when wbs_adr_i="00"&X"000001" else
 	(others=>'-');
 
-elapsed_o<=elapsed when not IRQ_INVERT else not elapsed;
+elapsed_o<=elapsed xor irq_invert;
 
 end architecture;

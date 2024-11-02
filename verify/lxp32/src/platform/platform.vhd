@@ -349,10 +349,6 @@ timer_inst: entity work.timer(rtl)
 -- Timer with a level-sensitive IRQ
 
 timer2_inst: entity work.timer(rtl)
-	generic map(
-		IRQ_LEVEL_TRIGGERED=>true,
-		IRQ_INVERT=>true
-	)
 	port map(
 		clk_i=>clk_i,
 		rst_i=>rst_i,

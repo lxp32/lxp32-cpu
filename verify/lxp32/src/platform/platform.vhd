@@ -104,6 +104,9 @@ signal timer_elapsed: std_logic;
 signal coprocessor_wb: wbs_type;
 signal coprocessor_irq: std_logic;
 
+signal timer2_wb: wbs_type;
+signal timer2_irq: std_logic;
+
 begin
 
 -- Interconnect
@@ -165,7 +168,16 @@ intercon_inst: entity work.intercon(rtl)
 		m3_ack_i=>coprocessor_wb.ack,
 		m3_adr_o=>coprocessor_wb.adr,
 		m3_dat_o=>coprocessor_wb.wdata,
-		m3_dat_i=>coprocessor_wb.rdata
+		m3_dat_i=>coprocessor_wb.rdata,
+
+		m4_cyc_o=>timer2_wb.cyc,
+		m4_stb_o=>timer2_wb.stb,
+		m4_we_o=>timer2_wb.we,
+		m4_sel_o=>timer2_wb.sel,
+		m4_ack_i=>timer2_wb.ack,
+		m4_adr_o=>timer2_wb.adr,
+		m4_dat_o=>timer2_wb.wdata,
+		m4_dat_i=>timer2_wb.rdata
 	);
 
 -- CPU
@@ -175,7 +187,7 @@ cpu_rst<=cpu_rst_i or rst_i;
 -- Note: we connect the timer IRQ to 2 CPU channels to test
 -- handling of simultaneously arriving interrupt requests.
 
-cpu_irq<="00000"&coprocessor_irq&timer_elapsed&timer_elapsed;
+cpu_irq<="0000"&timer2_irq&coprocessor_irq&timer_elapsed&timer_elapsed;
 
 gen_lxp32u: if not MODEL_LXP32C generate
 	lxp32u_top_inst: entity work.lxp32u_top(rtl)
@@ -332,6 +344,29 @@ timer_inst: entity work.timer(rtl)
 		wbs_dat_o=>timer_wb.rdata,
 		
 		elapsed_o=>timer_elapsed
+	);
+
+-- Timer with a level-sensitive IRQ
+
+timer2_inst: entity work.timer(rtl)
+	generic map(
+		IRQ_LEVEL_TRIGGERED=>true,
+		IRQ_INVERT=>true
+	)
+	port map(
+		clk_i=>clk_i,
+		rst_i=>rst_i,
+
+		wbs_cyc_i=>timer2_wb.cyc,
+		wbs_stb_i=>timer2_wb.stb,
+		wbs_we_i=>timer2_wb.we,
+		wbs_sel_i=>timer2_wb.sel,
+		wbs_ack_o=>timer2_wb.ack,
+		wbs_adr_i=>timer2_wb.adr,
+		wbs_dat_i=>timer2_wb.wdata,
+		wbs_dat_o=>timer2_wb.rdata,
+
+		elapsed_o=>timer2_irq
 	);
 
 -- Coprocessor

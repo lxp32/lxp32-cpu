@@ -35,6 +35,7 @@ end entity;
 
 architecture rtl of lxp32_interrupt_mux is
 
+signal irq: std_logic_vector(irq_i'range);
 signal irq_reg: std_logic_vector(irq_i'range):=(others=>'0');
 
 type state_type is (Ready,Requested,WaitForExit);
@@ -46,8 +47,12 @@ signal interrupt_valid: std_logic:='0';
 
 signal interrupts_enabled: std_logic_vector(7 downto 0):=(others=>'0');
 signal interrupts_wakeup: std_logic_vector(7 downto 0):=(others=>'0');
+signal interrupts_level: std_logic_vector(7 downto 0):=(others=>'0');
+signal interrupts_invert: std_logic_vector(7 downto 0):=(others=>'0');
 
 begin
+
+irq<=irq_i xor interrupts_invert;
 
 -- Note: "disabled" interrupts (i.e. for which interrupts_enabled_i(i)='0')
 -- are ignored completely, meaning that the interrupt handler won't be
@@ -64,16 +69,16 @@ begin
 			interrupt_vector_o<=(others=>'-');
 			wakeup_o<='0';
 		else
-			irq_reg<=irq_i;
+			irq_reg<=irq;
 			
 			pending_interrupts<=(pending_interrupts or 
-				(irq_i and not irq_reg)) and
+				(irq and not irq_reg)) and
 				interrupts_enabled and not interrupts_wakeup;
 			
 			case state is
 			when Ready =>
-				for i in pending_interrupts'reverse_range loop -- lower interrupts have priority
-					if pending_interrupts(i)='1' then
+				for i in irq'reverse_range loop -- lower interrupts have priority
+					if (interrupts_level(i)='0' and pending_interrupts(i)='1') or (interrupts_level(i)='1' and irq(i)='1') then
 						pending_interrupts(i)<='0';
 						interrupt_valid<='1';
 						interrupt_vector_o<=std_logic_vector(to_unsigned(i,3));
@@ -92,7 +97,7 @@ begin
 				end if;
 			end case;
 
-			if (irq_i and (not irq_reg) and interrupts_enabled and interrupts_wakeup)/=X"00" then
+			if (irq and (not irq_reg) and interrupts_enabled and interrupts_wakeup)/=X"00" then
 				wakeup_o<='1';
 			else
 				wakeup_o<='0';
@@ -109,9 +114,13 @@ begin
 		if rst_i='1' then
 			interrupts_enabled<=(others=>'0');
 			interrupts_wakeup<=(others=>'0');
+			interrupts_level<=(others=>'0');
+			interrupts_invert<=(others=>'0');
 		elsif sp_we_i='1' and sp_waddr_i=X"FC" then
 			interrupts_enabled<=sp_wdata_i(7 downto 0);
 			interrupts_wakeup<=sp_wdata_i(15 downto 8);
+			interrupts_level<=sp_wdata_i(23 downto 16);
+			interrupts_invert<=sp_wdata_i(31 downto 24);
 		end if;
 	end if;
 end process;

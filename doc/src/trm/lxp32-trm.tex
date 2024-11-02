@@ -246,7 +246,12 @@ Although the \lxp{} architecture doesn't mandate any particular calling conventi
 		8      & Interrupt 0 wake-up flag \\
 		& \ldots \\
 		15     & Interrupt 7 wake-up flag \\
-		31--16 & \emph{Reserved} \\
+		16     & Interrupt 0 level-sensitive flag \\
+		& \ldots \\
+		23     & Interrupt 7 level-sensitive flag \\
+		24     & Interrupt 0 invert flag \\
+		& \ldots \\
+		31     & Interrupt 7 invert flag \\
 		\bottomrule
 	\end{tabularx}
 \end{table}
@@ -254,6 +259,23 @@ Although the \lxp{} architecture doesn't mandate any particular calling conventi
 Disabled interrupts are ignored altogether: if the CPU receives an interrupt request signal while the corresponding interrupt is disabled, the interrupt will not be processed even if it is enabled later.
 
 Wake-up flag marks the interrupt as a \emph{wake-up interrupt} (see below).
+
+Level-sensitive and invert flags control trigger conditions (Table \ref{tab:trigger}).
+
+\begin{table}[htbp]
+	\caption{Interrupt trigger conditions}
+	\label{tab:trigger}
+	\begin{tabularx}{\textwidth}{llL}
+		\toprule
+		Level-sensitive & Invert & Trigger condition \\
+		\midrule
+		0 & 0 & Rising edge \\
+		0 & 1 & Falling edge \\
+		1 & 0 & High level \\
+		1 & 1 & Low level \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
 
 Like other registers, \code{cr} is zero-initialized during the CPU reset, meaning that no interrupts are initially enabled.
 
@@ -502,7 +524,7 @@ Typical timing diagrams for write and read cycles are shown on Figure \ref{fig:d
 \section{Interrupts}
 \label{sec:interrupts}
 
-\lxp{} registers an interrupt condition when the corresponding request signal goes from \code{0} to \code{1}. Transitions from \code{1} to \code{0} are ignored. All interrupt request signals must be synchronous with the system clock (\signal{clk\_i}); if coming from an asynchronous source, they must be synchronized using a sequence of at least two flip-flops clocked by \signal{clk\_i}. These flip-flops are not included in the \lxp{} core in order not to increase interrupt processing delay for interrupt sources that are inherently synchronous. Failure to properly synchronize interrupt request signals will cause timing violations that will manifest itself as intermittent, hard to debug faults.
+All interrupt request signals must be synchronous with the system clock (\signal{clk\_i}); if coming from an asynchronous source, they must be synchronized using a sequence of at least two flip-flops clocked by \signal{clk\_i}. These flip-flops are not included in the \lxp{} core in order not to increase interrupt processing delay for interrupt sources that are inherently synchronous. Failure to properly synchronize interrupt request signals will cause timing violations that will manifest itself as intermittent, hard to debug faults.
 
 \section{Synthesis and optimization}
 \label{sec:synthesis}

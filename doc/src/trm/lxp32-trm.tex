@@ -393,29 +393,38 @@ Both \lxp{}U and \lxp{}C use the WISHBONE protocol for the data bus.
 \section{Generics}
 \label{sec:generics}
 
-The following generics can be used to configure the \lxp{} IP core parameters.
+The following generics can be used to configure the \lxp{} IP core.
 
 \subsection{DBUS\_RMW}
 
-By default, \lxp{} uses the \signal{dbus\_sel\_o} (byte enable) port to perform byte-granular write transactions initiated by the \instr{sb} (\instrname{Store Byte}) instruction. If this option is set to \code{true}, \signal{dbus\_sel\_o} is always tied to \code{"1111"}, and byte-granular write access is performed using the RMW (read-modify-write) cycle. The latter method is slower, but can work with slaves that do not have the [SEL\_I()] port.
+This \code{boolean} generic controls how byte-granular data bus access is performed. \lxp{} byte-granular instructions are \instr{lub} (\instrname{Load Unsigned Byte}), \instr{lsb} (\instrname{Load Signed Byte}) and \instr{sb} (\instrname{Store Byte}).
 
-This feature is designed with the assumption that read and write transactions do not cause side effects, thus it can be unsuitable for some slaves.
+Some WISHBONE buses provide hardware support for byte-granular access by the means of the [SEL\_I()] (byte enable) port. In this case this option should be left to \code{false}, which is the default value.
+
+\lxp{} can also emulate byte-granular transactions. This works even if the data bus doesn't support byte-granular access natively. To enable this feature, DBUS\_RMW should be set to \code{true}. The emulation works like this:
+
+\begin{itemize}
+\item When executing the \instr{sb} instruction, the CPU performs an RMW (read-modify-write) cycle, reading the entire word, replacing a byte in it and writing the word back.
+\item When executing the \instr{lub} and \instr{lsb} instructions, the CPU reads the entire word and extracts the requested byte.
+\end{itemize}
+
+Either way, when this option is set to \code{true}, \signal{dbus\_sel\_o} is tied to \code{"1111"}.
 
 \subsection{DIVIDER\_EN}
 
-\lxp{} includes a divider unit which has quite a low performance but occupies a considerable amount of resources. It can be disabled by setting this option to \code{false}.
+\lxp{} includes a divider unit which has quite a low performance but occupies a considerable amount of resources. It can be disabled by setting this \code{boolean} generic to \code{false}.
 
 \subsection{IBUS\_BURST\_SIZE}
 
-Instruction bus burst size. Default value is 16. Only for \lxp{}C.
+This \code{integer} generic determines the instruction bus burst size. Default value is 16. Only for \lxp{}C.
 
 \subsection{IBUS\_PREFETCH\_SIZE}
 
-Number of words that the instruction cache will read ahead from the current instruction pointer. Default value is 32. Only for \lxp{}C.
+This \code{integer} generic determines the number of words that the instruction cache will read ahead from the current instruction pointer. Default value is 32. Only for \lxp{}C.
 
 \subsection{MUL\_ARCH}
 
-\lxp{} provides three multiplier options:
+This \code{string} generic selects the multiplier hardware implementation. \lxp{} provides three multiplier options:
 
 \begin{itemize}
 	\item \code{"dsp"} is the fastest architecture designed for technologies that provide fast parallel $16 \times 16$ multipliers, which includes most modern FPGA families. One multiplication takes 2 clock cycles.
@@ -429,7 +438,7 @@ For older FPGA families that don't provide dedicated multipliers the \code{"opt"
 
 \subsection{START\_ADDR}
 
-Address of the first instruction to be executed after CPU reset. Default value is \code{0}. The two least significant bits are ignored as instructions are always word-aligned.
+Address of the first instruction to be executed after CPU reset, represented as \code{std\_logic\_vector}. Default value is \code{0}. The two least significant bits are ignored as instructions are always word-aligned.
 
 \section{Clock and reset}
 \label{sec:clockreset}
@@ -498,7 +507,7 @@ A typical \lxp{}C instruction bus burst timing diagram is shown on Figure \ref{f
 
 \lxp{} uses the WISHBONE bus to interact with data memory and other peripherals. This bus is distinct from the instruction bus; its parameters are defined in the WISHBONE datasheet (Appendix \ref{app:wishbonedatasheet}).
 
-The data bus uses a 30-bit \signal{dbus\_adr\_o} port to address 32-bit words; the \signal{dbus\_sel\_o} port is used to select individual bytes to be written or read. The upper 30 bits of the address appear on the \signal{dbus\_adr\_o} port, while the lower two bits are decoded to create a 4-bit \signal{dbus\_sel\_o} signal. Consider:
+The data bus uses a 30-bit \signal{dbus\_adr\_o} port to address 32-bit words; the \signal{dbus\_sel\_o} port is used to select individual bytes to be written or read. The upper 30 bits of the address appear on the \signal{dbus\_adr\_o} port. \signal{dbus\_sel\_o} is set to \code{"1111"} when reading or writing whole words; for byte-granular transactions the lower two bits are decoded to create a 4-bit \signal{dbus\_sel\_o} signal. Consider:
 
 \begin{codeparbreakable}
     \instr{lc} r0, 0x20000002

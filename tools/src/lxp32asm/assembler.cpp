@@ -432,6 +432,7 @@ LinkableObject::Word Assembler::elaborateInstruction(TokenList &list) {
 	else if(list[0]=="sru") encodeSru(list);
 	else if(list[0]=="sub") encodeSub(list);
 	else if(list[0]=="sw") encodeSw(list);
+	else if(list[0]=="xcall") encodeXcall(list);
 	else if(list[0]=="xor") encodeXor(list);
 	else throw std::runtime_error("Unrecognized instruction: \""+list[0]+"\"");
 	return rva;
@@ -957,6 +958,17 @@ void Assembler::encodeSw(const TokenList &list) {
 	LinkableObject::Word w=0x32000000;
 	encodeRd1Operand(w,args[0]);
 	encodeRd2Operand(w,args[1]);
+	_obj.addWord(w);
+}
+
+void Assembler::encodeXcall(const TokenList &list) {
+	auto args=getOperands(list);
+	if(args.size()!=2) throw std::runtime_error("xcall instruction requires 2 operands");
+	if(args[0].type!=Operand::Register) throw std::runtime_error("\""+args[0].str+"\": must be a register");
+	if(args[1].type!=Operand::Register) throw std::runtime_error("\""+args[1].str+"\": must be a register");
+	LinkableObject::Word w=0x86000000;
+	encodeDstOperand(w,args[0]);
+	encodeRd1Operand(w,args[1]);
 	_obj.addWord(w);
 }
 

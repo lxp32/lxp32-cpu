@@ -66,7 +66,6 @@ private:
 	std::string decodeSimpleInstruction(const std::string &op,Word w);
 	std::string decodeAdd(Word w);
 	std::string decodeAnd(Word w);
-	std::string decodeCall(Word w);
 	std::string decodeCjmpxx(Word w);
 	std::string decodeDivs(Word w);
 	std::string decodeDivu(Word w);
@@ -88,6 +87,7 @@ private:
 	std::string decodeSru(Word w);
 	std::string decodeSub(Word w);
 	std::string decodeSw(Word w);
+	std::string decodeXcall(Word w);
 	std::string decodeXor(Word w);
 	std::string decodeWord(Word w);
 };

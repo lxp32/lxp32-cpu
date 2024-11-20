@@ -189,7 +189,9 @@ Before using the stack, the \code{sp} register must be set up to point to a vali
 \section{Calling procedures}
 \label{sec:callingprocedures}
 
-\lxp{} provides a \instr{call} instruction which saves the address of the next instruction in the \code{rp} register and transfers execution to the address stored in the register operand. Return from a procedure is performed by the \code{\instr{jmp} rp} instruction which also has a \instr{ret} alias.
+Procedure calls are supported in \lxp{} by the \instr{xcall} instruction which saves the address of the next instruction in the register specified as the first operand and transfers execution to the address pointed by the second operand. In a common case when the first operand is \code{rp}, the instruction can be also written as \instr{call} which takes only one operand.
+
+Return from a procedure is performed by the \instr{jmp} instruction; \code{\instr{jmp} rp} also has a \instr{ret} alias.
 
 If a procedure must in turn call a nested procedure itself, the return address in the \code{rp} register will be overwritten by the \instr{call} instruction. Hence, unless it is a tail call (see below), the procedure must save the \code{rp} value somewhere; the most general solution is to use the stack:
 
@@ -198,11 +200,11 @@ If a procedure must in turn call a nested procedure itself, the return address i
     \instr{sw} sp, rp
     ...
     \instr{lc} r0, Nested_proc
-    \instr{call} r0
+    \instr{call} r0 \emph{// equivalent to xcall rp, r0}
     ...
     \instr{lw} rp, sp
     \instr{add} sp, sp, 4
-    \instr{ret}
+    \instr{ret} \emph{// equivalent to jmp rp}
 \end{codepar}
 
 Procedures that don't use the \instr{call} instruction (sometimes called \emph{leaf procedures}) don't need to save the \code{rp} value.
@@ -973,7 +975,8 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:jmp]{\instr{jmp}} & Jump & \code{100000} \\
 	\hyperref[subsec:instr:cjmpxxx]{\instr{cjmp\emph{xxx}}} & Compare and Jump & \code{11\emph{xxxx}} (\code{\emph{xxxx}} = condition) \\
-	\hyperref[subsec:instr:call]{\instr{call}} & Call Procedure & \code{100001} \\
+	\hyperref[subsec:instr:call]{\instr{call}} & Call Procedure & alias for \code{\instr{xcall} rp, addr} \\
+	\hyperref[subsec:instr:xcall]{\instr{xcall}} & Extended Call & \code{100001} \\
 	\hyperref[subsec:instr:ret]{\instr{ret}} & Return from Procedure & alias for \code{\instr{jmp} rp} \\
 	\hyperref[subsec:instr:iret]{\instr{iret}} & Interrupt Return & alias for \code{\instr{jmp} irp}\\
 	\midrule
@@ -1028,27 +1031,11 @@ Example: \code{\instr{and} r2, r1, 0x3F} $\rightarrow$ \code{0x6202013F}
 \subsection{\instr{call} -- Call Procedure}
 \label{subsec:instr:call}
 
-Save a pointer to the next instruction in the \code{rp} register and transfer execution to the address pointed by the operand.
-
 \subsubsection{Syntax}
 
 \code{\instr{call} RD1}
 
-\subsubsection{Encoding}
-
-\code{100001 1 0 11111110 RD1 00000000}
-
-RD1 must be a register.
-
-Example: \code{\instr{call} r1} $\rightarrow$ \code{0x86FE0100}
-
-\subsubsection{Operation}
-
-\code{rp := \emph{return\_address}}
-
-\code{goto RD1}
-
-Pointer in RD1 is interpreted as described in Section \ref{sec:addressing}.
+Alias for \code{\instr{xcall} rp, RD1}
 
 \subsection{\instr{cjmp\emph{xxx}} -- Compare and Jump}
 \label{subsec:instr:cjmpxxx}
@@ -1553,6 +1540,31 @@ Example: \code{\instr{sw} r2, r1} $\rightarrow$ \code{0x33000201}
 
 Pointer in RD1 is interpreted as described in Section \ref{sec:addressing}.
 
+\subsection{\instr{xcall} -- Extended Call}
+\label{subsec:instr:xcall}
+
+Save a pointer to the next instruction in the register specified as the first operand and transfer execution to the address pointed by the second operand.
+
+\subsubsection{Syntax}
+
+\code{\instr{xcall} DST, RD1}
+
+\subsubsection{Encoding}
+
+\code{100001 1 0 DST RD1 00000000}
+
+RD1 must be a register.
+
+Example: \code{\instr{xcall} rp, r1} $\rightarrow$ \code{0x86FE0100}
+
+\subsubsection{Operation}
+
+\code{DST := \emph{return\_address}}
+
+\code{goto RD1}
+
+Pointer in RD1 is interpreted as described in Section \ref{sec:addressing}. Note: \code{\instr{xcall} rp, RD1} is equivalent to \code{\instr{call} RD1}.
+
 \subsection{\instr{xor} -- Bitwise Exclusive Or}
 \label{subsec:instr:xor}
 
@@ -1576,7 +1588,7 @@ Example: \code{\instr{xor} r2, r1, 0x3F} $\rightarrow$ \code{0x6A02013F}
 
 \chapter{Instruction cycle counts}
 
-Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based on an assumption that no pipeline stalls are caused by the instruction bus latency or cache misses. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
+Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}. These data are provided for reference purposes; the software should not depend on them as they can change in future hardware revisions.
 
 \begin{table}[htbp]
 	\centering
@@ -1586,21 +1598,22 @@ Cycle counts for \lxp{} instructions are listed in Table \ref{tab:cycles}, based
 		\toprule
 		Instruction & Cycles & Instruction & Cycles \\
 		\midrule
-		\instr{add} & 1 & \instr{modu} & 37 \\
-		\instr{and} & 1 & \instr{mov} & 1 \\
-		\instr{call} & 4 & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
-		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{neg} & 1 \\
-		\instr{divs} & 36 & \instr{nop} & 1 \\
-		\instr{divu} & 36 & \instr{not} & 1 \\
-		\instr{hlt} & N/A & \instr{or} & 1 \\
-		\instr{jmp} & 4 & \instr{ret} & 4 \\
-		\instr{iret} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
-		\instr{lc} & 2 & \instr{sl} & 2 \\
-		\instr{lcs} & 1 & \instr{srs} & 2 \\
-		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sru} & 2 \\
-		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
-		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
+		\instr{add} & 1 & \instr{mov} & 1 \\
+		\instr{and} & 1 & \instr{mul} & 2, 6 or 34\footnotemark[3] \\
+		\instr{call} & 4 & \instr{neg} & 1 \\
+		\instr{cjmp\emph{xxx}} & 5 or 2\footnotemark[1] & \instr{nop} & 1 \\
+		\instr{divs} & 36 & \instr{not} & 1 \\
+		\instr{divu} & 36 & \instr{or} & 1 \\
+		\instr{hlt} & N/A & \instr{ret} & 4 \\
+		\instr{jmp} & 4 & \instr{sb} & $\ge$ 2\footnotemark[2] \\
+		\instr{iret} & 4 & \instr{sl} & 2 \\
+		\instr{lc} & 2 & \instr{srs} & 2 \\
+		\instr{lcs} & 1 & \instr{sru} & 2 \\
+		\instr{lsb} & $\ge$ 3\footnotemark[2] & \instr{sub} & 1 \\
+		\instr{lub} & $\ge$ 3\footnotemark[2] & \instr{sw} & $\ge$ 2\footnotemark[2] \\
+		\instr{lw} & $\ge$ 3\footnotemark[2] & \instr{xcall} & 4 \\
 		\instr{mods} & 37 & \instr{xor} & 1 \\
+		\instr{modu} & 37 &  \\
 		\bottomrule
 	\end{tabularx}
 \end{table}

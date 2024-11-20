@@ -65,7 +65,7 @@ void Disassembler::dump() {
 			instruction=decodeAnd(word);
 			break;
 		case 0x21:
-			instruction=decodeCall(word);
+			instruction=decodeXcall(word);
 			break;
 		case 0x15:
 			instruction=decodeDivs(word);
@@ -231,18 +231,6 @@ std::string Disassembler::decodeAdd(Word w) {
 
 std::string Disassembler::decodeAnd(Word w) {
 	return decodeSimpleInstruction("and",w);
-}
-
-std::string Disassembler::decodeCall(Word w) {
-	auto dst=decodeDstOperand(w);
-	auto rd1=decodeRd1Operand(w);
-	auto rd2=decodeRd2Operand(w);
-	
-	if(dst.value()!=0xFE) return decodeWord(w);
-	if(rd1.type()!=Operand::Register) return decodeWord(w);
-	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
-	
-	return "call "+str(rd1);
 }
 
 std::string Disassembler::decodeCjmpxx(Word w) {
@@ -438,6 +426,20 @@ std::string Disassembler::decodeSw(Word w) {
 	if(rd1.type()!=Operand::Register) return decodeWord(w);
 	
 	return "sw "+str(rd1)+", "+str(rd2);
+}
+
+std::string Disassembler::decodeXcall(Word w) {
+	auto dst=decodeDstOperand(w);
+	auto rd1=decodeRd1Operand(w);
+	auto rd2=decodeRd2Operand(w);
+
+	if(rd1.type()!=Operand::Register) return decodeWord(w);
+	if(rd2.type()!=Operand::Direct||rd2.value()!=0) return decodeWord(w);
+
+	if(dst.value()==0xFE&&_preferAliases)
+		return "call "+str(rd1);
+	else
+		return "xcall "+str(dst)+", "+str(rd1);
 }
 
 std::string Disassembler::decodeXor(Word w) {

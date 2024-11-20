@@ -102,6 +102,7 @@ private:
 	void encodeSru(const TokenList &list);
 	void encodeSub(const TokenList &list);
 	void encodeSw(const TokenList &list);
+	void encodeXcall(const TokenList &list);
 	void encodeXor(const TokenList &list);
 };
 

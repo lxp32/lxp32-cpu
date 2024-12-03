@@ -961,7 +961,9 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\hyperref[subsec:instr:modu]{\instr{modu}} & Modulo Unsigned & \code{010110} \\
 	\hyperref[subsec:instr:mods]{\instr{mods}} & Modulo Signed & \code{010111} \\
 	\midrule
-	\tabcutin{3}{Bitwise operations} \\
+	& & \\
+	\midrule
+	\tabcutin{3}{Logical operations} \\
 	\midrule
 	\hyperref[subsec:instr:not]{\instr{not}} & Bitwise Not & alias for \code{\instr{xor} dst, src, -1} \\
 	\hyperref[subsec:instr:and]{\instr{and}} & Bitwise And & \code{011000} \\
@@ -984,6 +986,7 @@ See Section \ref{sec:instructionformat} for a general description of \lxp{} inst
 	\midrule
 	\hyperref[subsec:instr:nop]{\instr{nop}} & No Operation & \code{000000} \\
 	\hyperref[subsec:instr:hlt]{\instr{hlt}} & Halt & \code{000010} \\
+	\bottomrule
 \end{ctabular}
 
 \section{Alphabetical list of instructions}
@@ -1563,7 +1566,7 @@ Example: \code{\instr{xcall} rp, r1} $\rightarrow$ \code{0x86FE0100}
 
 \code{goto RD1}
 
-Pointer in RD1 is interpreted as described in Section \ref{sec:addressing}. Note: \code{\instr{xcall} rp, RD1} is equivalent to \code{\instr{call} RD1}.
+Pointer in RD1 is interpreted as described in Section \ref{sec:addressing}. \code{\instr{xcall} rp, RD1} is equivalent to \code{\instr{call} RD1}.
 
 \subsection{\instr{xor} -- Bitwise Exclusive Or}
 \label{subsec:instr:xor}

@@ -2,7 +2,6 @@ include ../../src/make/sources.make
 
 GHDL_FLAGS=--std=93
 
-WAVE_VCD=wave.vcd
 WAVE_OUT=wave.fst
 
 ########################
@@ -13,7 +12,7 @@ all: batch
 
 .PHONY: all compile batch gui clean
 
-.PRECIOUS: $(WAVE_OUT) $(WAVE_VCD)
+.PRECIOUS: $(WAVE_OUT)
 
 compile: compile.stamp $(FIRMWARE)
 
@@ -25,8 +24,8 @@ gui: $(WAVE_OUT)
 
 clean:
 	rm -f *.cf
-	rm -f $(WAVE_VCD)
 	rm -f $(WAVE_OUT)
+	rm -f *.hier
 	rm -f $(FIRMWARE)
 	rm -f *.o
 	rm -f $(TB_MOD)
@@ -36,11 +35,8 @@ clean:
 # Normal targets
 ########################
 
-$(WAVE_OUT): $(WAVE_VCD)
-	vcd2fst $^ $@
-
-$(WAVE_VCD): compile.stamp $(FIRMWARE)
-	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --vcd=$(WAVE_VCD)
+$(WAVE_OUT): compile.stamp $(FIRMWARE)
+	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
 	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)

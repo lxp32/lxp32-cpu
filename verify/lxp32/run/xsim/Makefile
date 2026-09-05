@@ -6,6 +6,14 @@ else
 	BAT=.bat
 endif
 
+VIVADO_GENERICS=-generic_top "CPU_DBUS_RMW=$(CPU_DBUS_RMW)" \
+	-generic_top "CPU_MUL_ARCH=$(CPU_MUL_ARCH)" \
+	-generic_top "MODEL_LXP32C=$(MODEL_LXP32C)" \
+	-generic_top "TEST_CASE=$(TEST_CASE)" \
+	-generic_top "THROTTLE_DBUS=$(THROTTLE_DBUS)" \
+	-generic_top "THROTTLE_IBUS=$(THROTTLE_IBUS)" \
+	-generic_top "VERBOSE=$(VERBOSE)"
+
 ########################
 # Phony targets
 ########################
@@ -41,7 +49,7 @@ clean:
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC) $(FIRMWARE)
 	xvhdl$(BAT) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
-	xelab$(BAT) work.tb -s tb_sim -debug typical
+	xelab$(BAT) $(VIVADO_GENERICS) work.tb -s tb_sim -debug typical
 	echo > compile.stamp
 
 %.ram: $(FW_SRC_DIR)/%.asm

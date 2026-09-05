@@ -1,0 +1,8 @@
+*.ram
+*.vcd
+*.fst
+*.fst.hier
+*.cf
+*.o
+tb
+compile.stamp

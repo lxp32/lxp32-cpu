@@ -662,12 +662,13 @@ The following software is required to simulate the \lxp{} design:
 	\item An HDL simulator supporting VHDL-93. \lxp{} package includes scripts (makefiles) for the following simulators:
 	
 	\begin{itemize}
-		\item GHDL -- a free and open-source VHDL simulator which supports multiple operating systems\footnote{\url{http://ghdl.free.fr/}};
+		\item GHDL -- a free and open source VHDL simulator\footnote{\url{http://ghdl.free.fr/}};
+		\item NVC -- another free and open source VHDL simulator\footnote{\url{https://www.nickg.me.uk/nvc/}};
 		\item Mentor Graphics\textregistered{} ModelSim\textregistered{} simulator (\shellcmd{vsim});
 		\item Xilinx\textregistered{} Vivado\textregistered{} Simulator (\shellcmd{xsim}).
 	\end{itemize}
 	
-	With GHDL, a waveform viewer such as GTKWave is also recommended (Figure \ref{fig:gtkwave})\footnote{\url{http://gtkwave.sourceforge.net/}}.
+	With GHDL and NVC, a waveform viewer such as GTKWave is also recommended (Figure \ref{fig:gtkwave})\footnote{\url{http://gtkwave.sourceforge.net/}}.
 	
 	Some FPGA vendors provide limited versions of the ModelSim\textregistered{} simulator for free as parts of their design suites. These versions should suffice for \lxp{} simulation.
 	
@@ -690,7 +691,7 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 
 \begin{itemize}
 	\item \shellcmd{batch} -- simulate the design in batch mode. Results will be written to the standard output. This is the default target.
-	\item \shellcmd{gui} -- simulate the design in GUI mode. Note: since GHDL doesn't have a GUI, the simulation itself will be run in batch mode; upon a completion, GTKWave will be run automatically to display the dumped waveforms.
+	\item \shellcmd{gui} -- simulate the design in GUI mode. Note: with GHDL and NVC, the simulation itself will be run in batch mode; upon a completion, GTKWave will be run automatically to display the dumped waveforms.
 	\item \shellcmd{compile} -- compile only, don't run simulation.
 	\item \shellcmd{clean} -- delete all the produced artifacts.
 \end{itemize}
@@ -715,6 +716,8 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 	\item Simulate the \shellcmd{tb} design unit defined in the \shellcmd{tb.vhd} file.
 \end{enumerate}
 
+Alternatively, it shouldn't be too hard to create a makefile for a new simulator using one of the existing makefiles as an example.
+
 \section{Testbench parameters}
 
 Simulation parameters can be configured by overriding generics defined by the \shellcmd{tb} design unit:
@@ -729,7 +732,7 @@ Simulation parameters can be configured by overriding generics defined by the \s
 	\item \code{VERBOSE} -- print more messages.
 \end{itemize}
 
-These generics can be also set using \shellcmd{make} parameters (currently works only for \shellcmd{ghdl} and \shellcmd{vsim}), for example:
+These generics can be also set using \shellcmd{make} parameters (currently works only for \shellcmd{ghdl}, \shellcmd{nvc} and \shellcmd{vsim}), for example:
 
 \begin{codepar}
     make MODEL_LXP32C=false TEST_CASE=test001

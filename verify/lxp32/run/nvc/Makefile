@@ -26,6 +26,7 @@ gui: $(WAVE_OUT)
 clean:
 	rm -rf work
 	rm -f $(WAVE_OUT)
+	rm -f *.hier
 	rm -f $(FIRMWARE)
 	rm -f compile.stamp
 

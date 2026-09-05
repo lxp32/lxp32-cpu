@@ -1,6 +1,6 @@
 include ../../src/make/sources.make
 
-GHDL_FLAGS=--std=93
+NVC_FLAGS=--std=93
 
 WAVE_OUT=wave.fst
 
@@ -17,17 +17,16 @@ all: batch
 compile: compile.stamp
 
 batch: compile.stamp
-	ghdl -r $(GHDL_FLAGS) $(TB_MOD)
+	nvc $(NVC_FLAGS) -r $(TB_MOD)
 
 gui: $(WAVE_OUT)
 	gtkwave $(WAVE_OUT)
 
 clean:
-	rm -f *.cf
+	rm -rf work
 	rm -f $(WAVE_OUT)
 	rm -f *.hier
-	rm -f *.o
-	rm -f $(TB_MOD)
+	rm -f $(FIRMWARE)
 	rm -f compile.stamp
 
 ########################
@@ -35,9 +34,9 @@ clean:
 ########################
 
 $(WAVE_OUT): compile.stamp
-	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT)
+	-nvc $(NVC_FLAGS) -r $(TB_MOD) --format=fst --wave=$(WAVE_OUT)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
-	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
-	ghdl -e $(GHDL_FLAGS) $(TB_MOD)
+	nvc $(NVC_FLAGS) -a $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
+	nvc $(NVC_FLAGS) -e $(TB_MOD)
 	echo > compile.stamp

@@ -42,6 +42,15 @@ end entity;
 
 architecture testbench of tb is
 
+function str_equal(s1, s2 : string) return boolean is
+begin
+	if s1'length /= s2'length then
+		return false;
+	else
+		return (s1 = s2);
+	end if;
+end function;
+
 signal clk: std_logic:='0';
 
 signal globals: soc_globals_type:=(others=>'1');
@@ -113,7 +122,7 @@ clk<=not clk and not finish after 5 ns;
 
 process is
 begin
-	if TEST_CASE="all" then
+	if str_equal(TEST_CASE,"all") then
 		run_test("test001.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test002.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test003.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);

@@ -723,7 +723,7 @@ Simulation parameters can be configured by overriding generics defined by the \s
 	\item \code{CPU\_DBUS\_RMW} -- \code{DBUS\_RMW} CPU generic value (see Section \ref{sec:generics}).
 	\item \code{CPU\_MUL\_ARCH} -- \code{MUL\_ARCH} CPU generic value (see Section \ref{sec:generics}).
 	\item \code{MODEL\_LXP32C} -- simulate the \lxp{}C version. By default, this option is set to \code{true}. If set to \code{false}, \lxp{}U is simulated instead.
-	\item \code{TEST\_CASE} -- if set to \code{"all"} (default), all tests are executed. Otherwise, specifies the file name of a test case to run.
+	\item \code{TEST\_CASE} -- if set to \code{"all"} (default), all tests are executed. Otherwise, specifies the test case to run.
 	\item \code{THROTTLE\_DBUS} -- perform pseudo-random data bus throttling. By default, this option is set to \code{true}.
 	\item \code{THROTTLE\_IBUS} -- perform pseudo-random instruction bus throttling. By default, this option is set to \code{true}.
 	\item \code{VERBOSE} -- print more messages.
@@ -732,7 +732,7 @@ Simulation parameters can be configured by overriding generics defined by the \s
 These generics can be set using \shellcmd{make} parameters (currently works only for \shellcmd{ghdl} and \shellcmd{vsim}), for example:
 
 \begin{codepar}
-    make MODEL_LXP32C=false TEST_CASE=test001.ram
+    make MODEL_LXP32C=false TEST_CASE=test001
 \end{codepar}
 
 \chapter{Development tools}

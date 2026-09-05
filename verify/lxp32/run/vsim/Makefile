@@ -1,5 +1,7 @@
 include ../../src/make/sources.make
 
+VSIM_GENERICS=-gCPU_DBUS_RMW=$(CPU_DBUS_RMW) -gCPU_MUL_ARCH=$(CPU_MUL_ARCH) -gMODEL_LXP32C=$(MODEL_LXP32C) -gTEST_CASE=$(TEST_CASE) -gTHROTTLE_DBUS=$(THROTTLE_DBUS) -gTHROTTLE_IBUS=$(THROTTLE_IBUS) -gVERBOSE=$(VERBOSE)
+
 VCOMFLAGS=-93
 VSIMFLAGS=-t 1ps
 
@@ -14,10 +16,10 @@ all: batch
 compile: compile.stamp
 
 batch: compile.stamp
-	vsim $(VSIMFLAGS) -do "run -all; quit -f" -c work.$(TB_MOD)
+	vsim $(VSIMFLAGS) $(VSIM_GENERICS) -do "run -all; quit -f" -c work.$(TB_MOD)
 
 gui: compile.stamp
-	vsim $(VSIMFLAGS) work.$(TB_MOD)
+	vsim $(VSIMFLAGS) $(VSIM_GENERICS) work.$(TB_MOD)
 
 clean:
 	rm -rf work

@@ -103,10 +103,9 @@ ack_write<=wbs_cyc_i and wbs_stb_i and wbs_we_i;
 
 wbs_ack_o<=ack_read or ack_write;
 
-wbs_dat_o(7 downto 0)<=ram_a_rdata(7 downto 0) when sel_read(0)='1' else (others=>'U');
-wbs_dat_o(15 downto 8)<=ram_a_rdata(15 downto 8) when sel_read(1)='1' else (others=>'U');
-wbs_dat_o(23 downto 16)<=ram_a_rdata(23 downto 16) when sel_read(2)='1' else (others=>'U');
-wbs_dat_o(31 downto 24)<=ram_a_rdata(31 downto 24) when sel_read(3)='1' else (others=>'U');
+gen_wbs_dat_o: for i in 3 downto 0 generate
+	wbs_dat_o(i*8+7 downto i*8)<=ram_a_rdata(i*8+7 downto i*8) when sel_read(i)='1' else (others=>'U');
+end generate;
 
 -- Low Latency Interface (with optional pseudo-random throttling)
 

@@ -1,6 +1,7 @@
 include ../../src/make/sources.make
 
 GHDL_FLAGS=--std=93
+GHDL_GENERICS=-gCPU_DBUS_RMW=$(CPU_DBUS_RMW) -gCPU_MUL_ARCH=$(CPU_MUL_ARCH) -gMODEL_LXP32C=$(MODEL_LXP32C) -gTEST_CASE=$(TEST_CASE) -gTHROTTLE_DBUS=$(THROTTLE_DBUS) -gTHROTTLE_IBUS=$(THROTTLE_IBUS) -gVERBOSE=$(VERBOSE)
 
 WAVE_OUT=wave.fst
 
@@ -17,7 +18,7 @@ all: batch
 compile: compile.stamp $(FIRMWARE)
 
 batch: compile.stamp $(FIRMWARE)
-	ghdl -r $(GHDL_FLAGS) $(TB_MOD)
+	ghdl -r $(GHDL_FLAGS) $(TB_MOD) $(GHDL_GENERICS)
 
 gui: $(WAVE_OUT)
 	gtkwave $(WAVE_OUT)
@@ -36,7 +37,7 @@ clean:
 ########################
 
 $(WAVE_OUT): compile.stamp $(FIRMWARE)
-	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT)
+	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT) $(GHDL_GENERICS)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
 	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)

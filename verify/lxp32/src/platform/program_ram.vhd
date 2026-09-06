@@ -50,6 +50,7 @@ signal ram_a_rdata: std_logic_vector(31 downto 0);
 signal ram_b_re: std_logic;
 signal ram_b_rdata: std_logic_vector(31 downto 0);
 
+signal sel_read: std_logic_vector(3 downto 0);
 signal ack_write: std_logic;
 signal ack_read: std_logic;
 
@@ -94,13 +95,17 @@ process (clk_i) is
 begin
 	if rising_edge(clk_i) then
 		ack_read<=wbs_cyc_i and wbs_stb_i and not wbs_we_i and not ack_read;
+		sel_read<=wbs_sel_i;
 	end if;
 end process;
 
 ack_write<=wbs_cyc_i and wbs_stb_i and wbs_we_i;
 
 wbs_ack_o<=ack_read or ack_write;
-wbs_dat_o<=ram_a_rdata;
+
+gen_wbs_dat_o: for i in 3 downto 0 generate
+	wbs_dat_o(i*8+7 downto i*8)<=ram_a_rdata(i*8+7 downto i*8) when sel_read(i)='1' else (others=>'U');
+end generate;
 
 -- Low Latency Interface (with optional pseudo-random throttling)
 

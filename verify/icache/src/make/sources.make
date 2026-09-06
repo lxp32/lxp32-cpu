@@ -1,3 +1,10 @@
+# Testbench parameters
+
+CACHE_BURST_SIZE ?= 16
+CACHE_PREFETCH_SIZE ?= 32
+CPU_BLOCKS ?= 100000
+VERBOSE ?= false
+
 # CPU RTL
 
 LXP32_DIR=../../../../rtl

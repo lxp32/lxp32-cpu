@@ -1,5 +1,4 @@
 *.ram
-*.vcd
 *.fst
 *.fst.hier
 *.cf

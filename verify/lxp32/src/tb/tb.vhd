@@ -12,8 +12,7 @@
 --     CPU_MUL_ARCH:    MUL_ARCH CPU generic
 --     MODEL_LXP32C:    when true, simulates LXP32C variant (with
 --                      instruction cache), otherwise LXP32U
---     TEST_CASE:       If non-empty, selects a test case to run.
---                      If empty, all tests are executed.
+--     TEST_CASE:       a test case to run, or "all" for all tests
 --     THROTTLE_IBUS:   perform pseudo-random instruction bus
 --                      throttling
 --     THROTTLE_DBUS:   perform pseudo-random data bus throttling
@@ -34,7 +33,7 @@ entity tb is
 		CPU_DBUS_RMW: boolean:=false;
 		CPU_MUL_ARCH: string:="dsp";
 		MODEL_LXP32C: boolean:=true;
-		TEST_CASE: string:="";
+		TEST_CASE: string:="all";
 		THROTTLE_DBUS: boolean:=true;
 		THROTTLE_IBUS: boolean:=true;
 		VERBOSE: boolean:=false
@@ -42,6 +41,15 @@ entity tb is
 end entity;
 
 architecture testbench of tb is
+
+function str_equal(s1, s2 : string) return boolean is
+begin
+	if s1'length /= s2'length then
+		return false;
+	else
+		return (s1 = s2);
+	end if;
+end function;
 
 signal clk: std_logic:='0';
 
@@ -114,7 +122,7 @@ clk<=not clk and not finish after 5 ns;
 
 process is
 begin
-	if TEST_CASE'length=0 then
+	if str_equal(TEST_CASE,"all") or TEST_CASE'length=0 then
 		run_test("test001.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test002.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test003.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
@@ -136,12 +144,25 @@ begin
 		run_test("test019.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test020.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test021.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
+		run_test("test022.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 	else
-		run_test(TEST_CASE,clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
+		run_test(TEST_CASE&".ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 	end if;
 	
 	report "ALL TESTS WERE COMPLETED SUCCESSFULLY";
 	finish<='1';
+	wait;
+end process;
+
+process is
+begin
+	report "CPU_DBUS_RMW   = " & boolean'image(CPU_DBUS_RMW) & LF &
+		   "CPU_MUL_ARCH   = " & CPU_MUL_ARCH & LF &
+		   "MODEL_LXP32C   = " & boolean'image(MODEL_LXP32C) & LF &
+		   "TEST_CASE      = " & TEST_CASE & LF &
+		   "THROTTLE_DBUS  = " & boolean'image(THROTTLE_DBUS) & LF &
+		   "THROTTLE_IBUS  = " & boolean'image(THROTTLE_IBUS) & LF &
+		   "VERBOSE        = " & boolean'image(VERBOSE);
 	wait;
 end process;
 

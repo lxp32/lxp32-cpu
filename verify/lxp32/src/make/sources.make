@@ -1,3 +1,13 @@
+# Testbench parameters
+
+CPU_DBUS_RMW ?= false
+CPU_MUL_ARCH ?= dsp
+MODEL_LXP32C ?= true
+TEST_CASE ?= all
+THROTTLE_DBUS ?= true
+THROTTLE_IBUS ?= true
+VERBOSE ?= false
+
 # CPU RTL
 
 LXP32_DIR=../../../../rtl

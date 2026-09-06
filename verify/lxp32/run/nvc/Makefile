@@ -1,7 +1,7 @@
 include ../../src/make/sources.make
 
-GHDL_FLAGS=--std=93
-GHDL_GENERICS=-gCPU_DBUS_RMW=$(CPU_DBUS_RMW) -gCPU_MUL_ARCH=$(CPU_MUL_ARCH) -gMODEL_LXP32C=$(MODEL_LXP32C) -gTEST_CASE=$(TEST_CASE) -gTHROTTLE_DBUS=$(THROTTLE_DBUS) -gTHROTTLE_IBUS=$(THROTTLE_IBUS) -gVERBOSE=$(VERBOSE)
+NVC_FLAGS=--std=93 --messages=compact
+NVC_GENERICS=-g CPU_DBUS_RMW=$(CPU_DBUS_RMW) -g CPU_MUL_ARCH=$(CPU_MUL_ARCH) -g MODEL_LXP32C=$(MODEL_LXP32C) -g TEST_CASE=$(TEST_CASE) -g THROTTLE_DBUS=$(THROTTLE_DBUS) -g THROTTLE_IBUS=$(THROTTLE_IBUS) -g VERBOSE=$(VERBOSE)
 
 WAVE_OUT=wave.fst
 
@@ -18,18 +18,16 @@ all: batch
 compile: compile.stamp $(FIRMWARE)
 
 batch: compile.stamp $(FIRMWARE)
-	ghdl -r $(GHDL_FLAGS) $(TB_MOD) $(GHDL_GENERICS)
+	nvc $(NVC_FLAGS) -r $(TB_MOD)
 
 gui: $(WAVE_OUT)
 	gtkwave $(WAVE_OUT)
 
 clean:
-	rm -f *.cf
+	rm -rf work
 	rm -f $(WAVE_OUT)
 	rm -f *.hier
 	rm -f $(FIRMWARE)
-	rm -f *.o
-	rm -f $(TB_MOD)
 	rm -f compile.stamp
 
 ########################
@@ -37,11 +35,11 @@ clean:
 ########################
 
 $(WAVE_OUT): compile.stamp $(FIRMWARE)
-	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT) $(GHDL_GENERICS)
+	-nvc $(NVC_FLAGS) -r $(TB_MOD) --format=fst --wave=$(WAVE_OUT)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
-	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
-	ghdl -e $(GHDL_FLAGS) $(TB_MOD)
+	nvc $(NVC_FLAGS) -a $(LXP32_RTL) $(COMMON_SRC) $(PLATFORM_RTL) $(TB_SRC)
+	nvc $(NVC_FLAGS) -e $(TB_MOD) $(NVC_GENERICS)
 	echo > compile.stamp
 
 %.ram: $(FW_SRC_DIR)/%.asm

@@ -714,20 +714,20 @@ To simulate the design, go to the \shellcmd{verify/lxp32/run/<\emph{simulator}>}
 	\item Simulate the \shellcmd{tb} design unit defined in the \shellcmd{tb.vhd} file.
 \end{enumerate}
 
-Alternatively, it shouldn't be too hard to create a makefile for a new simulator using one of the existing makefiles as an example.
+It shouldn't be hard to create a script for a new simulator using one of the existing makefiles as an example.
 
 \section{Testbench parameters}
 
 Simulation parameters can be configured by overriding generics defined by the \shellcmd{tb} design unit:
 
 \begin{itemize}
-	\item \code{CPU\_DBUS\_RMW} -- \code{DBUS\_RMW} CPU generic value (see Section \ref{sec:generics}).
-	\item \code{CPU\_MUL\_ARCH} -- \code{MUL\_ARCH} CPU generic value (see Section \ref{sec:generics}).
-	\item \code{MODEL\_LXP32C} -- simulate the \lxp{}C version. By default, this option is set to \code{true}. If set to \code{false}, \lxp{}U is simulated instead.
+	\item \code{CPU\_DBUS\_RMW} -- \code{DBUS\_RMW} CPU generic value (see Section \ref{sec:generics}). Default is \code{false}.
+	\item \code{CPU\_MUL\_ARCH} -- \code{MUL\_ARCH} CPU generic value (see Section \ref{sec:generics}). Default is \code{"dsp"}.
+	\item \code{MODEL\_LXP32C} -- simulate the \lxp{}C version. Default is \code{true}. If set to \code{false}, \lxp{}U is simulated instead.
 	\item \code{TEST\_CASE} -- if set to \code{"all"} (default), all tests are executed. Otherwise, specifies the test case to run.
-	\item \code{THROTTLE\_DBUS} -- perform pseudo-random data bus throttling. By default, this option is set to \code{true}.
-	\item \code{THROTTLE\_IBUS} -- perform pseudo-random instruction bus throttling. By default, this option is set to \code{true}.
-	\item \code{VERBOSE} -- print more messages.
+	\item \code{THROTTLE\_DBUS} -- perform pseudo-random data bus throttling. Default is \code{true}.
+	\item \code{THROTTLE\_IBUS} -- perform pseudo-random instruction bus throttling. Default is \code{true}.
+	\item \code{VERBOSE} -- print more messages. Default is \code{false}.
 \end{itemize}
 
 These generics can be also set using \shellcmd{make} parameters (currently works only for \shellcmd{ghdl}, \shellcmd{nvc} and \shellcmd{vsim}), for example:

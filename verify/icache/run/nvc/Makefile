@@ -1,6 +1,6 @@
 include ../../src/make/sources.make
 
-NVC_FLAGS=--std=93
+NVC_FLAGS=--std=93 --messages=compact
 
 WAVE_OUT=wave.fst
 

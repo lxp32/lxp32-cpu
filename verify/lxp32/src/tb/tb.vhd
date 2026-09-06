@@ -122,7 +122,7 @@ clk<=not clk and not finish after 5 ns;
 
 process is
 begin
-	if str_equal(TEST_CASE,"all") then
+	if str_equal(TEST_CASE,"all") or TEST_CASE'length=0 then
 		run_test("test001.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test002.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);
 		run_test("test003.ram",clk,globals,soc_wbs_in,soc_wbs_out,monitor_out);

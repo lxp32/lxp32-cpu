@@ -101,4 +101,13 @@ cpu_model_inst: entity work.cpu_model(sim)
 		finish_o=>finish
 	);
 
+process is
+begin
+	report "CACHE_BURST_SIZE    = " & integer'image(CACHE_BURST_SIZE) & LF &
+		   "CACHE_PREFETCH_SIZE = " & integer'image(CACHE_PREFETCH_SIZE) & LF &
+		   "CPU_BLOCKS          = " & integer'image(CPU_BLOCKS) & LF &
+		   "VERBOSE             = " & boolean'image(VERBOSE);
+	wait;
+end process;
+
 end architecture;

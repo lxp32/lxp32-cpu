@@ -1,6 +1,7 @@
 include ../../src/make/sources.make
 
 GHDL_FLAGS=--std=93
+GHDL_GENERICS=-gCACHE_BURST_SIZE=$(CACHE_BURST_SIZE) -gCACHE_PREFETCH_SIZE=$(CACHE_PREFETCH_SIZE) -gCPU_BLOCKS=$(CPU_BLOCKS) -gVERBOSE=$(VERBOSE)
 
 WAVE_OUT=wave.fst
 
@@ -17,7 +18,7 @@ all: batch
 compile: compile.stamp
 
 batch: compile.stamp
-	ghdl -r $(GHDL_FLAGS) $(TB_MOD)
+	ghdl -r $(GHDL_FLAGS) $(TB_MOD) $(GHDL_GENERICS)
 
 gui: $(WAVE_OUT)
 	gtkwave $(WAVE_OUT)
@@ -35,7 +36,7 @@ clean:
 ########################
 
 $(WAVE_OUT): compile.stamp
-	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT)
+	-ghdl -r $(GHDL_FLAGS) $(TB_MOD) --fst=$(WAVE_OUT) $(GHDL_GENERICS)
 
 compile.stamp: $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)
 	ghdl -a $(GHDL_FLAGS) $(LXP32_RTL) $(COMMON_SRC) $(TB_SRC)

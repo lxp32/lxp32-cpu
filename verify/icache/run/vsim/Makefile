@@ -1,5 +1,7 @@
 include ../../src/make/sources.make
 
+VSIM_GENERICS=-gCACHE_BURST_SIZE=$(CACHE_BURST_SIZE) -gCACHE_PREFETCH_SIZE=$(CACHE_PREFETCH_SIZE) -gCPU_BLOCKS=$(CPU_BLOCKS) -gVERBOSE=$(VERBOSE)
+
 VCOMFLAGS=-93
 VSIMFLAGS=-t 1ps
 
@@ -14,10 +16,10 @@ all: batch
 compile: compile.stamp
 
 batch: compile.stamp
-	vsim $(VSIMFLAGS) -do "run -all; quit -f" -c work.$(TB_MOD)
+	vsim $(VSIMFLAGS) $(VSIM_GENERICS) -do "run -all; quit -f" -c work.$(TB_MOD)
 
 gui: compile.stamp
-	vsim $(VSIMFLAGS) work.$(TB_MOD)
+	vsim $(VSIMFLAGS) $(VSIM_GENERICS) work.$(TB_MOD)
 
 clean:
 	rm -rf work

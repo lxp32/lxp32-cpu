@@ -36,7 +36,7 @@ loop:
 	lc r66, 12345 // addition constant
 	lc r67, 32767 // mask
 	
-	mov r10, 100
+	lc r10, 10000
 	lc r32, rand
 	lc r35, rnd_loop
 	
@@ -46,7 +46,7 @@ rnd_loop:
 	sub r10, r10, 1
 	cjmpug r35, r10, 0 // rnd_loop
 	
-	lc r1, 26521
+	lc r1, 29144
 	cjmpne r102, r0, r1 // failure
 	
 	sw r100, 1

@@ -6,7 +6,7 @@
 -- Copyright (c) 2016 by Alex I. Kuznetsov
 --
 -- This multiplier is designed for technologies that don't provide
--- fast 16x16 multipliers. One multiplication takes 5 cycles.
+-- fast 16x16 multipliers. One multiplication takes 6 cycles.
 --
 -- The multiplication algorithm is based on carry-save accumulation
 -- of partial products.
@@ -51,9 +51,6 @@ end function;
 signal reg1: unsigned(op1_i'range);
 signal reg2: unsigned(op2_i'range);
 
-signal op1: unsigned(op1_i'range);
-signal op2: unsigned(op2_i'range);
-
 type pp_type is array (7 downto 0) of unsigned(31 downto 0);
 signal pp: pp_type;
 
@@ -66,9 +63,6 @@ signal pp_carry: pp_carry_type;
 signal acc_sum: unsigned(31 downto 0);
 signal acc_carry: unsigned(31 downto 0);
 
-signal acc_sum_mux: unsigned(31 downto 0);
-signal acc_carry_mux: unsigned(31 downto 0);
-
 signal cnt: integer range 0 to 4:=0;
 
 signal result: std_logic_vector(result_o'range);
@@ -78,17 +72,11 @@ begin
 
 -- Calculate 8 partial products in parallel
 
-op1<=unsigned(op1_i) when ce_i='1' else reg1;
-op2<=unsigned(op2_i) when ce_i='1' else reg2;
-
 pp_gen: for i in pp'range generate
-	pp(i)<=shift_left(op1,i) when op2(i)='1' else (others=>'0');
+	pp(i)<=shift_left(reg1,i) when reg2(i)='1' else (others=>'0');
 end generate;
 
 -- Add partial products to the accumulator using carry-save adder tree
-
-acc_sum_mux<=acc_sum when ce_i='0' else (others=>'0');
-acc_carry_mux<=acc_carry when ce_i='0' else (others=>'0');
 
 pp_sum(0)<=csa_sum(pp(0),pp(1),pp(2),32);
 pp_carry(0)<=csa_carry(pp(0),pp(1),pp(2),32);
@@ -96,8 +84,8 @@ pp_carry(0)<=csa_carry(pp(0),pp(1),pp(2),32);
 pp_sum(1)<=csa_sum(pp(3),pp(4),pp(5),32);
 pp_carry(1)<=csa_carry(pp(3),pp(4),pp(5),32);
 
-pp_sum(2)<=csa_sum(pp(6),pp(7),acc_sum_mux,32);
-pp_carry(2)<=csa_carry(pp(6),pp(7),acc_sum_mux,32);
+pp_sum(2)<=csa_sum(pp(6),pp(7),acc_sum,32);
+pp_carry(2)<=csa_carry(pp(6),pp(7),acc_sum,32);
 
 pp_sum(3)<=csa_sum(pp_sum(0),pp_carry(0),pp_sum(1),32);
 pp_carry(3)<=csa_carry(pp_sum(0),pp_carry(0),pp_sum(1),32);
@@ -111,8 +99,8 @@ pp_carry(5)<=csa_carry(pp_sum(3),pp_carry(3),pp_sum(4),32);
 pp_sum(6)<=csa_sum(pp_sum(5),pp_carry(5),pp_carry(4),32);
 pp_carry(6)<=csa_carry(pp_sum(5),pp_carry(5),pp_carry(4),32);
 
-pp_sum(7)<=csa_sum(pp_sum(6),pp_carry(6),acc_carry_mux,32);
-pp_carry(7)<=csa_carry(pp_sum(6),pp_carry(6),acc_carry_mux,32);
+pp_sum(7)<=csa_sum(pp_sum(6),pp_carry(6),acc_carry,32);
+pp_carry(7)<=csa_carry(pp_sum(6),pp_carry(6),acc_carry,32);
 
 -- Multiplier state machine
 
@@ -127,22 +115,27 @@ begin
 			acc_sum<=(others=>'-');
 			acc_carry<=(others=>'-');
 		else
-			if ce_i='1' then
-				cnt<=3;
-			elsif cnt>0 then
-				cnt<=cnt-1;
-			end if;
-
 			if cnt=1 then
 				ceo<='1';
 			else
 				ceo<='0';
 			end if;
-
-			acc_sum<=pp_sum(7);
-			acc_carry<=pp_carry(7)(acc_carry'range);
-			reg1<=unsigned(op1(op1'high-8 downto 0))&X"00";
-			reg2<=X"00"&unsigned(op2(op2'high downto 8));
+			
+			if ce_i='1' then
+				cnt<=4;
+				reg1<=unsigned(op1_i);
+				reg2<=unsigned(op2_i);
+				acc_sum<=(others=>'0');
+				acc_carry<=(others=>'0');
+			else
+				acc_sum<=pp_sum(7);
+				acc_carry<=pp_carry(7)(acc_carry'range);
+				reg1<=reg1(reg1'high-8 downto 0)&X"00";
+				reg2<=X"00"&reg2(reg2'high downto 8);
+				if cnt>0 then
+					cnt<=cnt-1;
+				end if;
+			end if;
 		end if;
 	end if;
 end process;
